@@ -53,8 +53,24 @@ class GuideVideoPage(BasePage):
         self.duration = 0  # seconds
 
         # Create VLC instance and media player
-        self.vlc_instance = vlc.Instance()
+        # --- inside GuideVideoPage.__init__ right before creating the instance ---
+        # --- Create VLC instance with valid options ---
+        opts = [
+            "--aout=directsound",          # bypass WASAPI
+            "--no-video-title-show",
+            "--audio-replay-gain-mode=none",
+            "--no-audio-time-stretch",     # ✅ correct flag
+            "--quiet",
+        ]
+        print("Starting VLC with options:", opts)
+        self.vlc_instance = vlc.Instance(opts)
+        if not self.vlc_instance:
+            raise RuntimeError("libVLC failed to initialize (vlc.Instance returned None). "
+                            "Check Python/VLC bitness and VLC_PLUGIN_PATH.")
+
         self.player = self.vlc_instance.media_player_new()
+
+
 
         # Card container
         self.card = RoundedCard(self.overlay, radius=18, pad=12, bg=Colors.card_bg)
