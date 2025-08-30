@@ -45,12 +45,12 @@ class GuideVideoPage(BasePage):
 
         # VLC instance
         opts = [
-            "--aout=directsound",
-            "--no-video-title-show",
-            "--audio-replay-gain-mode=none",
-            "--no-audio-time-stretch",
-            "--quiet",
-        ]
+    "--aout=directsound",
+    "--no-video-title-show",
+    "--no-audio-time-stretch",
+    "--quiet",   # suppress logs
+]
+
         print("Starting VLC with options:", opts)
         self.vlc_instance = vlc.Instance(opts)
         if not self.vlc_instance:
