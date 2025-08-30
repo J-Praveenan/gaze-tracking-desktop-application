@@ -1,0 +1,30 @@
+opencv-python
+mediapipe
+numpy
+dlip
+imutils
+tensorflow==2.15
+pyautogui 
+win32gui
+SpeechRecognition
+pyttsx3
+whisper
+
+pip install opencv-contrib-python
+pip install mediapipe
+pip install numpy
+pip install E:\0001_FYP\GazeDesktop\Data\dlib-19.24.1-cp311-cp311-win_amd64.whl
+pip install imutils
+pip install tensorflow==2.15
+pip install pyautogui
+pip install pywin32
+pip install SpeechRecognition
+pip install pyttsx3
+pip install openai-whisper
+
+
+
+
+
+
+

@@ -4,6 +4,10 @@ from UI.theme import Colors, Fonts
 from UI.widgets import RoundedCard, PillButton
 from .base import BasePage
 
+import sys, subprocess, threading
+from pathlib import Path
+
+
 class HomePage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
@@ -11,10 +15,11 @@ class HomePage(BasePage):
         # Sidebar
         self.sidebar = RoundedCard(self.overlay, radius=24, pad=0, bg=Colors.sidebar_bg)
         self.sidebar.place(relx=0.05, rely=0.53, anchor="w", relwidth=0.22, relheight=0.74)
+        self.sidebar_buttons = {}  # keep refs so we can disable/enable
         self._sidebar_menu(self.sidebar.body)
 
         # Main column
-        self.main = tk.Frame(self.overlay, bg=self.overlay.cget("bg"), padx=10, pady=10)        
+        self.main = tk.Frame(self.overlay, bg=self.overlay.cget("bg"), padx=10, pady=10)
         self.main.place(relx=0.72, rely=0.52, anchor="center", relwidth=0.68, relheight=0.76)
 
         # Welcome
@@ -80,21 +85,117 @@ class HomePage(BasePage):
 
     def _sidebar_menu(self, parent):
         items = [
-            ("Home", True),
-            ("Set Up Gaze Tracking", False),
-            ("Apps Control", False),
-            ("System Control", False),
-            ("Tips", False),
-            ("Information", False),
-            ("Settings", False),
+            ("Home", True, None),
+            ("Set Up Gaze Tracking", False, self._run_calibration),  # wired
+            ("Gaze Tracker", False, self._run_gaze_tracker),
+            ("Apps Control", False, None),
+            ("System Control", False, None),
+            ("Tips", False, None),
+            ("Information", False, None),
+            ("Settings", False, None),
         ]
-        for text, active in items:
+        for text, active, cmd in items:
             style = "NavActive.TButton" if active else "Nav.TButton"
-            ttk.Button(parent, text=f"  {text}", style=style).pack(fill="x", padx=14, pady=(10, 0))
+            btn = ttk.Button(parent, text=f"  {text}", style=style, command=cmd)
+            btn.pack(fill="x", padx=14, pady=(10, 0))
+            self.sidebar_buttons[text] = btn
 
     def _start_app(self):
-        # Hook to your gaze backend (main.py) here if desired
         messagebox.showinfo("LOOK TRACK VISION", "Start Application clicked.\nHook this to start your backend.")
+
+    def _run_calibration(self):
+        """Launch Calibration/Calibration.py in a separate process so Tk stays responsive."""
+        calib_path = self._find_calibration_script()
+        if not calib_path:
+            messagebox.showerror("Calibration", "Could not find Calibration.py (looked under ./Calibration/).")
+            return
+
+        btn = self.sidebar_buttons.get("Set Up Gaze Tracking")
+        if btn:
+            btn.state(['disabled'])
+
+        def work():
+            rc = -1
+            try:
+                rc = subprocess.run([sys.executable, "-u", str(calib_path)]).returncode
+            except Exception:
+                rc = -1
+
+            def done():
+                if btn:
+                    btn.state(['!disabled'])
+                if rc == 0:
+                    messagebox.showinfo("Calibration", "Calibration complete. Thresholds saved.")
+                else:
+                    messagebox.showwarning("Calibration", "Calibration cancelled or failed. Check console output.")
+            self.after(0, done)
+
+        threading.Thread(target=work, daemon=True).start()
+        
+        
+        
+    def _run_gaze_tracker(self):
+        """
+        Launch main.py in a separate process so the Tk UI stays responsive.
+        """
+        main_path = self._find_main_script()
+        if not main_path:
+            messagebox.showerror("Gaze Tracker", "Could not find main.py.")
+            return
+
+        btn = self.sidebar_buttons.get("Gaze Tracker")
+        if btn:
+            btn.state(['disabled'])
+
+        def work():
+            rc = -1
+            try:
+                # -u for unbuffered prints; run with same interpreter
+                rc = subprocess.run([sys.executable, "-u", str(main_path)]).returncode
+            except Exception:
+                rc = -1
+
+            def done():
+                if btn:
+                    btn.state(['!disabled'])
+                if rc == 0:
+                    messagebox.showinfo("Gaze Tracker", "Gaze tracker closed.")
+                else:
+                    messagebox.showwarning("Gaze Tracker", "Gaze tracker ended with an error. Check console.")
+            self.after(0, done)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _find_main_script(self) -> Path | None:
+        """
+        Try to locate main.py (your gaze tracker) in common places.
+        Adjust as needed if you keep it elsewhere.
+        """
+        candidates = [
+            Path.cwd() / "main.py",
+            Path(__file__).resolve().parents[2] / "main.py",      # project root
+            Path(__file__).resolve().parent / "main.py",          # same folder (unlikely)
+        ]
+        for p in candidates:
+            if p.exists():
+                return p
+        return None
+
+
+    def _find_calibration_script(self) -> Path | None:
+        """Try to locate Calibration.py or calibration.py in a Calibration/ folder."""
+        candidates = [
+            Path.cwd() / "Calibration" / "Calibration.py",
+            Path.cwd() / "Calibration" / "calibration.py",
+            Path(__file__).resolve().parent / "Calibration" / "Calibration.py",
+            Path(__file__).resolve().parent / "Calibration" / "calibration.py",
+            Path(__file__).resolve().parents[1] / "Calibration" / "Calibration.py",
+            Path(__file__).resolve().parents[1] / "Calibration" / "calibration.py",
+        ]
+        for p in candidates:
+            if p.exists():
+                return p
+        return None
 
     def on_show(self):
         pass
