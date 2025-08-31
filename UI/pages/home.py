@@ -12,10 +12,10 @@ def F(name, default):
     return getattr(Fonts, name, default)
 
 SIDEBAR_W, SIDEBAR_H = 0.21, 0.86
-SIDEBAR_X, SIDEBAR_REL = 0.045, 0.55
+SIDEBAR_X, SIDEBAR_REL = 0.045, 0.45
 MAIN_W = 0.70
 MAIN_RELX = SIDEBAR_X + SIDEBAR_W + (1 - (SIDEBAR_X + SIDEBAR_W)) * 0.5
-MAIN_RELH, MAIN_RELY = SIDEBAR_H, SIDEBAR_REL
+MAIN_RELH, MAIN_RELY = 0.67, SIDEBAR_REL
 
 ASSETS = Path(__file__).resolve().parents[2] / "Assets" / "test_images"
 
@@ -49,34 +49,28 @@ class HomePage(BasePage):
         self.nav_info_20 = load_img("add_user_light.png", (20, 20))    # placeholder
         self.nav_settings_20 = load_img("add_user_light.png", (20, 20))# placeholder
 
-        # main banner + button icon
-        self.banner_500x150 = load_img("large_test_image.png", (500, 150))
-        self.btn_icon_20 = load_img("image_icon_light.png", (20, 20))
-
         # ---------- SIDEBAR ----------
-        self.sidebar = RoundedCard(self.overlay, radius=24, pad=0, bg=Colors.sidebar_bg, tight=False)
+        self.sidebar = RoundedCard(self.overlay, radius=18, pad=10, bg=Colors.dark_card, tight=False)
+        # RoundedCard(self.overlay, radius=24, pad=0, bg=Colors.sidebar_bg, tight=False)
         self.sidebar.place(relx=SIDEBAR_X, rely=SIDEBAR_REL, anchor="w",
                            relwidth=SIDEBAR_W, relheight=SIDEBAR_H)
-        # build after fields used inside are initialized
-        self._nav_rows = {}
-        self._nav_btns = {}
+        self._nav_rows, self._nav_btns = {}, {}
         self._build_sidebar(self.sidebar.body)
 
         # ---------- MAIN COLUMN (stack) ----------
+        # moved up slightly to reduce top spacing
         self.main_col = tk.Frame(self.overlay, bg=Colors.page_bg)
-        self.main_col.place(relx=MAIN_RELX, rely=MAIN_RELY, anchor="center",
+        self.main_col.place(relx=MAIN_RELX, rely=MAIN_RELY - 0.095, anchor="center",
                             relwidth=MAIN_W, relheight=MAIN_RELH)
 
-        # frames (you can add more later)
         self.frames = {
             "home": self._make_home_frame(self.main_col),
             "frame_2": self._make_second_frame(self.main_col),
             "frame_3": self._make_third_frame(self.main_col),
         }
         for fr in self.frames.values():
-            fr.place(relx=0, rely=0, relwidth=1, relheight=1)
+            fr.place(relx=0, rely=0, relwidth=1, relheight=0.3)
 
-        # map sidebar keys to frames (None if not implemented yet)
         self._nav_to_frame = {
             "home": "home",
             "setup": "frame_2",
@@ -87,30 +81,26 @@ class HomePage(BasePage):
             "settings": None,
         }
 
-        # default selection (selects and shows Home)
         self.select_nav("home")
 
-    # ======= Sidebar with icon buttons (matching screenshot) =======
+    # ======= Sidebar =======
     def _build_sidebar(self, parent):
         parent.configure(bg=Colors.sidebar_bg)
-        for w in parent.winfo_children():
-            w.destroy()
+        for w in parent.winfo_children(): w.destroy()
 
         wrap = tk.Frame(parent, bg=Colors.sidebar_bg)
         wrap.pack(fill="both", expand=True, padx=16, pady=16)
-        wrap.grid_rowconfigure(8, weight=1)  # push bottom items down
+        wrap.grid_rowconfigure(8, weight=1)
 
-        # Header (logo + title)
         head = tk.Frame(wrap, bg=Colors.sidebar_bg)
         head.grid(row=0, column=0, sticky="ew", pady=(6, 12))
         if self.logo_26:
             tk.Label(head, image=self.logo_26, bg=Colors.sidebar_bg).pack(side="left", padx=(2, 8))
 
         def _nav_row(row_index, key, text, icon, on_click):
-            # container with toggleable white border
             cont = tk.Frame(
                 wrap, bg=Colors.sidebar_bg,
-                highlightthickness=0,                # shown when selected
+                highlightthickness=0,
                 highlightbackground="#ffffff",
                 highlightcolor="#ffffff",
                 bd=0,
@@ -122,8 +112,7 @@ class HomePage(BasePage):
                 font=F("h3", ("Segoe UI", 12, "bold")),
                 fg="#e6eef7", bg=Colors.sidebar_bg, bd=0, relief="flat",
                 activebackground="#2b3947", activeforeground="#e6eef7",
-                cursor="hand2",
-                command=on_click
+                cursor="hand2", command=on_click
             )
             btn.bind("<Enter>", lambda e: btn.configure(bg="#2b3947"))
             btn.bind("<Leave>", lambda e: btn.configure(bg=Colors.sidebar_bg))
@@ -138,46 +127,55 @@ class HomePage(BasePage):
         _nav_row(r, "apps", "Apps Control", self.nav_apps_20, lambda: self.select_nav("apps")); r += 1
         _nav_row(r, "system", "System Control", self.nav_system_20, lambda: self.select_nav("system")); r += 1
         _nav_row(r, "tips", "Tips", self.nav_tips_20, lambda: self.select_nav("tips")); r += 1
-
-        # spacer pushes these to bottom
         tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=r, column=0, sticky="nsew"); r += 1
-
         _nav_row(r, "info", "Information", self.nav_info_20, lambda: self.select_nav("info")); r += 1
         _nav_row(r, "settings", "Settings", self.nav_settings_20, lambda: self.select_nav("settings")); r += 1
 
-    # ======= Main frames (CTk-like content) =======
+    # ======= Main: HOME =======
     def _make_home_frame(self, parent):
         fr = tk.Frame(parent, bg=Colors.page_bg)
-        # top banner card
-        card = RoundedCard(fr, radius=18, pad=10, bg=Colors.glass_bg, tight=False)
-        card.pack(fill="x", padx=8, pady=(0, 10))
-        tk.Label(card.body, text="", image=self.banner_500x150 or "",
-                 bg=Colors.glass_bg).pack(padx=10, pady=6)
 
-        # button panel (like CTk example)
+        # --- HERO (welcome) card like the screenshot ---
+        hero = RoundedCard(fr, radius=18, pad=10, bg=Colors.dark_card, tight=False)
+        hero.pack(fill="x", padx=8, pady=(2, 4))  # minimal top space
+
+        title = tk.Label(
+            hero.body,
+            text="Welcome to LOOK TRACK VISION",
+            fg="#ffffff", bg=Colors.dark_card,
+            font=F("h1b", ("Segoe UI", 20, "bold"))
+        )
+        title.pack(pady=(2, 4))
+
+        subtitle = tk.Label(
+            hero.body,
+            text=("A smart assistant that lets you control your computer with just your eyes and voice.\n"
+                  "Whether you're browsing, chatting, or presenting, it's all hands-free, intuitive, and "
+                  "empowering."),
+            fg="#e8eef6", bg=Colors.dark_card,
+            justify="center",
+            font=F("body", ("Segoe UI", 10))
+        )
+        subtitle.pack(pady=(0, 0))
+
+        # keep text nicely wrapped as card resizes
+        def _wrap(e):
+            # leave padding for rounded corners
+            subtitle.configure(wraplength=max(150, int(e.width * 0.92)))
+        hero.body.bind("<Configure>", _wrap)
+
+        # --- MAIN PANEL (placeholder content below the hero) ---
         panel = RoundedCard(fr, radius=18, pad=16, bg=Colors.glass_bg, tight=False)
         panel.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
-        def _img_btn(text, compound="left", anchor="center"):
-            return tk.Button(
-                panel.body, text=text,
-                image=self.btn_icon_20, compound=compound, anchor=anchor,
-                font=F("h3", ("Segoe UI", 11, "bold")),
-                fg=Colors.card_text, bg=Colors.dark_card, activebackground="#2f3e4c",
-                activeforeground="#ffffff", bd=0, relief="flat", padx=12, pady=10, cursor="hand2"
-            )
-
-        b1 = _img_btn("", compound="left")
-        b2 = _img_btn("CTkButton", compound="right")
-        b3 = _img_btn("CTkButton", compound="top")
-        b4 = _img_btn("CTkButton", compound="bottom", anchor="w")
-
-        # grid like CTk example
+        # (you can replace these with your real controls; kept minimal)
         panel.body.grid_columnconfigure(0, weight=1)
-        b1.grid(row=0, column=0, sticky="ew", padx=10, pady=6)
-        b2.grid(row=1, column=0, sticky="ew", padx=10, pady=6)
-        b3.grid(row=2, column=0, sticky="ew", padx=10, pady=6)
-        b4.grid(row=3, column=0, sticky="ew", padx=10, pady=6)
+        tk.Label(panel.body, text="Control Mode", fg=Colors.card_head, bg=Colors.glass_bg,
+                 font=F("h2b", ("Segoe UI", 12, "bold"))).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
+        tk.Label(panel.body, text="(Auto / Manual controls go here)", fg=Colors.card_text,
+                 bg=Colors.glass_bg, font=F("body", ("Segoe UI", 10))
+                 ).grid(row=1, column=0, sticky="w", padx=6, pady=(0, 10))
+
         return fr
 
     def _make_second_frame(self, parent):
@@ -204,20 +202,15 @@ class HomePage(BasePage):
 
     # ======= selection visuals (bg + white border) =======
     def _set_selected_nav(self, key: str):
-        # border toggle
         for k, cont in self._nav_rows.items():
             cont.configure(highlightthickness=(2 if k == key else 0))
-        # background toggle
         for k, btn in self._nav_btns.items():
             btn.configure(bg=("#3a4c60" if k == key else Colors.sidebar_bg))
 
     # ======= Frame switching =======
     def _switch_frame(self, name: str):
         for k, fr in self.frames.items():
-            if k == name:
-                fr.lift()
-            else:
-                fr.lower()
+            fr.lift() if k == name else fr.lower()
 
     # ======= Unified selection from sidebar =======
     def select_nav(self, key: str):
@@ -226,11 +219,9 @@ class HomePage(BasePage):
         if target and target in self.frames:
             self._switch_frame(target)
 
-    # (optional) keep for external callers that still use it
     def select_frame_by_name(self, name: str):
         self._switch_frame(name)
 
-    # ======= Appearance (placeholder hook) =======
     def _on_appearance_change(self, _evt=None):
         choice = self.appearance.get()
         messagebox.showinfo("Appearance", f"Selected: {choice}")
