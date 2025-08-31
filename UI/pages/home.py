@@ -11,7 +11,7 @@ from .base import BasePage
 def F(name, default):
     return getattr(Fonts, name, default)
 
-SIDEBAR_W, SIDEBAR_H = 0.21, 0.86
+SIDEBAR_W, SIDEBAR_H = 0.23, 0.86
 SIDEBAR_X, SIDEBAR_REL = 0.045, 0.45
 MAIN_W = 0.70
 MAIN_RELX = SIDEBAR_X + SIDEBAR_W + (1 - (SIDEBAR_X + SIDEBAR_W)) * 0.5
@@ -49,39 +49,60 @@ class HomePage(BasePage):
         self.nav_info_20 = load_img("add_user_light.png", (20, 20))    # placeholder
         self.nav_settings_20 = load_img("add_user_light.png", (20, 20))# placeholder
 
-        # ---------- SIDEBAR ----------
+       # ---------- SIDEBAR ----------
         self.sidebar = RoundedCard(self.overlay, radius=18, pad=10, bg=Colors.dark_card, tight=False)
-        # RoundedCard(self.overlay, radius=24, pad=0, bg=Colors.sidebar_bg, tight=False)
         self.sidebar.place(relx=SIDEBAR_X, rely=SIDEBAR_REL, anchor="w",
                            relwidth=SIDEBAR_W, relheight=SIDEBAR_H)
         self._nav_rows, self._nav_btns = {}, {}
         self._build_sidebar(self.sidebar.body)
 
-        # ---------- MAIN COLUMN (stack) ----------
-        # moved up slightly to reduce top spacing
+        # ---------- MAIN COLUMN (fixed area that hosts pages) ----------
         self.main_col = tk.Frame(self.overlay, bg=Colors.page_bg)
         self.main_col.place(relx=MAIN_RELX, rely=MAIN_RELY - 0.095, anchor="center",
                             relwidth=MAIN_W, relheight=MAIN_RELH)
 
+        # container where all pages are stacked
+        self.content = tk.Frame(self.main_col, bg=Colors.page_bg)
+        self.content.place(relx=0, rely=0, relwidth=1, relheight=0.3)
+
+        # create all pages ONCE and stack them in the same spot
         self.frames = {
-            "home": self._make_home_frame(self.main_col),
-            "frame_2": self._make_second_frame(self.main_col),
-            "frame_3": self._make_third_frame(self.main_col),
+            "home":   self._make_home_frame(self.content),
+            "setup":  self._make_second_frame(self.content),
+            "apps":   self._make_third_frame(self.content),
+            "system":   self._make_third_frame(self.content),
+            "tips":   self._make_third_frame(self.content),
+            "info":   self._make_third_frame(self.content),
+            "settings":   self._make_third_frame(self.content),
+            # you can add real pages later: "system": SystemPage(self.content, controller), etc.
         }
         for fr in self.frames.values():
-            fr.place(relx=0, rely=0, relwidth=1, relheight=0.3)
+            fr.place(relx=0, rely=0, relwidth=1, relheight=1)  # full size & same position
 
+        # map sidebar keys -> frame keys
         self._nav_to_frame = {
             "home": "home",
-            "setup": "frame_2",
-            "apps": "frame_3",
-            "system": None,
-            "tips": None,
-            "info": None,
-            "settings": None,
+            "setup": "setup",
+            "apps": "apps",
+            "system": "system",    # placeholder until you build a System page
+            "tips": "tips",
+            "info": "info",
+            "settings": "settings",
         }
 
         self.select_nav("home")
+
+    # ======= Frame switching =======
+    def _switch_frame(self, name: str):
+        # tkraise shows one frame and keeps others underneath
+        self.frames[name].tkraise()
+
+    # ======= Unified selection from sidebar =======
+    def select_nav(self, key: str):
+        self._set_selected_nav(key)
+        target = self._nav_to_frame.get(key)
+        if target in self.frames:
+            self._switch_frame(target)
 
     # ======= Sidebar =======
     def _build_sidebar(self, parent):
@@ -213,11 +234,11 @@ class HomePage(BasePage):
             fr.lift() if k == name else fr.lower()
 
     # ======= Unified selection from sidebar =======
-    def select_nav(self, key: str):
-        self._set_selected_nav(key)
-        target = self._nav_to_frame.get(key)
-        if target and target in self.frames:
-            self._switch_frame(target)
+    # def select_nav(self, key: str):
+    #     self._set_selected_nav(key)
+    #     target = self._nav_to_frame.get(key)
+    #     if target and target in self.frames:
+    #         self._switch_frame(target)
 
     def select_frame_by_name(self, name: str):
         self._switch_frame(name)
