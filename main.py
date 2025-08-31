@@ -189,11 +189,17 @@ long_blink_start = None
 long_blink_armed = True
 long_blink_cooldown_until = 0.0
 
+# --- UI: live click indicators ---
+left_click_count = 0
+right_click_count = 0
+_last_click_flash_until = 0.0   # time until which we "flash" the last clicked badge
+_last_click_side = None         # "left" | "left_dbl" | "right"
+
 _anchor_points = []
 _anchor_idx = 0
 
 
-ANCHOR_ORDER = ("left", "top", "right", "bottom")  # cycle order
+ANCHOR_ORDER = ("center", "left", "right", "top", "bottom")  # cycle order
 
 def _compute_anchors():
     sw, sh = pyautogui.size()
@@ -203,7 +209,7 @@ def _compute_anchors():
         "top":    (sw // 2,  m),
         "right":  (sw - m,   sh // 2),
         "bottom": (sw // 2,  sh - m),
-        # "center": (sw // 2,  sh // 2),  # include if you want it in the cycle
+        "center": (sw // 2,  sh // 2),  # include if you want it in the cycle
     }
 
 _anchor_idx = 0
@@ -293,12 +299,36 @@ _left_wink_start = None
 _right_wink_start = None
 
 def _click_debounced(button="left"):
-    global _last_click_ts
+    global _last_click_ts, left_click_count, right_click_count, _last_click_flash_until, _last_click_side
     now = time.time()
     if now - _last_click_ts < CLICK_COOLDOWN_SEC:
         return
     _last_click_ts = now
     pyautogui.click(button=button)
+
+    # record for UI
+    if button == "left":
+        left_click_count += 1
+        _last_click_side = "left"
+    else:
+        right_click_count += 1
+        _last_click_side = "right"
+    _last_click_flash_until = time.time() + 0.6  # flash for 0.6s
+    
+def _double_click_debounced(interval=0.15):
+    """Left double-click with debounce and UI record."""
+    global _last_click_ts, left_click_count, _last_click_flash_until, _last_click_side
+    now = time.time()
+    if now - _last_click_ts < CLICK_COOLDOWN_SEC:
+        return
+    _last_click_ts = now
+    pyautogui.click(clicks=2, interval=interval, button="left")
+
+    # record as two left-clicks
+    left_click_count += 2
+    _last_click_side = "left_dbl"
+    _last_click_flash_until = time.time() + 0.6
+
 
 
 
@@ -690,8 +720,8 @@ screen_width = pyautogui.size().width
 screen_height = pyautogui.size().height
 
         # Calculate 3/4 width and keep height proportional or fixed
-window_width = int(screen_width * 0.5)
-window_height = int(screen_height * 1)  # Or use a fixed value
+window_width = int(screen_width * 0.6)
+window_height = int(screen_height * 0.75)  # Or use a fixed value
 
         # Resize the OpenCV window
 cv2.resizeWindow("result", window_width, window_height)
@@ -727,7 +757,7 @@ while cap.isOpened():
             _paste_rgba(canvas, _icon_rgba, x_title, 10, w=40, h=40, radius=8)
             x_title += 48 + 10  # icon width + spacing
 
-        put_text(canvas, "LOOK TRACK VISION", (x_title, 46), 1.1, COL["text"], 3)
+        put_text(canvas, "REAL TIME GAZE ESTIMATION", (x_title, 46), 1.1, COL["text"], 3)
         put_text(canvas, f"{fps:.1f} FPS", (W - MARGIN_X, 46), 0.9, COL["muted"], 2, align="right")
 
         # -------- Compute available area for strip + video --------
@@ -791,10 +821,43 @@ while cap.isOpened():
         bx -= (acc_w + 12)
         draw_card(canvas, bx-gaze_w, by, gaze_w, gaze_h, radius=14, color=COL["accent2"])
         put_text(canvas, gaze_txt, (bx-gaze_w+12, by+gaze_h-12), 0.75, (255,255,255), 2)
+        
+        
+                # --- Click badges (live) just below the gaze/accuracy badges ---
+        # layout
+        now = time.time()
+        flash = (now < _last_click_flash_until)
+
+        row_y = by + max(acc_h, gaze_h) + 10
+        gap = 10
+
+        # Left-click badge
+        left_text = f"L: {left_click_count}"
+        left_w, left_h = _badge_wh(left_text)
+
+        # Right-click badge
+        right_text = f"R: {right_click_count}"
+        right_w, right_h = _badge_wh(right_text)
+
+        # Choose colors; flash the one that was clicked last
+        left_bg  = COL["accent2"] if flash and (_last_click_side in ("left", "left_dbl")) else COL["accent"]
+        right_bg = COL["accent2"] if flash and (_last_click_side == "right") else COL["accent"]
+
+        # place from right edge inward, under existing badges
+        # first right badge
+        draw_card(canvas, bx-right_w, row_y, right_w, right_h, radius=14, color=right_bg)
+        put_text(canvas, right_text, (bx-right_w+12, row_y+right_h-12), 0.75, (255,255,255), 2)
+        bx -= (right_w + gap)
+
+        # then left badge
+        draw_card(canvas, bx-left_w, row_y, left_w, left_h, radius=14, color=left_bg)
+        put_text(canvas, left_text, (bx-left_w+12, row_y+left_h-12), 0.75, (255,255,255), 2)
+        # done; bx now points to left of click badges
+
 
         # -------- Video card (just below the strip) --------
-        vy = strip_y + strip_h + 16
-        draw_card(canvas, vx - 16, vy - 16, vw + 32, vh + 32, radius=20, color=COL["card"])
+        vy = strip_y + strip_h + 8
+        draw_card(canvas, vx - 16, vy - 16, vw + 32, vh + 12, radius=20, color=COL["card"])
         resized = cv2.resize(frame, (vw, vh))
         mask = _rounded_rect_mask(vh, vw, 16)
         roi = canvas[vy:vy+vh, vx:vx+vw]
@@ -862,7 +925,8 @@ while cap.isOpened():
         if _left_wink_start is not None and left_open and right_open:
             dur = t - _left_wink_start
             if WINK_MIN_SEC <= dur <= WINK_MAX_SEC:
-                _click_debounced("left")
+                # _click_debounced("left")
+                _double_click_debounced()
         _left_wink_start = None
 
     # 2) RIGHT-EYE WINK → RIGHT CLICK
@@ -1030,9 +1094,6 @@ while cap.isOpened():
         # ====== PREDICTION PROCESS ======
         gaze, accuracy = detect_gaze(eye_input_g, blink_confirmed, mesh_points, is_eye_closed)
         
-        # Blink → left click (debounced)
-        # if gaze == "blink":
-        #     click_on_blink()
 
 
         # Move mouse (function has its own cooldown & accuracy gate)
