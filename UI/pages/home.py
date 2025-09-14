@@ -15,7 +15,8 @@ SIDEBAR_W, SIDEBAR_H = 0.23, 0.86
 SIDEBAR_X, SIDEBAR_REL = 0.045, 0.45
 MAIN_W = 0.70
 MAIN_RELX = SIDEBAR_X + SIDEBAR_W + (1 - (SIDEBAR_X + SIDEBAR_W)) * 0.5
-MAIN_RELH, MAIN_RELY = 0.67, SIDEBAR_REL
+MAIN_RELH = 1.0
+MAIN_RELY = 0.62
 
 ASSETS = Path(__file__).resolve().parents[2] / "Assets" / "test_images"
 
@@ -63,7 +64,7 @@ class HomePage(BasePage):
 
         # container where all pages are stacked
         self.content = tk.Frame(self.main_col, bg=Colors.page_bg)
-        self.content.place(relx=0, rely=0, relwidth=1, relheight=0.3)
+        self.content.place(relx=0, rely=0, relwidth=1, relheight=1)
 
         # create all pages ONCE and stack them in the same spot
         self.frames = {
@@ -129,12 +130,15 @@ class HomePage(BasePage):
             cont.grid(row=row_index, column=0, sticky="ew", padx=2, pady=6)
 
             btn = tk.Button(
-                cont, text=("  " + text), image=icon, compound="left", anchor="w",
-                font=F("h3", ("Segoe UI", 12, "bold")),
-                fg="#e6eef7", bg=Colors.sidebar_bg, bd=0, relief="flat",
-                activebackground="#2b3947", activeforeground="#e6eef7",
-                cursor="hand2", command=on_click
-            )
+    cont, text=("  " + text), image=icon, compound="left", anchor="w",
+    font=F("h3", ("Segoe UI", 12, "bold")),
+    fg="white", bg=Colors.sidebar_bg, bd=0, relief="flat",
+    activebackground="#1d4ed8", activeforeground="white",
+    cursor="hand2", command=on_click
+)
+
+            btn.configure(padx=12, pady=8)
+
             btn.bind("<Enter>", lambda e: btn.configure(bg="#2b3947"))
             btn.bind("<Leave>", lambda e: btn.configure(bg=Colors.sidebar_bg))
             btn.pack(fill="x", padx=6, pady=6)
@@ -153,12 +157,13 @@ class HomePage(BasePage):
         _nav_row(r, "settings", "Settings", self.nav_settings_20, lambda: self.select_nav("settings")); r += 1
 
     # ======= Main: HOME =======
+        # ======= Main: HOME =======
     def _make_home_frame(self, parent):
         fr = tk.Frame(parent, bg=Colors.page_bg)
 
-        # --- HERO (welcome) card like the screenshot ---
-        hero = RoundedCard(fr, radius=18, pad=10, bg=Colors.dark_card, tight=False)
-        hero.pack(fill="x", padx=8, pady=(2, 4))  # minimal top space
+        # --- HERO (welcome) card ---
+        hero = RoundedCard(fr, radius=18, pad=20, bg=Colors.dark_card, tight=True)
+        hero.pack(fill="x", padx=8, pady=(2, 4))
 
         title = tk.Label(
             hero.body,
@@ -166,36 +171,111 @@ class HomePage(BasePage):
             fg="#ffffff", bg=Colors.dark_card,
             font=F("h1b", ("Segoe UI", 20, "bold"))
         )
-        title.pack(pady=(2, 4))
+        title.pack(pady=(2, 0))
 
         subtitle = tk.Label(
             hero.body,
             text=("A smart assistant that lets you control your computer with just your eyes and voice.\n"
-                  "Whether you're browsing, chatting, or presenting, it's all hands-free, intuitive, and "
-                  "empowering."),
+                  "Whether you're browsing, chatting, or presenting, it's all hands-free, intuitive, and empowering."),
             fg="#e8eef6", bg=Colors.dark_card,
             justify="center",
             font=F("body", ("Segoe UI", 10))
         )
-        subtitle.pack(pady=(0, 0))
-
-        # keep text nicely wrapped as card resizes
+        subtitle.pack(pady=(0,4))
+        subtitle.configure(wraplength=400)
         def _wrap(e):
-            # leave padding for rounded corners
             subtitle.configure(wraplength=max(150, int(e.width * 0.92)))
         hero.body.bind("<Configure>", _wrap)
 
-        # --- MAIN PANEL (placeholder content below the hero) ---
+        # --- MAIN PANEL ---
         panel = RoundedCard(fr, radius=18, pad=16, bg=Colors.glass_bg, tight=False)
-        panel.pack(fill="both", expand=True, padx=8, pady=(0, 8))
-
-        # (you can replace these with your real controls; kept minimal)
+        panel.pack(fill="both", expand=True, padx=8, pady=(8, 8))
         panel.body.grid_columnconfigure(0, weight=1)
-        tk.Label(panel.body, text="Control Mode", fg=Colors.card_head, bg=Colors.glass_bg,
-                 font=F("h2b", ("Segoe UI", 12, "bold"))).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
-        tk.Label(panel.body, text="(Auto / Manual controls go here)", fg=Colors.card_text,
-                 bg=Colors.glass_bg, font=F("body", ("Segoe UI", 10))
-                 ).grid(row=1, column=0, sticky="w", padx=6, pady=(0, 10))
+
+        # ---- Control Mode ----
+        control_card = RoundedCard(panel.body, radius=12, pad=12,
+                        bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
+        control_card.grid(row=0, column=0, sticky="ew", padx=8, pady=8)
+        control_card.body.grid_columnconfigure(0, weight=1)
+
+        tk.Label(control_card.body, text="Control Mode", fg=Colors.card_head, bg=Colors.glass_bg,
+                font=F("h2b", ("Segoe UI", 12, "bold"))).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
+
+        tk.Label(control_card.body, text="Select how you want to control apps using your gaze – automatic or manual.",
+                fg=Colors.card_text, bg=Colors.glass_bg, font=F("body", ("Segoe UI", 10))
+                ).grid(row=1, column=0, sticky="w", padx=6, pady=(0, 8))
+
+        auto_var = tk.StringVar(value="auto")
+        tk.Radiobutton(control_card.body, text="Auto Control", variable=auto_var, value="auto",
+                    bg=Colors.glass_bg, anchor="w").grid(row=2, column=0, sticky="w", padx=16)
+        tk.Radiobutton(control_card.body, text="Manual Control", variable=auto_var, value="manual",
+                    bg=Colors.glass_bg, anchor="w").grid(row=3, column=0, sticky="w", padx=16, pady=(0, 10))
+
+        # ---- Voice Tips ----
+        voice_card = RoundedCard(panel.body, radius=12, pad=12,
+                 bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
+        voice_card.grid(row=1, column=0, sticky="ew", padx=8, pady=8)
+        voice_card.body.grid_columnconfigure(0, weight=1)
+
+        tk.Label(voice_card.body, text="Voice Tips", fg=Colors.card_head, bg=Colors.glass_bg,
+                font=F("h2b", ("Segoe UI", 12, "bold"))).grid(row=0, column=0, sticky="w", padx=6, pady=(6, 6))
+
+        tk.Label(voice_card.body, text="Turn voice tips ON or OFF while using gaze control.",
+                fg=Colors.card_text, bg=Colors.glass_bg, font=F("body", ("Segoe UI", 10))
+                ).grid(row=1, column=0, sticky="w", padx=6, pady=(0, 8))
+
+        voice_var = tk.StringVar(value="on")
+        tk.Radiobutton(voice_card.body, text="Turn ON", variable=voice_var, value="on",
+                    bg=Colors.glass_bg, anchor="w").grid(row=2, column=0, sticky="w", padx=16)
+        tk.Radiobutton(voice_card.body, text="Turn OFF", variable=voice_var, value="off",
+                    bg=Colors.glass_bg, anchor="w").grid(row=3, column=0, sticky="w", padx=16, pady=(0, 10))
+
+        # ---- Hide to tray ----
+        tray_var = tk.BooleanVar(value=False)
+        tray_frame = tk.Frame(panel.body, bg=Colors.glass_bg)
+        tray_frame.grid(row=8, column=0, sticky="ew", padx=6, pady=(6, 6))
+        tray_toggle = ttk.Checkbutton(tray_frame, text="Hide to tray", variable=tray_var,
+                              style="Switch.TCheckbutton")
+        tray_toggle.pack(side="left")
+        tk.Checkbutton(tray_frame, text="Hide to tray", variable=tray_var,
+                       bg=Colors.glass_bg, anchor="w").pack(side="left")
+        tk.Label(tray_frame, text="When enabled, the app will minimize and continue running in the background.",
+                 fg=Colors.card_text, bg=Colors.glass_bg, font=F("body", ("Segoe UI", 9)),
+                 wraplength=350, justify="left").pack(side="left", padx=(8, 0))
+
+        # ---- Shortcuts Legend ----
+        legend = tk.Frame(panel.body, bg=Colors.glass_bg)
+        legend.grid(row=10, column=0, sticky="ew", padx=6, pady=(12, 6))
+
+        tk.Label(legend, text="Look Up  :", fg="red", bg=Colors.glass_bg,
+                 font=F("body", ("Segoe UI", 9, "bold"))).grid(row=0, column=0, sticky="w")
+        tk.Label(legend, text="Move to the option above", fg=Colors.card_text,
+                 bg=Colors.glass_bg, font=F("body", ("Segoe UI", 9))).grid(row=0, column=1, sticky="w", padx=(6, 0))
+
+        tk.Label(legend, text="Look Down  :", fg="red", bg=Colors.glass_bg,
+                 font=F("body", ("Segoe UI", 9, "bold"))).grid(row=1, column=0, sticky="w")
+        tk.Label(legend, text="Move to the option below", fg=Colors.card_text,
+                 bg=Colors.glass_bg, font=F("body", ("Segoe UI", 9))).grid(row=1, column=1, sticky="w", padx=(6, 0))
+
+        tk.Label(legend, text="Look Left  :", fg="orange", bg=Colors.glass_bg,
+                 font=F("body", ("Segoe UI", 9, "bold"))).grid(row=2, column=0, sticky="w")
+        tk.Label(legend, text="Go to the previous section or tab", fg=Colors.card_text,
+                 bg=Colors.glass_bg, font=F("body", ("Segoe UI", 9))).grid(row=2, column=1, sticky="w", padx=(6, 0))
+
+        tk.Label(legend, text="Look Right :", fg="orange", bg=Colors.glass_bg,
+                 font=F("body", ("Segoe UI", 9, "bold"))).grid(row=3, column=0, sticky="w")
+        tk.Label(legend, text="Go to the next section or tab", fg=Colors.card_text,
+                 bg=Colors.glass_bg, font=F("body", ("Segoe UI", 9))).grid(row=3, column=1, sticky="w", padx=(6, 0))
+
+        tk.Label(legend, text="Blink :", fg="purple", bg=Colors.glass_bg,
+                 font=F("body", ("Segoe UI", 9, "bold"))).grid(row=4, column=0, sticky="w")
+        tk.Label(legend, text="Select / Toggle the highlighted option", fg=Colors.card_text,
+                 bg=Colors.glass_bg, font=F("body", ("Segoe UI", 9))).grid(row=4, column=1, sticky="w", padx=(6, 0))
+
+
+        # ---- Start Button ----
+        start_btn = PillButton(panel.body, text="START APPLICATION", command=lambda: messagebox.showinfo("Start", "Application started!"))
+        start_btn.grid(row=9, column=0, pady=(16, 6), sticky="e")
 
         return fr
 
