@@ -97,7 +97,7 @@ tmp/
 temp/
 
 # Ignore everything in Voice folder
-Voice/*
+Voice_Model/*
 
 # But keep this one file
-!Voice/voice_command_handler.py
+!Voice_Model/voice_autodictation.py

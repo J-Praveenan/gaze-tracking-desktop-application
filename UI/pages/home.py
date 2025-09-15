@@ -1,448 +1,235 @@
-# UI/pages/home.py
+# UI/pages/home.py (only the HomePage class replaced)
 import tkinter as tk
 from tkinter import ttk, messagebox
+from pathlib import Path
+from PIL import Image, ImageTk
+
 from UI.theme import Colors, Fonts
 from UI.widgets import RoundedCard, PillButton
 from .base import BasePage
 
-
 def F(name, default):
-    """Safe font getter, e.g. F('h3', ('Segoe UI', 12, 'bold'))"""
     return getattr(Fonts, name, default)
 
-
-# ---- layout knobs ----
 SIDEBAR_W, SIDEBAR_H = 0.21, 0.86
 SIDEBAR_X, SIDEBAR_REL = 0.045, 0.55
-
 MAIN_W = 0.70
 MAIN_RELX = SIDEBAR_X + SIDEBAR_W + (1 - (SIDEBAR_X + SIDEBAR_W)) * 0.5
 MAIN_RELH, MAIN_RELY = SIDEBAR_H, SIDEBAR_REL
 
-
-def DLabel(parent, **kw):
-    """Label that sits on a dark card (no halos)."""
-    base = dict(bg=Colors.dark_card, fg="#ffffff", bd=0, highlightthickness=0)
-    base.update(kw)
-    return tk.Label(parent, **base)
-
-
-# -------------------- Right-side sections (simple placeholders) --------------------
-
-class _SectionBase(tk.Frame):
-    def __init__(self, parent, title: str, subtitle: str = ""):
-        super().__init__(parent, bg=Colors.page_bg)
-        # banner
-        banner = RoundedCard(self, radius=18, pad=6, bg=Colors.dark_card, tight=False)
-        banner.pack(fill="x", pady=(0, 8))
-        DLabel(
-            banner.body,
-            text=title,
-            font=F("h2b", ("Segoe UI", 14, "bold")),
-            justify="center"
-        ).pack(fill="x", padx=6, pady=(2, 6))
-        if subtitle:
-            tk.Label(
-                banner.body, text=subtitle, fg="#cfd8e3", bg=Colors.dark_card,
-                font=F("body", ("Segoe UI", 10)), justify="center", wraplength=1100
-            ).pack(fill="x", padx=6, pady=(0, 6))
-
-        # glass body area to put content in
-        self.glass = RoundedCard(self, radius=18, pad=14, bg=Colors.glass_bg, tight=False)
-        self.glass.pack(fill="both", expand=True, pady=(0, 8))
-        self.body = tk.Frame(self.glass.body, bg=self.glass.cget("bg"))
-        self.body.pack(fill="both", expand=True)
-
-
-class HomeSection(_SectionBase):
-    def __init__(self, parent):
-        super().__init__(
-            parent,
-            "Welcome to LOOK TRACK VISION",
-            "Control your computer with your eyes and voice — hands-free, intuitive, empowering."
-        )
-        # ---- Control Mode ----
-        self._section(parent=self.body, title="Control Mode",
-                      desc="Select how you want to control apps using your gaze — automatic or manual.")
-
-    def _section(self, parent, title, desc):
-        box = tk.Frame(parent, bg=self.glass.cget("bg"),
-                       highlightbackground="#4a637d", highlightcolor="#4a637d",
-                       highlightthickness=2, bd=0)
-        box.pack(fill="x", pady=(6, 10))
-        tk.Label(box, text=title, font=F("h2b", ("Segoe UI", 14, "bold")),
-                 fg=Colors.card_head, bg=self.glass.cget("bg")).pack(anchor="w", padx=18, pady=(10, 0))
-        tk.Label(box, text=desc, font=F("body", ("Segoe UI", 11)),
-                 fg=Colors.muted, bg=self.glass.cget("bg"), wraplength=1000
-                 ).pack(anchor="w", padx=18, pady=(2, 8))
-
-        mode_var = tk.StringVar(value="auto")
-        r = tk.Frame(box, bg=self.glass.cget("bg")); r.pack(anchor="w", padx=18, pady=(2, 12))
-        ttk.Radiobutton(r, text="Auto Control", value="auto", variable=mode_var).pack(side="left", padx=(0, 18))
-        ttk.Radiobutton(r, text="Manual Control", value="manual", variable=mode_var).pack(side="left")
-
-        # tips + start
-        tips = tk.Label(self.body,
-                        text="These gaze and blink actions work across the entire application.",
-                        font=F("body", ("Segoe UI", 11)), fg=Colors.tips, bg=self.glass.cget("bg"))
-        tips.pack(anchor="w", pady=(6, 0), padx=12)
-
-        right = tk.Frame(self.body, bg=self.glass.cget("bg"))
-        right.pack(anchor="e", fill="x", pady=(8, 4))
-        PillButton(right, text="START APPLICATION   ⏻",
-                   command=lambda: messagebox.showinfo("LOOK TRACK VISION", "Start your backend here.")
-                   ).pack(side="right", padx=6, pady=4)
-
-
-class SetupSection(_SectionBase):
-    def __init__(self, parent):
-        super().__init__(parent, "Set Up Gaze Tracking",
-                         "Calibrate camera, eye model, and environment.")
-        tk.Label(self.body, text="(Your setup UI goes here)", bg=self.glass.cget("bg"),
-                 fg=Colors.card_text, font=F("body", ("Segoe UI", 11))).pack(padx=16, pady=12, anchor="w")
-
-
-class AppsSection(_SectionBase):
-    def __init__(self, parent):
-        super().__init__(parent, "Apps Control", "Bind gaze gestures to your favorite apps.")
-        tk.Label(self.body, text="(Your apps mapping UI goes here)", bg=self.glass.cget("bg"),
-                 fg=Colors.card_text, font=F("body", ("Segoe UI", 11))).pack(padx=16, pady=12, anchor="w")
-
-
-class SystemSection(_SectionBase):
-    def __init__(self, parent):
-        super().__init__(parent, "System Control", "Volume, brightness, mouse, and more.")
-        tk.Label(self.body, text="(Your system controls go here)", bg=self.glass.cget("bg"),
-                 fg=Colors.card_text, font=F("body", ("Segoe UI", 11))).pack(padx=16, pady=12, anchor="w")
-
-
-class TipsSection(_SectionBase):
-    def __init__(self, parent):
-        super().__init__(parent, "Tips", "Helpful hints for smooth gaze navigation.")
-        tk.Label(self.body, text="(Your tips content goes here)", bg=self.glass.cget("bg"),
-                 fg=Colors.card_text, font=F("body", ("Segoe UI", 11))).pack(padx=16, pady=12, anchor="w")
-
-
-class InfoSection(_SectionBase):
-    def __init__(self, parent):
-        super().__init__(parent, "Information", "Version, authors, credits, links.")
-        tk.Label(self.body, text="(Your info content goes here)", bg=self.glass.cget("bg"),
-                 fg=Colors.card_text, font=F("body", ("Segoe UI", 11))).pack(padx=16, pady=12, anchor="w")
-
-
-class SettingsSection(_SectionBase):
-    def __init__(self, parent):
-        super().__init__(parent, "Settings", "Theme, audio, accessibility, preferences.")
-        tk.Label(self.body, text="(Your settings UI goes here)", bg=self.glass.cget("bg"),
-                 fg=Colors.card_text, font=F("body", ("Segoe UI", 11))).pack(padx=16, pady=12, anchor="w")
-
-
-# -------------------- Home page with persistent sidebar --------------------
+ASSETS = Path(__file__).resolve().parents[2] / "Assets" / "test_images"
 
 class HomePage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
         self.overlay.configure(bg=Colors.page_bg)
 
+        # ---- image cache to avoid GC ----
+        self._img = {}
+
+        # ---- preload images (fallbacks if missing) ----
+        def load_img(name, size=None):
+            p = ASSETS / name
+            if not p.exists():
+                return None
+            im = Image.open(p)
+            if size:
+                im = im.resize(size, Image.LANCZOS)
+            ph = ImageTk.PhotoImage(im)
+            self._img[name] = ph
+            return ph
+
+        # sidebar / header icons
+        self.logo_26 = load_img("CustomTkinter_logo_single.png", (26, 26))
+        self.nav_home_20 = load_img("home_light.png", (20, 20))
+        self.nav_chat_20 = load_img("chat_light.png", (20, 20))
+        self.nav_user_20 = load_img("add_user_light.png", (20, 20))
+
+        # main banner + button icon
+        self.banner_500x150 = load_img("large_test_image.png", (500, 150))
+        self.btn_icon_20 = load_img("image_icon_light.png", (20, 20))
+
         # ---------- SIDEBAR ----------
-        self.sidebar = RoundedCard(self.overlay, radius=24, pad=10,
-                                   bg=Colors.sidebar_bg, tight=False)
+        self.sidebar = RoundedCard(self.overlay, radius=24, pad=0, bg=Colors.sidebar_bg, tight=False)
         self.sidebar.place(relx=SIDEBAR_X, rely=SIDEBAR_REL, anchor="w",
                            relwidth=SIDEBAR_W, relheight=SIDEBAR_H)
         self._build_sidebar(self.sidebar.body)
 
-        # ---------- MAIN COLUMN (holds swappable sections) ----------
+        # ---------- MAIN COLUMN (stack) ----------
         self.main_col = tk.Frame(self.overlay, bg=Colors.page_bg)
         self.main_col.place(relx=MAIN_RELX, rely=MAIN_RELY, anchor="center",
                             relwidth=MAIN_W, relheight=MAIN_RELH)
 
-        # section host (stack); we create all once and raise the one we need
-        self.sections = {
-            "Home":       HomeSection(self.main_col),
-            "Setup":      SetupSection(self.main_col),
-            "Apps":       AppsSection(self.main_col),
-            "System":     SystemSection(self.main_col),
-            "Tips":       TipsSection(self.main_col),
-            "Info":       InfoSection(self.main_col),
-            "Settings":   SettingsSection(self.main_col),
+        # three frames like CTk example: home / set_up_gaze_tracking / frame_3
+        self.frames = {
+            "home": self._make_home_frame(self.main_col),
+            "set_up_gaze_tracking": self._make_second_frame(self.main_col),
+            "frame_3": self._make_third_frame(self.main_col),
         }
-        for s in self.sections.values():
-            s.place(relx=0, rely=0, relwidth=1, relheight=1)
+        for fr in self.frames.values():
+            fr.place(relx=0, rely=0, relwidth=1, relheight=1)
 
-        # default
-        self.show_section("Home")
+        # default selection
+        self.select_frame_by_name("home")
 
-    # =================== SIDEBAR WITH MOVING ROUNDED OUTLINE ===================
-
+    # ======= Sidebar with icon buttons (CTk-like) =======
     def _build_sidebar(self, parent):
-        """
-        Sidebar with clickable rows and a rounded white outline that glides
-        to the clicked row. We do NOT navigate to other top-level pages; instead
-        we call show_section(...) to swap the RIGHT content only.
-        """
         parent.configure(bg=Colors.sidebar_bg)
         for w in parent.winfo_children():
             w.destroy()
 
         wrap = tk.Frame(parent, bg=Colors.sidebar_bg)
         wrap.pack(fill="both", expand=True, padx=16, pady=16)
+        wrap.grid_rowconfigure(5, weight=1)
 
-        # Canvas for the moving rounded outline; sits BEHIND the rows.
-        self._hilite = tk.Canvas(wrap, bg=Colors.sidebar_bg, highlightthickness=0, bd=0)
-        self._hilite.place(relx=0, rely=0, relwidth=1, relheight=1)
+        # Header (logo + text)
+        head = tk.Frame(wrap, bg=Colors.sidebar_bg)
+        head.grid(row=0, column=0, sticky="ew", pady=(6, 12))
+        if self.logo_26:
+            tk.Label(head, image=self.logo_26, bg=Colors.sidebar_bg).pack(side="left", padx=(2, 8))
+        tk.Label(head, text="Image Example", font=F("h2b", ("Segoe UI", 15, "bold")),
+                 fg="#e6eef7", bg=Colors.sidebar_bg).pack(side="left")
 
-        # Rows on top
-        self._rows = tk.Frame(wrap, bg=Colors.sidebar_bg)
-        self._rows.place(relx=0, rely=0, relwidth=1, relheight=1)
+        # Helper to create a "row" with border + the actual flat button inside
+        def _nav_row(row_index, text, icon, cmd):
+            # container with toggleable white border
+            cont = tk.Frame(
+                wrap, bg=Colors.sidebar_bg,
+                highlightthickness=0,  # will be set to 2 on selection
+                highlightbackground="#ffffff",
+                highlightcolor="#ffffff",
+                bd=0
+            )
+            cont.grid(row=row_index, column=0, sticky="ew", padx=2, pady=4)
+            cont.grid_columnconfigure(0, weight=1)
 
-        # Offscreen outline at start (nothing selected)
-        self._outline_ids = self._draw_round_outline(self._hilite, -100, -100, -50, -50,
-                                                     r=14, width=3, color="#e6eef7")
-        self._current_row = None
-        self._rows.lift()
+            # the real button
+            btn = tk.Button(
+                cont, text=("  " + text), image=icon, compound="left", anchor="w",
+                font=F("h3", ("Segoe UI", 12, "bold")),
+                fg="#e6eef7", bg=Colors.sidebar_bg, bd=0, relief="flat",
+                activebackground="#2b3947", activeforeground="#e6eef7",
+                cursor="hand2"
+            )
+            # hover effect
+            btn.bind("<Enter>", lambda e: btn.configure(bg="#2b3947"))
+            btn.bind("<Leave>", lambda e: btn.configure(bg=Colors.sidebar_bg))
+            btn.configure(command=cmd)
+            btn.grid(row=0, column=0, sticky="ew", padx=6, pady=6)
+            return cont, btn
 
-        # Home (label only)
-        home = tk.Frame(self._rows, bg=Colors.sidebar_bg, takefocus=0, cursor="hand2")
-        home.pack(anchor="w")
-        lbl_home = tk.Label(home, text="  🏠  Home",
-                            font=F("h2b", ("Segoe UI", 14, "bold")),
-                            fg="#e6eef7", bg=Colors.sidebar_bg, bd=0)
-        lbl_home.pack(padx=14, pady=8)
+        # rows + buttons
+        self._nav_rows = {}   # key -> container frame (so we can show border)
+        self._nav_btns = {}   # key -> button (for bg highlight)
 
-        tk.Frame(self._rows, height=12, bg=Colors.sidebar_bg).pack(fill="x")
+        r = 1
+        row_home, self.btn_home = _nav_row(r, "Home", self.nav_home_20,
+                                           lambda: self.select_frame_by_name("home"))
+        self._nav_rows["home"] = row_home
+        self._nav_btns["home"] = self.btn_home
 
-        # Sidebar items -> section keys
-        items = [
-            ("Set Up Gaze Tracking", "Setup",    "⚙️"),
-            ("Apps Control",         "Apps",     "🧩"),
-            ("System Control",       "System",   "🖥️"),
-            ("Tips",                 "Tips",     "💡"),
-            ("Information",          "Info",     "ℹ️"),
-            ("Settings",             "Settings", "⚙️"),
-        ]
+        r += 1
+        row_f2, self.btn_chat = _nav_row(r, "Set Up Gaze Tracking", self.nav_chat_20,
+                                         lambda: self.select_frame_by_name("set_up_gaze_tracking"))
+        self._nav_rows["set_up_gaze_tracking"] = row_f2
+        self._nav_btns["set_up_gaze_tracking"] = self.btn_chat
 
-        self._row_widgets = []
+        r += 1
+        row_f3, self.btn_user = _nav_row(r, "Frame 3", self.nav_user_20,
+                                         lambda: self.select_frame_by_name("frame_3"))
+        self._nav_rows["frame_3"] = row_f3
+        self._nav_btns["frame_3"] = self.btn_user
 
-        def _bind_click(widget, section_key, row_widget):
-            def on_click(_evt=None, key=section_key, rw=row_widget):
-                first_time = self._current_row is None
-                self._current_row = rw
-                self._move_outline_to_row(rw, instant=first_time)
-                self.after(80, lambda: self.show_section(key))   # swap right side only
-                try:
-                    self.overlay.focus_set()
-                except Exception:
-                    pass
-            widget.bind("<Button-1>", on_click)
+        # spacer
+        tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=4, column=0, sticky="nsew")
 
-        # Make Home clickable too
-        _bind_click(home, "Home", home)
-        _bind_click(lbl_home, "Home", home)
-        self._row_widgets.append(home)
+        # Appearance dropdown (placeholder)
+        dd_wrap = tk.Frame(wrap, bg=Colors.sidebar_bg)
+        dd_wrap.grid(row=6, column=0, sticky="ew", pady=(12, 4))
+        tk.Label(dd_wrap, text="Appearance", fg="#cfd8e3", bg=Colors.sidebar_bg,
+                 font=F("body", ("Segoe UI", 10, "bold"))).pack(anchor="w", padx=2, pady=(0, 4))
+        self.appearance = ttk.Combobox(dd_wrap, values=["Light", "Dark", "System"], state="readonly")
+        self.appearance.current(2)
+        self.appearance.pack(fill="x")
+        self.appearance.bind("<<ComboboxSelected>>", self._on_appearance_change)
 
-        for text, key, icon in items:
-            row = tk.Frame(self._rows, bg=Colors.sidebar_bg, cursor="hand2", takefocus=0)
-            row.pack(fill="x", pady=10)
+    # ======= Main frames (CTk-like content) =======
+    def _make_home_frame(self, parent):
+        fr = tk.Frame(parent, bg=Colors.page_bg)
+        # top banner card
+        card = RoundedCard(fr, radius=18, pad=10, bg=Colors.glass_bg, tight=False)
+        card.pack(fill="x", padx=8, pady=(0, 10))
+        tk.Label(card.body, text="", image=self.banner_500x150 or "",
+                 bg=Colors.glass_bg).pack(padx=10, pady=6)
 
-            tk.Label(row, text=icon, takefocus=0,
-                     font=F("h3", ("Segoe UI", 12, "bold")),
-                     fg="#e6eef7", bg=Colors.sidebar_bg).pack(side="left", padx=(2, 10))
+        # button panel (like CTk example)
+        panel = RoundedCard(fr, radius=18, pad=16, bg=Colors.glass_bg, tight=False)
+        panel.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
-            lbl = tk.Label(row, text=text, takefocus=0,
-                           font=F("h3", ("Segoe UI", 12, "bold")),
-                           fg="#e6eef7", bg=Colors.sidebar_bg, bd=0)
-            lbl.pack(side="left")
+        def _img_btn(text, compound="left", anchor="center"):
+            return tk.Button(
+                panel.body, text=text,
+                image=self.btn_icon_20, compound=compound, anchor=anchor,
+                font=F("h3", ("Segoe UI", 11, "bold")),
+                fg=Colors.card_text, bg=Colors.dark_card, activebackground="#2f3e4c",
+                activeforeground="#ffffff", bd=0, relief="flat", padx=12, pady=10, cursor="hand2"
+            )
 
-            _bind_click(row, key, row)
-            _bind_click(lbl, key, row)
-            self._row_widgets.append(row)
+        b1 = _img_btn("", compound="left")
+        b2 = _img_btn("CTkButton", compound="right")
+        b3 = _img_btn("CTkButton", compound="top")
+        b4 = _img_btn("CTkButton", compound="bottom", anchor="w")
 
-    # ---- rounded outline helpers (canvas: 4 arcs + 4 lines) ----
-    def _draw_round_outline(self, canvas, x1, y1, x2, y2, r=12, width=2, color="#fff"):
-        r = max(0, min(r, int(min(x2 - x1, y2 - y1) / 2)))
-        ids = {}
-        ids["a_tl"] = canvas.create_arc(x1, y1, x1 + 2*r, y1 + 2*r,
-                                        start=90, extent=90, style="arc",
-                                        outline=color, width=width)
-        ids["a_tr"] = canvas.create_arc(x2 - 2*r, y1, x2, y1 + 2*r,
-                                        start=0, extent=90, style="arc",
-                                        outline=color, width=width)
-        ids["a_br"] = canvas.create_arc(x2 - 2*r, y2 - 2*r, x2, y2,
-                                        start=270, extent=90, style="arc",
-                                        outline=color, width=width)
-        ids["a_bl"] = canvas.create_arc(x1, y2 - 2*r, x1 + 2*r, y2,
-                                        start=180, extent=90, style="arc",
-                                        outline=color, width=width)
-        ids["l_top"]   = canvas.create_line(x1 + r, y1, x2 - r, y1, fill=color, width=width)
-        ids["l_right"] = canvas.create_line(x2, y1 + r, x2, y2 - r, fill=color, width=width)
-        ids["l_bot"]   = canvas.create_line(x1 + r, y2, x2 - r, y2, fill=color, width=width)
-        ids["l_left"]  = canvas.create_line(x1, y1 + r, x1, y2 - r, fill=color, width=width)
-        ids["_bbox"] = [x1, y1, x2, y2, r, width]
-        return ids
+        # grid like CTk example
+        panel.body.grid_columnconfigure(0, weight=1)
+        b1.grid(row=0, column=0, sticky="ew", padx=10, pady=6)
+        b2.grid(row=1, column=0, sticky="ew", padx=10, pady=6)
+        b3.grid(row=2, column=0, sticky="ew", padx=10, pady=6)
+        b4.grid(row=3, column=0, sticky="ew", padx=10, pady=6)
+        return fr
 
-    def _set_round_outline(self, ids, x1, y1, x2, y2):
-        c = self._hilite
-        _, _, _, _, r, _ = ids["_bbox"]
-        c.coords(ids["a_tl"], x1, y1, x1 + 2*r, y1 + 2*r)
-        c.coords(ids["a_tr"], x2 - 2*r, y1, x2, y1 + 2*r)
-        c.coords(ids["a_br"], x2 - 2*r, y2 - 2*r, x2, y2)
-        c.coords(ids["a_bl"], x1, y2 - 2*r, x1 + 2*r, y2)
-        c.coords(ids["l_top"],   x1 + r, y1, x2 - r, y1)
-        c.coords(ids["l_right"], x2, y1 + r, x2, y2 - r)
-        c.coords(ids["l_bot"],   x1 + r, y2, x2 - r, y2)
-        c.coords(ids["l_left"],  x1, y1 + r, x1, y2 - r)
-        ids["_bbox"][:4] = [x1, y1, x2, y2]
+    def _make_second_frame(self, parent):
+        fr = tk.Frame(parent, bg=Colors.page_bg)
+        card = RoundedCard(fr, radius=18, pad=18, bg=Colors.glass_bg, tight=False)
+        card.pack(fill="both", expand=True, padx=8, pady=8)
+        tk.Label(card.body, text="Set Up Gaze Tracking", fg=Colors.card_head, bg=Colors.glass_bg,
+                 font=F("h2b", ("Segoe UI", 14, "bold"))).pack(anchor="w")
+        tk.Label(card.body, text="(Your second frame content)",
+                 fg=Colors.card_text, bg=Colors.glass_bg, font=F("body", ("Segoe UI", 11))
+                 ).pack(anchor="w", pady=(6, 0))
+        return fr
 
-    def _move_outline_to_row(self, row, instant=False):
-        """Animate the rounded outline to wrap the given row."""
-        try:
-            y = row.winfo_y()
-            h = row.winfo_height() or 40
-            pad_x, pad_y = 12, 6
-            x1 = pad_x
-            y1 = max(0, y - pad_y)
-            x2 = self._rows.winfo_width() - pad_x
-            y2 = y + h + pad_y
-        except Exception:
-            return
+    def _make_third_frame(self, parent):
+        fr = tk.Frame(parent, bg=Colors.page_bg)
+        card = RoundedCard(fr, radius=18, pad=18, bg=Colors.glass_bg, tight=False)
+        card.pack(fill="both", expand=True, padx=8, pady=8)
+        tk.Label(card.body, text="Frame 3", fg=Colors.card_head, bg=Colors.glass_bg,
+                 font=F("h2b", ("Segoe UI", 14, "bold"))).pack(anchor="w")
+        tk.Label(card.body, text="(Your third frame content)",
+                 fg=Colors.card_text, bg=Colors.glass_bg, font=F("body", ("Segoe UI", 11))
+                 ).pack(anchor="w", pady=(6, 0))
+        return fr
 
-        cx1, cy1, cx2, cy2, *_ = self._outline_ids["_bbox"]
+    # ======= selection visuals (bg + white border) =======
+    def _set_selected_nav(self, key: str):
+        # border toggle
+        for k, cont in self._nav_rows.items():
+            cont.configure(highlightthickness=(2 if k == key else 0))
+        # background toggle
+        for k, btn in self._nav_btns.items():
+            btn.configure(bg=("#3a4c60" if k == key else Colors.sidebar_bg))
 
-        if instant or cx1 == cx2 == 0:
-            self._set_round_outline(self._outline_ids, x1, y1, x2, y2)
-            self._rows.lift()   # keep rows above the canvas
-            return
-
-        steps = 12
-        dx1 = (x1 - cx1) / steps
-        dy1 = (y1 - cy1) / steps
-        dx2 = (x2 - cx2) / steps
-        dy2 = (y2 - cy2) / steps
-
-        def step(i=0, a=cx1, b=cy1, c=cx2, d=cy2):
-            na, nb, nc, nd = a + dx1, b + dy1, c + dx2, d + dy2
-            self._set_round_outline(self._outline_ids, na, nb, nc, nd)
-            self._rows.lift()
-            if i < steps - 1:
-                self.after(12, lambda: step(i + 1, na, nb, nc, nd))
+    # ======= Frame switching like CTk example =======
+    def select_frame_by_name(self, name: str):
+        for key, fr in self.frames.items():
+            if key == name:
+                fr.lift()
             else:
-                self._set_round_outline(self._outline_ids, x1, y1, x2, y2)
-                self._rows.lift()
-        step()
+                fr.lower()
+        self._set_selected_nav(name)
 
-    # ---------- section swap ----------
-    def show_section(self, key: str):
-        """Raise only the right-side section; sidebar remains."""
-        sect = self.sections.get(key)
-        if not sect:
-            return
-        sect.tkraise()
-
-    # ---------- actions ----------
-    def _start_app(self):
-        messagebox.showinfo(
-            "LOOK TRACK VISION",
-            "Start Application clicked.\nHook this to start your backend."
-        )
-
-    def _run_calibration(self):
-        """Launch Calibration/Calibration.py in a separate process so Tk stays responsive."""
-        calib_path = self._find_calibration_script()
-        if not calib_path:
-            messagebox.showerror("Calibration", "Could not find Calibration.py (looked under ./Calibration/).")
-            return
-
-        btn = self.sidebar_buttons.get("Set Up Gaze Tracking")
-        if btn:
-            btn.state(['disabled'])
-
-        def work():
-            rc = -1
-            try:
-                rc = subprocess.run([sys.executable, "-u", str(calib_path)]).returncode
-            except Exception:
-                rc = -1
-
-            def done():
-                if btn:
-                    btn.state(['!disabled'])
-                if rc == 0:
-                    messagebox.showinfo("Calibration", "Calibration complete. Thresholds saved.")
-                else:
-                    messagebox.showwarning("Calibration", "Calibration cancelled or failed. Check console output.")
-            self.after(0, done)
-
-        threading.Thread(target=work, daemon=True).start()
-        
-        
-        
-    def _run_gaze_tracker(self):
-        """
-        Launch main.py in a separate process so the Tk UI stays responsive.
-        """
-        main_path = self._find_main_script()
-        if not main_path:
-            messagebox.showerror("Gaze Tracker", "Could not find main.py.")
-            return
-
-        btn = self.sidebar_buttons.get("Gaze Tracker")
-        if btn:
-            btn.state(['disabled'])
-
-        def work():
-            rc = -1
-            try:
-                # -u for unbuffered prints; run with same interpreter
-                rc = subprocess.run([sys.executable, "-u", str(main_path)]).returncode
-            except Exception:
-                rc = -1
-
-            def done():
-                if btn:
-                    btn.state(['!disabled'])
-                if rc == 0:
-                    messagebox.showinfo("Gaze Tracker", "Gaze tracker closed.")
-                else:
-                    messagebox.showwarning("Gaze Tracker", "Gaze tracker ended with an error. Check console.")
-            self.after(0, done)
-
-        threading.Thread(target=work, daemon=True).start()
-
-    def _find_main_script(self) -> Path | None:
-        """
-        Try to locate main.py (your gaze tracker) in common places.
-        Adjust as needed if you keep it elsewhere.
-        """
-        candidates = [
-            Path.cwd() / "main.py",
-            Path(__file__).resolve().parents[2] / "main.py",      # project root
-            Path(__file__).resolve().parent / "main.py",          # same folder (unlikely)
-        ]
-        for p in candidates:
-            if p.exists():
-                return p
-        return None
-
-
-    def _find_calibration_script(self) -> Path | None:
-        """Try to locate Calibration.py or calibration.py in a Calibration/ folder."""
-        candidates = [
-            Path.cwd() / "Calibration" / "Calibration.py",
-            Path.cwd() / "Calibration" / "calibration.py",
-            Path(__file__).resolve().parent / "Calibration" / "Calibration.py",
-            Path(__file__).resolve().parent / "Calibration" / "calibration.py",
-            Path(__file__).resolve().parents[1] / "Calibration" / "Calibration.py",
-            Path(__file__).resolve().parents[1] / "Calibration" / "calibration.py",
-        ]
-        for p in candidates:
-            if p.exists():
-                return p
-        return None
-
-    def on_show(self):
-        # Optional: clear the outline when the page is re-shown
-        if hasattr(self, "_outline_ids"):
-            self._set_round_outline(self._outline_ids, -100, -100, -50, -50)
-            self._current_row = None
-        # ensure current section visible
-        self.show_section("Home")
+    # ======= Appearance (placeholder hook) =======
+    def _on_appearance_change(self, _evt=None):
+        choice = self.appearance.get()
+        # Hook your real theme switch here if you have one
+        messagebox.showinfo("Appearance", f"Selected: {choice}")

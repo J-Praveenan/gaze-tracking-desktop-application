@@ -1,6 +1,6 @@
 {
-    "LEFT_THRESHOLD": 1,
+    "LEFT_THRESHOLD": 2,
     "RIGHT_THRESHOLD": -2,
     "UP_THRESHOLD": -1,
-    "DOWN_THRESHOLD": -7
+    "DOWN_THRESHOLD":-7
 }

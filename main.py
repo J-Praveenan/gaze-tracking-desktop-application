@@ -16,10 +16,14 @@ import os
 import webbrowser
 from json import JSONDecodeError
 from typing import Tuple
+# main.py (simplified snippet)
+from Voice_Model.voice_autodictation import start_voice_autodictation
 
-from Voice.voice_command_handler import (
-    transcribe_command, record_audio, execute_voice_command
-)
+import threading
+
+# from Voice.voice_command_handler import (
+#     transcribe_command, record_audio, execute_voice_command
+# )
 
 
 # ===== THEME (approximate to your 2nd screenshot; tweak hex to match exactly) =====
@@ -117,6 +121,12 @@ def click_on_blink():
     _last_click_ts = now
     x, y = pyautogui.position()
     pyautogui.click(x, y)
+    
+    
+    
+# --- Gaze suppression after blinks/winks ---
+SUPPRESS_AFTER_BLINK_SEC = 0.15   # small quiet period after any wink/long-blink
+_suppress_until_ts = 0.0          # timestamp; while now < this, don't predict
 
 
 
@@ -127,6 +137,7 @@ ACCURACY_GATE = 65          # only move when model confidence >= this
 MOVE_COOLDOWN_SEC = 0.08    # min time between moves
 
 _last_cursor_move_ts = 0.0  # do not rename; used by move_cursor_for_gaze
+
 
 
 # ===== Smooth cursor controller =====
@@ -172,7 +183,7 @@ def _start_cursor_smoother():
 # --- Long-blink tuning ---
 
 # --- Wink & long-blink tuning (adjust to taste) ---
-EAR_CLOSED = 0.12           # eye considered closed below this
+EAR_CLOSED = 0.18           # eye considered closed below this
 EAR_OPEN_HYST = 0.16        # must be clearly open above this
 WINK_OPEN_MARGIN = 0.02     # the OTHER eye must be this much more open
 WINK_MIN_SEC = 0.08         # ignore micro twitches
@@ -231,12 +242,14 @@ _anchor_points = _compute_anchors()
 _start_cursor_smoother()
 
 
+
 # ===== UI sizing =====
 UI_W = 1600        # overall canvas width  (↑ this to make everything wider)
 UI_H = 950         # overall canvas height
 TITLE_BAR_H = 68   # height of the top title bar
 STRIP_H = 120      # height of the strip above video
 MARGIN_X = 44      # left/right margin around content
+
 MARGIN_Y = 40      # top/bottom margin around content
 
 # Optional: app icon in the title bar (PNG supported, with alpha)
@@ -322,10 +335,11 @@ def _double_click_debounced(interval=0.15):
     if now - _last_click_ts < CLICK_COOLDOWN_SEC:
         return
     _last_click_ts = now
-    pyautogui.click(clicks=2, interval=interval, button="left")
+    pyautogui.click(clicks=1, interval=interval, button="left")
+    pyautogui.press('enter')
 
     # record as two left-clicks
-    left_click_count += 2
+    left_click_count += 1
     _last_click_side = "left_dbl"
     _last_click_flash_until = time.time() + 0.6
 
@@ -438,24 +452,31 @@ blink_confirmed = False
 
 
 # Landmark indices for left and right eye
-LEFT_EYE_LANDMARKS = [33, 160, 158, 133, 153, 144]
-RIGHT_EYE_LANDMARKS = [362, 385, 387, 263, 373, 380]
+# LEFT_EYE_LANDMARKS = [33, 160, 158, 133, 153, 144]
+# RIGHT_EYE_LANDMARKS = [362, 385, 387, 263, 373, 380]
+
+LEFT_EYE_LANDMARKS  = [362, 385, 387, 263, 373, 380]  # subject's left
+RIGHT_EYE_LANDMARKS = [33, 160, 158, 133, 153, 144]   # subject's right
 
 def euclidean(p1, p2):
     return np.linalg.norm(np.array(p1) - np.array(p2))
 
+
 def eye_aspect_ratio(landmarks, eye_indices):
+    # landmarks is expected to be a numpy array of shape (>=478, 2)
+    if landmarks is None or len(landmarks) == 0 or np.max(eye_indices) >= len(landmarks):
+        return None
     p1 = landmarks[eye_indices[1]]
     p2 = landmarks[eye_indices[2]]
     p3 = landmarks[eye_indices[5]]
     p4 = landmarks[eye_indices[4]]
     p5 = landmarks[eye_indices[0]]
     p6 = landmarks[eye_indices[3]]
-    
     vertical = (euclidean(p2, p4) + euclidean(p1, p3)) / 2.0
     horizontal = euclidean(p5, p6)
-    ear = vertical / horizontal
-    return ear
+    return vertical / horizontal if horizontal > 1e-6 else None
+
+
 
 
 detector = dlib.get_frontal_face_detector()
@@ -659,41 +680,7 @@ def crop_eye(img, eye_points):
     return eye_img, eye_rect
 
 
-# main
-def voice_command_loop():
-    speak("Voice assistant activated.")
-    while True:
-        command = listen()
-        if not command:
-            continue
-        if "exit" in command or "stop" in command or "bye" in command:
-            speak("Voice control stopped.")
-            break
-        if "open" in command:
-            if any(app in command for app in ["chrome", "zoom", "excel", "powerpoint", "word"]):
-                open_application(command)
-            elif any(site in command for site in ["youtube", "google"]):
-                open_website(command)
-            else:
-                speak("I can't open that.")
 
-        # ✅ Add these new voice typing commands
-        elif "type in zoom" in command:
-            voice_type_to_zoom_chat()
-
-        elif "search on youtube" in command or "search on chrome" in command:
-            voice_search_in_browser()
-
-        else:
-            speak("Please say open followed by application or website.")
-
-
-# Start voice assistant in background
-voice_thread = threading.Thread(target=voice_command_loop, daemon=True)
-voice_thread.start()
-
-
-# cap = cv2.VideoCapture(0)
 
 cap = cv2.VideoCapture(0)
 
@@ -881,6 +868,9 @@ while cap.isOpened():
     h, w = (112, 128)
     if not ret:
         break
+    
+    # UI-only mirror
+    display = cv2.flip(img, 1)
 
     # img = cv2.flip(img, 1)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -891,20 +881,79 @@ while cap.isOpened():
 
     # Process the frame to get face landmarks
     results = face_mesh.process(rgb_frame)
+    # ---------------- FaceMesh to mesh_points (safe) ----------------
     img_h, img_w = img.shape[:2]
-    
     ih, iw = gray.shape
+
+    mesh_points = None
     if results.multi_face_landmarks:
         face_landmarks = results.multi_face_landmarks[0]
-        mesh_points = [(int(p.x * iw), int(p.y * ih)) for p in face_landmarks.landmark]
-    else:
-        mesh_points = []   # or continue to next frame
+        pts = np.array([
+            np.multiply([p.x, p.y], [iw, ih]).astype(int)
+            for p in face_landmarks.landmark
+        ])
+        # You use iris indices up to 477; require them to exist
+        if pts.shape[0] >= 478:
+            mesh_points = pts
 
+    # If no usable landmarks, render UI and continue
+    if mesh_points is None:
+        if 't_prev' not in globals():
+            t_prev = time.perf_counter()
+        fps = 1.0 / max(1e-6, (time.perf_counter() - t_prev))
+        t_prev = time.perf_counter()
 
-    left_ear = eye_aspect_ratio(mesh_points, LEFT_EYE_LANDMARKS)
+        ui = compose_ui(
+            frame=display,
+            eye_left_view=None,
+            eye_right_view=None,
+            gaze="--",
+            acc=0,
+            blink_total=blink_total,
+            fps=fps
+        )
+        cv2.imshow("result", ui)
+        if cv2.waitKey(1) in (ord('q'), ord('Q')): break
+        continue
+
+    # ---------------- EARs (safe) ----------------
+    left_ear  = eye_aspect_ratio(mesh_points, LEFT_EYE_LANDMARKS)
     right_ear = eye_aspect_ratio(mesh_points, RIGHT_EYE_LANDMARKS)
+
+    # If EARs couldn’t be computed this frame, just draw and continue
+    if left_ear is None or right_ear is None:
+        if 't_prev' not in globals():
+            t_prev = time.perf_counter()
+        fps = 1.0 / max(1e-6, (time.perf_counter() - t_prev))
+        t_prev = time.perf_counter()
+
+        ui = compose_ui(
+            frame=display,
+            eye_left_view=None,
+            eye_right_view=None,
+            gaze="--",
+            acc=0,
+            blink_total=blink_total,
+            fps=fps
+        )
+        cv2.imshow("result", ui)
+        if cv2.waitKey(1) in (ord('q'), ord('Q')): break
+        continue
+
+    # Now it’s safe to use EAR values
     avg_ear = (left_ear + right_ear) / 2
     is_eye_closed = avg_ear < EAR_THRESHOLD
+    
+    wink_in_progress = (_left_wink_start is not None) or (_right_wink_start is not None)
+    both_closed_now  = (left_ear < EAR_CLOSED) and (right_ear < EAR_CLOSED)
+
+    # time-based quiet period
+    now = time.time()
+    time_quiet = (now < _suppress_until_ts)
+
+    # suppress_gaze = is_eye_closed and both_closed_now or wink_in_progress or time_quiet    
+        
+    
 
 
     # --- Robust wink + long-blink handling ---
@@ -927,6 +976,7 @@ while cap.isOpened():
             if WINK_MIN_SEC <= dur <= WINK_MAX_SEC:
                 # _click_debounced("left")
                 _double_click_debounced()
+                _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
         _left_wink_start = None
 
     # 2) RIGHT-EYE WINK → RIGHT CLICK
@@ -939,6 +989,7 @@ while cap.isOpened():
             dur = t - _right_wink_start
             if WINK_MIN_SEC <= dur <= WINK_MAX_SEC:
                 _click_debounced("right")
+                _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
         _right_wink_start = None
 
     # 3) BOTH EYES CLOSED LONG (≥ LONG_BLINK_SEC) → WARP TO NEXT EDGE MIDPOINT
@@ -955,6 +1006,7 @@ while cap.isOpened():
                 winsound.Beep(1200, 120)  # optional audio cue
                 blink_total += 1 
                 long_blink_armed = False
+                _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
                 long_blink_cooldown_until = t + LONG_BLINK_COOLDOWN
     else:
         # only fully reopen re-arms; flutter won't reset timer
@@ -1092,7 +1144,35 @@ while cap.isOpened():
         #=================PREDICTION PROCESS========================================
         
         # ====== PREDICTION PROCESS ======
+        # ====== PREDICTION PROCESS ======
+        # if suppress_gaze:
+        #     gaze, accuracy = "--", 0          # don't predict while suppressed
+        # else:
+        #     gaze, accuracy = detect_gaze(eye_input_g, blink_confirmed, mesh_points, is_eye_closed)
+        
         gaze, accuracy = detect_gaze(eye_input_g, blink_confirmed, mesh_points, is_eye_closed)
+
+        # Only move cursor when not suppressed and a direction is predicted
+        # if (not suppress_gaze) and (gaze in ("left", "right", "up", "down")):
+        #     move_cursor_for_gaze(gaze, accuracy)
+            
+        if (gaze in ("left", "right", "up", "down")):
+            move_cursor_for_gaze(gaze, accuracy)
+
+        # Any logic that reacts to model outputs should also be skipped while suppressed
+        # if not suppress_gaze:
+        #     if gaze == class_labels[1]:
+        #         blinking_frames += 1
+        #         if blinking_frames == frames_to_blink:
+        #             winsound.Beep(1000, 250)
+        #     elif gaze == class_labels[2]:
+        #         blinking_frames += 1
+        #         if blinking_frames == frames_to_blink:
+        #             winsound.Beep(1000, 250)
+        #     else:
+        #         blinking_frames = 0
+        # else:
+        #     blinking_frames = 0
         
 
 
@@ -1152,9 +1232,10 @@ while cap.isOpened():
 
         # --- Compose polished UI ---
         ui = compose_ui(
-            frame=img,                  # your camera frame (BGR)
-            eye_left_view=eye_img_l_view,
-            eye_right_view=eye_img_r_view,
+            frame=display,  
+            # your camera frame (BGR)
+            eye_left_view=eye_img_r_view,
+            eye_right_view=eye_img_l_view,
             gaze=gaze,
             acc=accuracy,
             blink_total=blink_total,
@@ -1176,3 +1257,6 @@ cap.release()
 cv2.destroyAllWindows()    
 
 
+if __name__ == "__main__":
+    # start the dictation listener
+    start_voice_autodictation()
