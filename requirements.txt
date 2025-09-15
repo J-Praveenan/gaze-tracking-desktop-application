@@ -1,3 +1,16 @@
+# === Core runtime ===
+pillow>=10.0.0
+python-vlc>=3.0.18121
+
+# === Image / numerical processing ===
+numpy>=1.24
+opencv-python>=4.9
+mediapipe>=0.10.10
+
+# Note:
+# - Tkinter is part of the Python standard library (no pip install needed).
+# - Ensure you are running a 64-bit Python to match your VLC DLLs.
+
 opencv-python
 mediapipe
 numpy

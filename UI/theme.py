@@ -8,20 +8,25 @@ class Colors:
     sidebar_bg  = "#1f2a37"
     card_bg     = "#e0edff"
     dark_card   = "#1f2937"
-    card_head   = "#0f172a"
-    card_text   = "#0f172a"
-    muted       = "#475569"
-    tips        = "#b42318"
     pill_bg     = "#3b82f6"
     pill_fg     = "#ffffff"
+    page_bg   = "#cfe3f5"    # overall page behind content (light blue/gray)
+    glass_bg  = "#d9e9fb"    # cards/panels inside the page
+    card_head = "#1b2a3a"
+    card_text = "#0f172a"
+    muted     = "#6b7b8f"
+    tips      = "#d65353"
 
 
 class Fonts:
-    banner = ("Segoe UI", 20, "bold")
-    h1     = ("Segoe UI", 18, "bold")
-    h2b    = ("Segoe UI", 14, "bold")
-    h3     = ("Segoe UI", 12, "bold")
-    body   = ("Segoe UI", 10)
+    h1  = ("Segoe UI", 20, "bold")
+    h2  = ("Segoe UI", 14)          # normal h2
+    h2b = ("Segoe UI", 14, "bold")  # bold h2
+    h3  = ("Segoe UI", 12, "bold")
+    body = ("Segoe UI", 11)
+    banner = ("Segoe UI", 18, "bold")
+    card_text = ("Segoe UI", 12)
+
 
 def apply_base_style(root):
     s = ttk.Style(root)

@@ -1,6 +1,15 @@
 from pathlib import Path
-
+import traceback
 import os, platform
+from UI.pages.setup import SetupPage
+from UI.pages.apps import AppsPage
+from UI.pages.system import SystemPage
+from UI.pages.tips import TipsPage
+from UI.pages.info import InfoPage
+from UI.pages.settings import SettingsPage
+
+# ...
+
 
 # ---- VLC bootstrap: use bundled runtime ----
 
@@ -74,15 +83,23 @@ class App(tk.Tk):
         self.container = tk.Frame(self, bg=Colors.bg)
         self.container.pack(fill="both", expand=True)
 
-        # Instantiate pages
+        # --- Instantiate pages ---
         self.pages = {}
+
+        # splash / guide / home
         self._add_page(SplashPage, "SplashPage")
         self._add_page(GuideVideoPage, "GuideVideoPage", guide_video_path=GUIDE_MP4)
         self._add_page(HomePage, "HomePage")
 
-        # Keep wallpaper responsive
-        self.bind("<Configure>", self._on_resize)
+        # the other sections used by the sidebar
+        self._add_page(SetupPage, "SetupPage")
+        self._add_page(AppsPage, "AppsPage")
+        self._add_page(SystemPage, "SystemPage")
+        self._add_page(TipsPage, "TipsPage")
+        self._add_page(InfoPage, "InfoPage")
+        self._add_page(SettingsPage, "SettingsPage")
 
+        # keep this line if you want the splash first
         self.show("SplashPage")
 
     # ------------- shared assets -------------
@@ -131,9 +148,13 @@ class App(tk.Tk):
                 page.set_bg(bg_photo)
 
 
+def _report_callback_exception(self, exc, val, tb):
+    """Show full Tk callback errors in the terminal instead of a vague popup."""
+    traceback.print_exception(exc, val, tb)
+
 if __name__ == "__main__":
-    try:
-        app = App()
-        app.mainloop()
-    except Exception as e:
-        messagebox.showerror("Fatal", str(e))
+    # install Tk callback error reporter
+    tk.Tk.report_callback_exception = _report_callback_exception
+
+    app = App()
+    app.mainloop()
