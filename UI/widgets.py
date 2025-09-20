@@ -4,53 +4,77 @@ from UI.theme import Colors, Fonts
 
 
 class RoundedCard(tk.Frame):
-    def __init__(self, parent, radius=16, pad=12, bg=None, tight=True, **kwargs):
+    def __init__(self, parent, border_color="#222", border_width=0,
+                 radius=16, pad=12, bg=None, tight=True, **kwargs):
         self.radius = radius
         self._bg = bg or Colors.card_bg
         self._tight = tight
+        self.border_color = border_color
+        self.border_width = border_width
+        self.pad = pad
+
+        # prevent tkinter from seeing these
+        kwargs.pop("border_color", None)
+        kwargs.pop("border_width", None)
+
         super().__init__(parent, bg=parent.cget("bg"), highlightthickness=0, **kwargs)
 
         self.canvas = tk.Canvas(self, bg=self["bg"], bd=0, highlightthickness=0)
-        if self._tight:
-            # old behavior: hug content
-            self.canvas.pack()
-        else:
-            # NEW: let the canvas fill the frame
-            self.canvas.pack(fill="both", expand=True)
+        self.canvas.pack(fill="both", expand=True)
 
         self.body = tk.Frame(self.canvas, bg=self._bg)
-        self.pad = pad
 
         self.bind("<Configure>", self._draw)
-        self.body.bind("<Configure>", lambda e: self._draw())
+        # self.body.bind("<Configure>", lambda e: self._draw())
 
     def _draw(self, _evt=None):
+        w = max(10, self.winfo_width())
+
         if self._tight:
-            reqw = max(10, self.body.winfo_reqwidth())
             reqh = max(10, self.body.winfo_reqheight())
-            w = reqw + 2 * self.pad
-            h = reqh + 2 * self.pad
+            h = reqh + 2*self.pad
         else:
-            # Use the frame’s current size
-            w = max(10, self.winfo_width())
             h = max(10, self.winfo_height())
 
-        # Keep canvas in sync in BOTH modes
         self.canvas.config(width=w, height=h)
-
         self.canvas.delete("all")
+
         r = min(self.radius, h // 2, w // 2)
 
-        # rounded rect
-        self.canvas.create_rectangle(r, 0, w - r, h, fill=self._bg, outline="")
-        self.canvas.create_rectangle(0, r, w, h - r, fill=self._bg, outline="")
-        for x, y in [(0, 0), (w - 2*r, 0), (0, h - 2*r), (w - 2*r, h - 2*r)]:
-            self.canvas.create_oval(x, y, x + 2*r, y + 2*r, fill=self._bg, outline="")
+        # --- Background fill ---
+        self.canvas.create_rectangle(r, 0, w-r, h, fill=self._bg, outline="")
+        self.canvas.create_rectangle(0, r, w, h-r, fill=self._bg, outline="")
+        for x, y in [(0,0), (w-2*r,0), (0,h-2*r), (w-2*r,h-2*r)]:
+            self.canvas.create_oval(x, y, x+2*r, y+2*r, fill=self._bg, outline="")
 
-        # inner body window stretches with the card
+        # --- Border stroke (only if border_width > 0) ---
+        if self.border_width > 0:
+            # top line
+            self.canvas.create_line(r, 0, w-r, 0,
+                                    fill=self.border_color, width=self.border_width)
+            # bottom line
+            self.canvas.create_line(r, h, w-r, h,
+                                    fill=self.border_color, width=self.border_width)
+            # left line
+            self.canvas.create_line(0, r, 0, h-r,
+                                    fill=self.border_color, width=self.border_width)
+            # right line
+            self.canvas.create_line(w, r, w, h-r,
+                                    fill=self.border_color, width=self.border_width)
+            # 4 arcs for corners
+            self.canvas.create_arc(0, 0, 2*r, 2*r, start=90, extent=90,
+                                   style="arc", outline=self.border_color, width=self.border_width)
+            self.canvas.create_arc(w-2*r, 0, w, 2*r, start=0, extent=90,
+                                   style="arc", outline=self.border_color, width=self.border_width)
+            self.canvas.create_arc(w-2*r, h-2*r, w, h, start=270, extent=90,
+                                   style="arc", outline=self.border_color, width=self.border_width)
+            self.canvas.create_arc(0, h-2*r, 2*r, h, start=180, extent=90,
+                                   style="arc", outline=self.border_color, width=self.border_width)
+
+        # place inner body
         self.canvas.create_window(
             self.pad, self.pad, window=self.body, anchor="nw",
-            width=max(1, w - 2*self.pad), height=max(1, h - 2*self.pad)
+            width=max(1, w-2*self.pad), height=max(1, h-2*self.pad)
         )
 
 class TitleBar(tk.Frame):

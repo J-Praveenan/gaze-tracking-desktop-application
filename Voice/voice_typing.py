@@ -7,12 +7,69 @@ import uiautomation as auto
 from uiautomation import UIAutomationInitializerInThread
 import win32gui
 
+def is_zoom_chat_open():
+        root = auto.GetRootControl()
+        for win in root.GetChildren():
+            try:
+                if win.ClassName == "ConfMultiTabContentWndClass":  # Zoom meeting window
+                    for child in win.GetChildren():
+                        try:
+                            print("Child:", child.ControlTypeName, "| Name:", child.Name, "| ClassName:", child.ClassName)
+                            if "chat" in (child.Name or "").lower() or "message" in (child.Name or "").lower():
+                                return True
+                        except Exception:
+                            continue  # skip if child is stale
+            except Exception:
+                continue  # skip if win is stale
+        return False
+
+
 def is_text_field_focused():
     element = auto.GetFocusedControl()
+    
     if element:
-        print("Focused ControlTypeName:", element.ControlTypeName)
-        return element.ControlTypeName in ["Edit", "Document"]
+        
+        # Standard text fields
+        if element.ControlTypeName in ["Edit", "Document"]:
+            return True
+        # ✅ Chrome special case: search / address bar
+        if element.ControlTypeName in ["EditControl", "ComboBoxControl"] and (
+            "search" in element.Name.lower() or "address" in element.Name.lower()
+        ):
+            return True
+        
+        # ✅ Teams chat & participants            
+        if "teams" in get_active_window_title().lower():
+            if element.ControlTypeName == "EditControl":
+                name = (element.Name or "").lower()
+                if any(key in name for key in ["type a message", "reply", "message", "type a name", "search"]):
+                    return True               
+              
+        # ✅ Zoom special case: chat / main window
+        if is_zoom_chat_open():
+            return True
+        
+        
+    # For Testing window and child elements
+    # root = auto.GetRootControl()
+    # for win in root.GetChildren():
+    #     try:
+    #         if "microsoft teams" in get_active_window_title().lower():  # Zoom meeting window
+    #             # print("Active Window Title:", get_active_window_title().lower())
+    #             for child in win.GetChildren():
+    #                 try:
+    #                     print("Child:", child.ControlTypeName, "| Name:", child.Name, "| ClassName:", child.ClassName)
+    #                     if "chat" in (child.Name or "").lower() or "message" in (child.Name or "").lower():
+    #                         return True
+    #                 except Exception:
+    #                     continue  # skip if child is stale
+    #     except Exception:
+    #         continue  # skip if win is stale
+           
+    
     return False
+
+
 
 def get_active_window_title():
     hwnd = win32gui.GetForegroundWindow()
@@ -26,7 +83,7 @@ def speak(message):
 def voice_typing():
     speak("Please type your message here")
     time.sleep(0.5)
-    text = transcribe_from_mic(duration=5)
+    text = transcribe_from_mic(duration=3)
     time.sleep(0.5)
     pyautogui.typewrite(text, interval=0.05)
     
@@ -39,16 +96,13 @@ def run_voice_typing_loop():
             if is_text_field_focused():
                 print("✅ Native text input focused!")
                 voice_typing()
-            elif any(app in get_active_window_title() for app in ["Chrome", "WhatsApp", "Zoom", "Google Docs", "Word", "Slack"]):
-                print(f"🔎 Typing app active: {get_active_window_title()}")
-                voice_typing()
-
+    
             if keyboard.is_pressed("esc"):
                 print("🛑 ESC pressed. Stopping.")
                 break
 
-            time.sleep(0.5)
-
+            time.sleep(0.5)                                                                                                                                      
+              
 
 
 if __name__ == "__main__":
@@ -59,11 +113,11 @@ if __name__ == "__main__":
             print("✅ Native text input focused!")
             voice_typing()
             break
-        elif any(app in get_active_window_title() for app in ["Chrome", "WhatsApp", "Zoom", "Google Docs", "Word", "Slack"]):
-            print(f"🔎 Typing app active: {get_active_window_title()}")
-            voice_typing()
-            break
+    
         if keyboard.is_pressed("esc"):
             print("🛑 ESC pressed. Stopping.")
             break
         time.sleep(0.5)
+
+
+ 

@@ -21,6 +21,7 @@ def speak(message):
     engine = pyttsx3.init()
     engine.say(message)
     engine.runAndWait()
+    
 
 def voice_typing():
     speak("Please type your message here")

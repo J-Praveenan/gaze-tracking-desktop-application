@@ -100,7 +100,6 @@ def execute_voice_command(command):
 
 
 
-
 # === Main Loop ===
 if __name__ == "__main__":
     while True:
@@ -116,3 +115,6 @@ if __name__ == "__main__":
         # Example control flow flag you can feed into your gaze system
         if step == "awaiting_zoom_popup":
             speak("Please look left or right to select, then blink to confirm.")
+            
+            
+            

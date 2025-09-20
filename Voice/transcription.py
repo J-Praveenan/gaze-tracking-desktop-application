@@ -20,13 +20,17 @@ asr_model = pipeline(
     "automatic-speech-recognition",
     model=model,
     tokenizer=processor.tokenizer,
-    feature_extractor=processor.feature_extractor
+    feature_extractor=processor.feature_extractor,
+    generate_kwargs={
+        "task": "transcribe",   # could also use "translate"
+        "language": "en"        # force English transcription
+    }
 )
 
 # Function to record and transcribe audio from mic
 def transcribe_from_mic(duration=5):
     fs = 16000  # Sample rate
-    print("Listening...")
+    print("Listening. ..")
 
     recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
     sd.wait()
@@ -35,5 +39,14 @@ def transcribe_from_mic(duration=5):
         wav.write(temp_wav.name, fs, recording)
         result = asr_model(temp_wav.name)
 
-    print("Recognized:", result["text"])
-    return result["text"]
+    text = result["text"].strip()
+    print("Recognized:", text)
+
+    # 🔎 Filter out very short / low-confidence outputs
+    if len(text.split()) <= 2:   # e.g. "you", "uh", "ok"
+        print("⚠️ Ignored low-confidence result:", text)
+        return ""   # return empty so nothing is typed
+
+    return text
+
+
