@@ -160,7 +160,7 @@ def main():
             thresholds = json.load(f)
 
     LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"] + 4
-    RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"] - 3
+    RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"] - 4
     
     UP_THRESHOLD = thresholds["UP_THRESHOLD"]
     DOWN_THRESHOLD = thresholds["DOWN_THRESHOLD"] 
@@ -208,7 +208,7 @@ def main():
     WINK_MIN_SEC = 0.08         # ignore micro twitches
     WINK_MAX_SEC = 1.20         # long holds won't count as a wink
 
-    LONG_BLINK_SEC = 1.5
+    LONG_BLINK_SEC = 1
     # both eyes closed for this long → warp
     LONG_BLINK_COOLDOWN = 0.6   # don't fire twice back-to-back
 
@@ -248,7 +248,7 @@ def main():
     _anchor_points = _compute_anchors()
 
     # start smoother once at startup (after imports)
-    _start_cursor_smoother()
+    # _start_cursor_smoother()
 
 
 
@@ -657,13 +657,10 @@ def main():
 
             
         if gaze == "left":
-            cnn_left_boolean = True
             print("Looking LEFT (CNN model prediction)")
         elif gaze == "right":
-            cnn_right_boolean = True
             print("Looking RIGHT (CNN model prediction)")
         elif gaze == "center":
-            cnn_center_boolean = True
             print("Looking CENTER (CNN model prediction)")
         elif gaze == "up":
             print("Looking UP (CNN model prediction)")
@@ -671,18 +668,17 @@ def main():
             print("Looking DOWN (CNN model prediction)")
 
         
-        
-        if gaze == "down" or landmark_down_boolean:
+        if gaze == "center" or landmark_center_boolean:
+            gaze = "center"
+            print("Final Gaze direction: ", gaze)       
+        elif gaze == "down" or landmark_down_boolean:
             gaze = "down"
             print("Final Gaze direction: ", gaze)
         elif gaze == "right" and landmark_right_boolean:
             gaze = "right"
             print("Final Gaze direction: ", gaze)
-        elif gaze == "up" and landmark_up_boolean:
+        elif gaze == "up":
             gaze = "up"
-            print("Final Gaze direction: ", gaze)
-        elif gaze == "center" or landmark_center_boolean:
-            gaze = "center"
             print("Final Gaze direction: ", gaze)      
         elif gaze == "left" and landmark_left_boolean:
             gaze = "left"
@@ -1190,8 +1186,8 @@ def main():
 
 
             # Only allow new gaze prediction after a short interval      
-            if (gaze in ("left", "right", "up", "down")):
-                move_cursor_for_gaze(gaze, accuracy)
+            # if (gaze in ("left", "right", "up", "down")):
+            #     move_cursor_for_gaze(gaze, accuracy)
 
             
         
