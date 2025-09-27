@@ -7,21 +7,18 @@ numpy>=1.24
 opencv-python>=4.9
 mediapipe>=0.10.10
 
-# Note:
-# - Tkinter is part of the Python standard library (no pip install needed).
-# - Ensure you are running a 64-bit Python to match your VLC DLLs.
-
-opencv-python
-mediapipe
-numpy
-dlip
+# === Dependencies ===
+dlib @ file:///D:/Desktop_Application/gaze-tracking-desktop-application/dlib-19.24.1-cp311-cp311-win_amd64.whl
 imutils
 tensorflow==2.15
-pyautogui 
-win32gui
+pyautogui
+pywin32
 SpeechRecognition
 pyttsx3
-whisper
+openai-whisper
+keyboard
+transformers
+uiautomation
 
 # pip install opencv-contrib-python
 # pip install mediapipe
