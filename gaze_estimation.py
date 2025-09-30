@@ -316,7 +316,7 @@ def main():
 
     # ===== Wink (single-eye blink) → click =====
     CLICK_COOLDOWN_SEC = 0.5     # reuse/adjust
-    WINK_MIN_SEC = 0.2  #0.08          # valid wink duration window
+    WINK_MIN_SEC = 0.08  #0.2         # valid wink duration window
     WINK_MAX_SEC = 1.20
     WINK_OPEN_MARGIN = 0.04      # other eye must be clearly open
 
@@ -356,7 +356,6 @@ def main():
         left_click_count += 1
         _last_click_side = "left_dbl"
         _last_click_flash_until = time.time() + 0.6
-
 
 
 
@@ -527,16 +526,18 @@ def main():
             return "closed", 100
         
         
+        
+        
         if blink_confirmed:
             return "blink", accuracy
-        elif (left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)) and (left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)) :
-            return "--"
-        elif left_ear is not None and right_ear is not None:
-            if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-                return "left_blink", 100
+        # elif (left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)) and (left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)) :
+        #     return "--"
+        elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+            _click_debounced("left");
+            return "left_blink", 100
         elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-                return "left_blink", 100
+            _click_debounced("right");
+            return "right_blink", 100
             
         
         
