@@ -36,7 +36,7 @@ import vlc
 
 
 class GuideVideoPage(BasePage):
-    def __init__(self, parent, controller, guide_video_path: Path):
+    def __init__(self, parent, controller, guide_video_path: Path,show_skip=True):
         super().__init__(parent, controller)
         self.guide = guide_video_path
         self._is_full = False
@@ -117,12 +117,13 @@ class GuideVideoPage(BasePage):
                                   bg=ctrl_bg, bd=0, cursor="hand2")
         self.btn_full.pack(side="left", padx=(6, 2))
 
-        self.btn_skip = PillButton(
+        if show_skip:
+            self.btn_skip = PillButton(
     right,
     text="SKIP  ⏭",
     command=self._skip_video
 )
-        self.btn_skip.pack(side="left", padx=(8, 0))   # flush with right edge
+            self.btn_skip.pack(side="left", padx=(8, 0))   # flush with right edge
 
         # --- Load video if present ---
         if self.guide and Path(self.guide).exists():
