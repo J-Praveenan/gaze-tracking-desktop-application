@@ -208,7 +208,7 @@ def main():
     EAR_CLOSED = 0.2           # eye considered closed below this
     EAR_OPEN_HYST = 0.16        # must be clearly open above this
     WINK_OPEN_MARGIN = 0.02     # the OTHER eye must be this much more open
-    WINK_MIN_SEC = 0.08         # ignore micro twitches
+    WINK_MIN_SEC = 0.08        # ignore micro twitches
     WINK_MAX_SEC = 1.20         # long holds won't count as a wink
 
     LONG_BLINK_SEC = 1
@@ -342,21 +342,18 @@ def main():
         _last_click_flash_until = time.time() + 0.6  # flash for 0.6s
         
     def _double_click_debounced(interval=0.15):
-        """Left double-click with debounce and UI record."""
         global _last_click_ts, left_click_count, _last_click_flash_until, _last_click_side
         now = time.time()
         if now - _last_click_ts < CLICK_COOLDOWN_SEC:
             return
         _last_click_ts = now
-        pyautogui.click(clicks=1, interval=interval, button="left")
+        pyautogui.click(clicks=2, interval=interval, button="left")  # double-click for real
         pyautogui.press('enter')
 
         # record as two left-clicks
-        
         left_click_count += 1
         _last_click_side = "left_dbl"
         _last_click_flash_until = time.time() + 0.6
-
 
 
 
@@ -532,12 +529,23 @@ def main():
             return "blink", accuracy
         # elif (left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)) and (left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)) :
         #     return "--"
+        # elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     _click_debounced("left")   # trigger left click
+        #     return "left_blink", 100
+
+        # elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     _click_debounced("right")  # trigger right click
+        #     return "right_blink", 100
         elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            _click_debounced("left");
+            _click_debounced("left")
             return "left_blink", 100
+
         elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            _click_debounced("right");
+            _click_debounced("right") 
             return "right_blink", 100
+
+
+
             
         
         
@@ -750,7 +758,7 @@ def main():
 
 
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
 
     ret, frame = cap.read()
     if not ret:
