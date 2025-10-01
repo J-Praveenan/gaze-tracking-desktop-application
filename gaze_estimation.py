@@ -758,7 +758,7 @@ def main():
 
 
 
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     ret, frame = cap.read()
     if not ret:

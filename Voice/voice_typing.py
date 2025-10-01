@@ -38,6 +38,17 @@ def is_text_field_focused():
         ):
             return True
         
+        
+         # Browser case: ChatGPT, Gmail, etc.
+        if "chrome" in get_active_window_title().lower() or "edge" in get_active_window_title().lower():
+            # Case 1: standard editable elements
+            if element.ControlTypeName in ["EditControl", "PaneControl"]:
+                return True
+            # Case 2: webpage input (ChatGPT typing bar, Gmail body, etc.)
+            if element.ControlTypeName == "DocumentControl" and element.ClassName == "Chrome_RenderWidgetHostHWND":
+                return True
+            
+        
         # ✅ Teams chat & participants            
         if "teams" in get_active_window_title().lower():
             if element.ControlTypeName == "EditControl":
@@ -51,20 +62,20 @@ def is_text_field_focused():
         
         
     # For Testing window and child elements
-    # root = auto.GetRootControl()
-    # for win in root.GetChildren():
-    #     try:
-    #         if "microsoft teams" in get_active_window_title().lower():  # Zoom meeting window
-    #             # print("Active Window Title:", get_active_window_title().lower())
-    #             for child in win.GetChildren():
-    #                 try:
-    #                     print("Child:", child.ControlTypeName, "| Name:", child.Name, "| ClassName:", child.ClassName)
-    #                     if "chat" in (child.Name or "").lower() or "message" in (child.Name or "").lower():
-    #                         return True
-    #                 except Exception:
-    #                     continue  # skip if child is stale
-    #     except Exception:
-    #         continue  # skip if win is stale
+    root = auto.GetRootControl()
+    for win in root.GetChildren():
+        try:
+            if  get_active_window_title().lower():  # Zoom meeting window
+                print("Active Window Title:", get_active_window_title().lower())
+                for child in win.GetChildren():
+                    try:
+                        print("Child:", child.ControlTypeName, "| Name:", child.Name, "| ClassName:", child.ClassName)
+                        if "chat" in (child.Name or "").lower() or "message" in (child.Name or "").lower():
+                            return True
+                    except Exception:
+                        continue  # skip if child is stale
+        except Exception:
+            continue  # skip if win is stale
            
     
     return False
