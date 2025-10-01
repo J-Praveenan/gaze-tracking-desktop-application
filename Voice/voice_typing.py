@@ -14,7 +14,7 @@ def is_zoom_chat_open():
                 if win.ClassName == "ConfMultiTabContentWndClass":  # Zoom meeting window
                     for child in win.GetChildren():
                         try:
-                            print("Child:", child.ControlTypeName, "| Name:", child.Name, "| ClassName:", child.ClassName)
+                            # print("Child:", child.ControlTypeName, "| Name:", child.Name, "| ClassName:", child.ClassName)
                             if "chat" in (child.Name or "").lower() or "message" in (child.Name or "").lower():
                                 return True
                         except Exception:
@@ -62,20 +62,20 @@ def is_text_field_focused():
         
         
     # For Testing window and child elements
-    root = auto.GetRootControl()
-    for win in root.GetChildren():
-        try:
-            if  get_active_window_title().lower():  # Zoom meeting window
-                print("Active Window Title:", get_active_window_title().lower())
-                for child in win.GetChildren():
-                    try:
-                        print("Child:", child.ControlTypeName, "| Name:", child.Name, "| ClassName:", child.ClassName)
-                        if "chat" in (child.Name or "").lower() or "message" in (child.Name or "").lower():
-                            return True
-                    except Exception:
-                        continue  # skip if child is stale
-        except Exception:
-            continue  # skip if win is stale
+    # root = auto.GetRootControl()
+    # for win in root.GetChildren():
+    #     try:
+    #         if  get_active_window_title().lower():  # Zoom meeting window
+    #             print("Active Window Title:", get_active_window_title().lower())
+    #             for child in win.GetChildren():
+    #                 try:
+    #                     print("Child:", child.ControlTypeName, "| Name:", child.Name, "| ClassName:", child.ClassName)
+    #                     if "chat" in (child.Name or "").lower() or "message" in (child.Name or "").lower():
+    #                         return True
+    #                 except Exception:
+    #                     continue  # skip if child is stale
+    #     except Exception:
+    #         continue  # skip if win is stale
            
     
     return False
