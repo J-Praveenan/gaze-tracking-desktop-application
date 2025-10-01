@@ -47,7 +47,7 @@ _last_click_side = None
 
 # ---- Anchor globals ----
 ANCHOR_MARGIN_PX = 24       # keep off the exact screen edge
-ANCHOR_ORDER = ("center", "left","center", "right", "center","top","center","bottom")  # cycle order
+ANCHOR_ORDER = ("center", "left","center", "right","top","center","bottom")  # cycle order
 _anchor_points = []
 _anchor_idx = 0
 
@@ -159,8 +159,11 @@ def main():
     with open(THRESH_FILE, "r", encoding="utf-8") as f:
             thresholds = json.load(f)
 
-    LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"] + 4
-    RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"] - 4
+    # LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"] + 4
+    # RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"] - 4
+    
+    LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"]
+    RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"]
     
     UP_THRESHOLD = thresholds["UP_THRESHOLD"]
     DOWN_THRESHOLD = thresholds["DOWN_THRESHOLD"] 
@@ -202,10 +205,10 @@ def main():
     # --- Long-blink tuning ---
 
     # --- Wink & long-blink tuning (adjust to taste) ---
-    EAR_CLOSED = 0.18           # eye considered closed below this
+    EAR_CLOSED = 0.2           # eye considered closed below this
     EAR_OPEN_HYST = 0.16        # must be clearly open above this
     WINK_OPEN_MARGIN = 0.02     # the OTHER eye must be this much more open
-    WINK_MIN_SEC = 0.08         # ignore micro twitches
+    WINK_MIN_SEC = 0.08        # ignore micro twitches
     WINK_MAX_SEC = 1.20         # long holds won't count as a wink
 
     LONG_BLINK_SEC = 1
@@ -286,6 +289,7 @@ def main():
 
         b, g, r, a = cv2.split(img)
 
+
         if radius:
             # rounded alpha
             mask = np.zeros_like(a)
@@ -312,9 +316,9 @@ def main():
 
     # ===== Wink (single-eye blink) → click =====
     CLICK_COOLDOWN_SEC = 0.5     # reuse/adjust
-    WINK_MIN_SEC = 0.08          # valid wink duration window
+    WINK_MIN_SEC = 0.08  #0.2         # valid wink duration window
     WINK_MAX_SEC = 1.20
-    WINK_OPEN_MARGIN = 0.02      # other eye must be clearly open
+    WINK_OPEN_MARGIN = 0.04      # other eye must be clearly open
 
     _last_click_ts = 0.0
     _left_wink_start = None
@@ -338,22 +342,18 @@ def main():
         _last_click_flash_until = time.time() + 0.6  # flash for 0.6s
         
     def _double_click_debounced(interval=0.15):
-        """Left double-click with debounce and UI record."""
         global _last_click_ts, left_click_count, _last_click_flash_until, _last_click_side
         now = time.time()
         if now - _last_click_ts < CLICK_COOLDOWN_SEC:
             return
         _last_click_ts = now
-        pyautogui.click(clicks=1, interval=interval, button="left")
+        pyautogui.click(clicks=2, interval=interval, button="left")  # double-click for real
         pyautogui.press('enter')
 
         # record as two left-clicks
-        
         left_click_count += 1
         _last_click_side = "left_dbl"
         _last_click_flash_until = time.time() + 0.6
-
-
 
 
 
@@ -523,21 +523,46 @@ def main():
             return "closed", 100
         
         
+        
+        
+        if blink_confirmed:
+            return "blink", accuracy
+        # elif (left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)) and (left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)) :
+        #     return "--"
+        # elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     _click_debounced("left")   # trigger left click
+        #     return "left_blink", 100
+
+        # elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     _click_debounced("right")  # trigger right click
+        #     return "right_blink", 100
+        elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+            _click_debounced("left")
+            return "left_blink", 100
+
+        elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+            _click_debounced("right") 
+            return "right_blink", 100
+
+
+
+            
+        
+        
+        
         # --- Left blink (wink) ---
-        if left_ear is not None and right_ear is not None:
-            if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-                return "left_blink", 100
+        # if left_ear is not None and right_ear is not None:
+        #     if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #         return "left_blink", 100
 
         # --- Right blink (wink) ---
-        if right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            return "right_blink", 100
+        # if right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     return "right_blink", 100
         
         pred_l = model.predict(eye_img)
         accuracy = int(np.array(pred_l).max() * 100)
         gaze = class_labels[np.argmax(pred_l)]
 
-        if blink_confirmed:
-            return "blink", accuracy
 
 
         # Horizontal Geometry
@@ -623,6 +648,28 @@ def main():
         
         
         
+        # if (right_eye_horizontal_offset >= LEFT_THRESHOLD) and (left_eye_horizontal_offset >= LEFT_THRESHOLD):
+        #     landmark_left_boolean = True
+        #     print("Looking LEFT (Landmarks)")
+        # elif (right_eye_horizontal_offset <= RIGHT_THRESHOLD) and (left_eye_horizontal_offset <= RIGHT_THRESHOLD):
+        #     landmark_right_boolean = True
+        #     print("Looking RIGHT (Landmarks)")
+        # elif delta_r_y <= UP_THRESHOLD and delta_l_y <= UP_THRESHOLD:
+        #     landmark_up_boolean = True
+        #     print("Looking UP (Landmarks)")
+        # elif left_eye_offset_y > DOWN_THRESHOLD and right_eye_offset_y > DOWN_THRESHOLD:
+        #     landmark_down_boolean = True
+        #     print("Looking DOWN (Landmarks)")
+        # elif (RIGHT_THRESHOLD < right_eye_horizontal_offset < LEFT_THRESHOLD) and (RIGHT_THRESHOLD < left_eye_horizontal_offset < LEFT_THRESHOLD):
+        #     landmark_center_boolean = True
+        #     print("Looking CENTER (Landmarks)")
+        
+        if (RIGHT_THRESHOLD < right_eye_horizontal_offset < LEFT_THRESHOLD) and (RIGHT_THRESHOLD < left_eye_horizontal_offset < LEFT_THRESHOLD):
+            landmark_center_boolean = True
+            print("Looking CENTER (Landmarks)")
+        elif left_eye_offset_y > DOWN_THRESHOLD and right_eye_offset_y > DOWN_THRESHOLD:
+            landmark_down_boolean = True
+            print("Looking DOWN (Landmarks)")
         if (right_eye_horizontal_offset >= LEFT_THRESHOLD) and (left_eye_horizontal_offset >= LEFT_THRESHOLD):
             landmark_left_boolean = True
             print("Looking LEFT (Landmarks)")
@@ -632,12 +679,8 @@ def main():
         elif delta_r_y <= UP_THRESHOLD and delta_l_y <= UP_THRESHOLD:
             landmark_up_boolean = True
             print("Looking UP (Landmarks)")
-        elif left_eye_offset_y > DOWN_THRESHOLD and right_eye_offset_y > DOWN_THRESHOLD:
-            landmark_down_boolean = True
-            print("Looking DOWN (Landmarks)")
-        elif (RIGHT_THRESHOLD < right_eye_horizontal_offset < LEFT_THRESHOLD) and (RIGHT_THRESHOLD < left_eye_horizontal_offset < LEFT_THRESHOLD):
-            landmark_center_boolean = True
-            print("Looking CENTER (Landmarks)")
+        
+        
 
 
             
@@ -666,24 +709,27 @@ def main():
             print("Looking UP (CNN model prediction)")
         elif gaze == "down":
             print("Looking DOWN (CNN model prediction)")
-
+            
         
-        if gaze == "center" or landmark_center_boolean:
-            gaze = "center"
-            print("Final Gaze direction: ", gaze)       
-        elif gaze == "down" or landmark_down_boolean:
+
+        if gaze == "down" or landmark_down_boolean:
             gaze = "down"
             print("Final Gaze direction: ", gaze)
+        elif gaze == "center" or landmark_center_boolean:
+            gaze = "center"
+            print("Final Gaze direction: ", gaze)       
         elif gaze == "right" and landmark_right_boolean:
             gaze = "right"
             print("Final Gaze direction: ", gaze)
-        elif gaze == "up":
+        elif gaze == "up" :
             gaze = "up"
             print("Final Gaze direction: ", gaze)      
         elif gaze == "left" and landmark_left_boolean:
             gaze = "left"
             print("Final Gaze direction: ", gaze)
-    
+        else:
+            gaze = "center"
+            print("Final Gaze direction: ", gaze)
 
         return gaze, accuracy
 
@@ -696,6 +742,7 @@ def main():
 
         w = (x2 - x1) * 1.2
         h = w * IMG_SIZE[1] / IMG_SIZE[0]
+        
 
         margin_x, margin_y = w / 2, h / 2
 
