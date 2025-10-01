@@ -2,8 +2,6 @@ from pathlib import Path
 import traceback
 import os, platform
 from UI.pages.setup import SetupPage
-from UI.pages.apps import AppsPage
-from UI.pages.system import SystemPage
 from UI.pages.tips import TipsPage
 from UI.pages.info import InfoPage
 from UI.pages.settings import SettingsPage
@@ -55,6 +53,7 @@ from UI.pages.splash import SplashPage
 from UI.pages.home import HomePage
 from utils.paths import data_path
 from UI.pages.guide import GuideVideoPage
+from UI.pages.gaze_test import GazeTestPage
 
 APP_TITLE = "LOOK TRACK VISION"
 BASE_DIR = Path(__file__).resolve().parent
@@ -97,8 +96,7 @@ class App(tk.Tk):
 
         # the other sections used by the sidebar
         self._add_page(SetupPage, "SetupPage")
-        self._add_page(AppsPage, "AppsPage")
-        self._add_page(SystemPage, "SystemPage")
+        self._add_page(GazeTestPage, "GazeTestPage")
         self._add_page(TipsPage, "TipsPage")
         self._add_page(InfoPage, "InfoPage")
         self._add_page(SettingsPage, "SettingsPage")
