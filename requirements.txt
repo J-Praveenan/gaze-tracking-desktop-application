@@ -10,7 +10,7 @@ mediapipe>=0.10.10
 # === Dependencies ===
 dlib @ file:///D:/Desktop_Application/gaze-tracking-desktop-application/dlib-19.24.1-cp311-cp311-win_amd64.whl
 imutils
-tensorflow==2.15
+tensorflow==2.20.0
 pyautogui
 pywin32
 SpeechRecognition
