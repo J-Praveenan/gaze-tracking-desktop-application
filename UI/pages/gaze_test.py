@@ -4,10 +4,9 @@ from UI.theme import Colors, Fonts
 from UI.widgets import RoundedCard, PillButton
 from UI.pages.base import BasePage
 from UI.pages.sidebar import Sidebar
-
-# Import the gaze detection loop
 from UI.pages.gaze_runner import main as run_gaze_test
-
+import subprocess, sys, os
+from UI.pages import gaze_runner
 
 def F(name, default):
     return getattr(Fonts, name, default)
@@ -52,4 +51,13 @@ class GazeTestPage(BasePage):
 
     def _start_test(self):
         # Run gaze detection in a separate thread so Tkinter UI stays responsive
-        threading.Thread(target=run_gaze_test, daemon=True).start()
+        # threading.Thread(target=run_gaze_test, daemon=True).start()
+        threading.Thread(
+                target=lambda: gaze_runner.main(enable_mouse_control=False, show_video=True),
+                daemon=True
+            ).start()
+ 
+       
+
+
+
