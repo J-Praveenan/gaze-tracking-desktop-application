@@ -316,7 +316,7 @@ def main():
 
     # ===== Wink (single-eye blink) → click =====
     CLICK_COOLDOWN_SEC = 0.5     # reuse/adjust
-    WINK_MIN_SEC = 0.2  #0.08          # valid wink duration window
+    WINK_MIN_SEC = 0.08  #0.2         # valid wink duration window
     WINK_MAX_SEC = 1.20
     WINK_OPEN_MARGIN = 0.04      # other eye must be clearly open
 
@@ -521,6 +521,8 @@ def main():
     
         if is_eye_closed:
             return "closed", 100
+        
+        
         
         
         if blink_confirmed:
@@ -756,7 +758,7 @@ def main():
 
 
 
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     ret, frame = cap.read()
     if not ret:

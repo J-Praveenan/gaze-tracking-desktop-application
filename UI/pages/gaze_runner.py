@@ -19,10 +19,19 @@ from json import JSONDecodeError
 from typing import Tuple
 import threading
 
+import tkinter as tk
+import threading
+from UI.theme import Colors, Fonts
+from UI.widgets import RoundedCard, PillButton
+from UI.pages.base import BasePage
+from UI.pages.sidebar import Sidebar
+
 # main.py (simplified snippet)
+# global reference to the Tkinter app
+ui_app = None
 
-
-
+# ---- Control Mode ----
+SCROLL_MODE = False
 
 # ---- Cursor smoother globals ----
 SMOOTH_HZ = 120                # how often to update the cursor
@@ -52,6 +61,27 @@ ANCHOR_ORDER = ("center", "left","center", "right","top","center","bottom")  # c
 _anchor_points = []
 _anchor_idx = 0
 
+# Determine if we are running in integrated Tkinter mode
+INTEGRATED_UI = "ui_app" in globals() and ui_app is not None
+
+
+
+def speak(message):
+    engine = pyttsx3.init()
+    engine.say(message)
+    engine.runAndWait()
+
+def toggle_scroll_mode():
+    """Toggle between cursor move and scroll modes."""
+    global SCROLL_MODE
+    SCROLL_MODE = not SCROLL_MODE
+    mode = "🧾 Scroll Mode" if SCROLL_MODE else "🖱️ Cursor Mode"
+    if mode == "🖱️ Cursor Mode":
+        speak("Cursor mode is activated now")
+    else:
+        speak("Scroll mode is activated now")
+    print(f"[MODE SWITCHED] {mode}")
+    winsound.Beep(1000 if SCROLL_MODE else 700, 150)
 
 
 def _start_cursor_smoother():
@@ -81,7 +111,7 @@ def _start_cursor_smoother():
         threading.Thread(target=_loop, daemon=True).start()
 
 
-def main():
+def main(enable_mouse_control=False, show_video=False):
     # ===== THEME (approximate to your 2nd screenshot; tweak hex to match exactly) =====
     def _hex(h):  # hex -> BGR tuple for OpenCV
         h = h.lstrip('#')
@@ -128,7 +158,7 @@ def main():
 
     def put_text(img, text, org, scale=0.7, color=COL["text"], weight=1, align="left"):
         th = weight
-        font = cv2.FONT_HERSHEY_SIMPLEX
+        font = cv2.FONT_HERSHEY_DUPLEX  
         size, _ = cv2.getTextSize(text, font, scale, th)
         (x, y) = org
         if align == "center":
@@ -252,8 +282,11 @@ def main():
 
     _anchor_points = _compute_anchors()
 
-    # start smoother once at startup (after imports)
-    # _start_cursor_smoother()
+    # # start smoother once at startup (after imports)
+    # if enable_mouse_control:
+    #     _start_cursor_smoother()
+    #     speak("Gaze control enabled.")
+        
 
 
 
@@ -364,7 +397,7 @@ def main():
         Updates a smooth target position based on gaze direction.
         The background smoother thread moves the cursor toward this target.
         """
-        global _last_cursor_move_ts, _target_pos
+        global _last_cursor_move_ts, _target_pos, SCROLL_MODE
 
         if accuracy < ACCURACY_GATE:
             return
@@ -373,28 +406,43 @@ def main():
         if now - _last_cursor_move_ts < MOVE_COOLDOWN_SEC:
             return
         _last_cursor_move_ts = now
-
-        # step vector from gaze
-        dx = dy = 0
-        if gaze == "left":
-            dx = -CURSOR_STEP_PX
-        elif gaze == "right":
-            dx = CURSOR_STEP_PX
-        elif gaze == "up":
-            dy = -CURSOR_STEP_PX
-        elif gaze == "down":
-            dy = CURSOR_STEP_PX
+        
+        
+        if SCROLL_MODE:
+            # --- Scroll Mode ---
+            if gaze == "up":
+                pyautogui.scroll(-200)
+                print("🧾 Scrolled up")
+                return
+            elif gaze == "down":
+                pyautogui.scroll(+200)
+                print("🧾 Scrolled down")
+                return
+            elif gaze in ("left", "right"):
+                print("⏩ Left/right gaze ignored in scroll mode")
+                return
         else:
-            return
+        # step vector from gaze
+            dx = dy = 0
+            if gaze == "left":
+                dx = -CURSOR_STEP_PX
+            elif gaze == "right":
+                dx = CURSOR_STEP_PX
+            elif gaze == "up":
+                dy = -CURSOR_STEP_PX
+            elif gaze == "down":
+                dy = CURSOR_STEP_PX
+            else:
+                return
 
-        # update target (clamped)
-        sw, sh = pyautogui.size()
-        cx, cy = pyautogui.position()  # current as base
-        tx, ty = _target_pos if _target_pos is not None else (cx, cy)
-        # nudge the target rather than the current cursor to avoid fighting the smoother
-        ntx = _clamp(tx + dx, 0, sw - 1)
-        nty = _clamp(ty + dy, 0, sh - 1)
-        _target_pos = (ntx, nty)
+            # update target (clamped)
+            sw, sh = pyautogui.size()
+            cx, cy = pyautogui.position()  # current as base
+            tx, ty = _target_pos if _target_pos is not None else (cx, cy)
+            # nudge the target rather than the current cursor to avoid fighting the smoother
+            ntx = _clamp(tx + dx, 0, sw - 1)
+            nty = _clamp(ty + dy, 0, sh - 1)
+            _target_pos = (ntx, nty)
         
         
         
@@ -756,12 +804,17 @@ def main():
 
 
 
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     ret, frame = cap.read()
     if not ret:
         print("Failed to grab frame from webcam")
         exit()
+        
+    # start smoother once at startup (after imports)
+    if enable_mouse_control and not _smoother_started:
+        _start_cursor_smoother()
+        speak("Gaze control enabled.")
 
     # Set resolution for virtual camera
     height, width = frame.shape[:2]
@@ -774,168 +827,110 @@ def main():
 
         
     # Define the window as resizable
-    cv2.namedWindow("result", cv2.WINDOW_NORMAL)
+    if show_video:
+        cv2.namedWindow("Real Time Gaze Estimation", cv2.WINDOW_NORMAL)
 
-            # Get screen size
-    screen_width = pyautogui.size().width
-    screen_height = pyautogui.size().height
+                # Get screen size
+        screen_width = pyautogui.size().width
+        screen_height = pyautogui.size().height
 
-            # Calculate 3/4 width and keep height proportional or fixed
-    window_width = int(screen_width * 0.6)
-    window_height = int(screen_height * 0.75)  # Or use a fixed value
+                # Calculate 3/4 width and keep height proportional or fixed
+        window_width = int(screen_width * 0.6)
+        window_height = int(screen_height * 0.75)  # Or use a fixed value
 
-            # Resize the OpenCV window
-    cv2.resizeWindow("result", window_width, window_height)
+                # Resize the OpenCV window
+        cv2.resizeWindow("Real Time Gaze Estimation", window_width, window_height)
 
-            # Optional: move window to center
-    x_pos = (screen_width - window_width) // 2
-    y_pos = (screen_height - window_height) // 2
-    cv2.moveWindow("result", x_pos, y_pos)
+                # Optional: move window to center
+        x_pos = (screen_width - window_width) // 2
+        y_pos = (screen_height - window_height) // 2
+        cv2.moveWindow("Real Time Gaze Estimation", x_pos, y_pos)
+        
+
 
     while cap.isOpened():
         
         
         # swap your compose_ui(...) with this one
-        def compose_ui(frame: np.ndarray,
-                eye_left_view: np.ndarray,
-                eye_right_view: np.ndarray,
-                gaze: str, acc: int, blink_total: int, fps: float) -> np.ndarray:
-            """
-                Wider layout + title icon.
-                • Full-width title bar with icon on the left and FPS on the right
-                • Wide strip above the video (eye thumbnails on the left, badges on the right)
-                • Video centered and as wide as possible
-            """
+        def compose_ui(frame, eye_left_view, eye_right_view, gaze, acc, blink_total, left_blinks, right_blinks, fps):
             H, W = UI_H, UI_W
             canvas = np.full((H, W, 3), COL["bg"], np.uint8)
+            
 
-            # -------- Title bar --------
+            # ---- Title Bar ----
             draw_card(canvas, 0, 0, W, TITLE_BAR_H, radius=0, color=COL["card2"], shadow=False)
-
-            # Icon + title text
-            x_title = MARGIN_X
-            if _icon_rgba is not None:
-                _paste_rgba(canvas, _icon_rgba, x_title, 10, w=40, h=40, radius=8)
-                x_title += 48 + 10  # icon width + spacing
-
-            put_text(canvas, "REAL TIME GAZE ESTIMATION", (x_title, 46), 1.1, COL["text"], 3)
+            put_text(canvas, "REAL TIME GAZE ESTIMATION", (MARGIN_X, 46), 1.1, COL["text"], 3)
             put_text(canvas, f"{fps:.1f} FPS", (W - MARGIN_X, 46), 0.9, COL["muted"], 2, align="right")
 
-            # -------- Compute available area for strip + video --------
+            # ---- Layout sizes ----
             y_top = TITLE_BAR_H + MARGIN_Y
-            # We'll center the video; the strip will align to the video's width
-            # Make the video as wide as possible inside margins
+            cam_w = int(W * 0.65)       # left column
+            right_w = W - cam_w - MARGIN_X * 2
+            cam_h = H - y_top - MARGIN_Y
+
+            # ---- Left: Video feed ----
             fh, fw = frame.shape[:2]
-            max_w = W - 2*MARGIN_X
-            max_h = H - y_top - MARGIN_Y - STRIP_H - 24  # space for strip + spacing
-
-            scale = min(max_w / fw, max_h / fh)
+            scale = min(cam_w / fw, cam_h / fh)
             vw, vh = int(fw * scale), int(fh * scale)
-
-            # video position (center horizontally)
-            vx = (W - vw) // 2
-            # strip sits above; add small gap (16)
-            strip_y = y_top
-            strip_x = vx - 16
-            strip_w = vw + 32
-            strip_h = STRIP_H
-
-            # -------- Top strip (eyes left, badges right) --------
-            draw_card(canvas, strip_x, strip_y, strip_w, strip_h, radius=18, color=COL["card2"])
-
-            # Eye thumbs (bigger to match the wider strip)
-            thumb_h, thumb_w = strip_h - 28, 220
-            pad = 16
-            tx = strip_x + pad
-            ty = strip_y + (strip_h - thumb_h) // 2
-
-            def _place_thumb(src, x, y, label):
-                if src is None:
-                    return x
-                th = cv2.resize(src, (thumb_w, thumb_h))
-                if th.ndim == 2:
-                    th = cv2.cvtColor(th, cv2.COLOR_GRAY2BGR)
-                sub = canvas[y:y+thumb_h, x:x+thumb_w]
-                tmask = _rounded_rect_mask(thumb_h, thumb_w, 10)
-                sub[:] = np.where(tmask[..., None] == 255, th, sub)
-                put_text(canvas, label, (x, y-6), 0.65, COL["muted"])
-                return x + thumb_w + 12
-
-            tx = _place_thumb(eye_left_view,  tx, ty, "Left")
-            tx = _place_thumb(eye_right_view, tx, ty, "Right")
-
-            # Badges on the right end of strip
-            bx = strip_x + strip_w - pad
-            by = strip_y + 16
-            acc_txt = f"{acc}%"
-            gaze_txt = gaze.upper()
-
-            def _badge_wh(text):
-                size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.75, 2)
-                return size[0] + 2*12, size[1] + 2*10
-
-            acc_w, acc_h = _badge_wh(acc_txt)
-            gaze_w, gaze_h = _badge_wh(gaze_txt)
-
-            draw_card(canvas, bx-acc_w, by, acc_w, acc_h, radius=14, color=COL["accent"])
-            put_text(canvas, acc_txt, (bx-acc_w+12, by+acc_h-12), 0.75, (255,255,255), 2)
-            bx -= (acc_w + 12)
-            draw_card(canvas, bx-gaze_w, by, gaze_w, gaze_h, radius=14, color=COL["accent2"])
-            put_text(canvas, gaze_txt, (bx-gaze_w+12, by+gaze_h-12), 0.75, (255,255,255), 2)
+            vx, vy = MARGIN_X, y_top
             
             
-                    # --- Click badges (live) just below the gaze/accuracy badges ---
-            # layout
-            now = time.time()
-            flash = (now < _last_click_flash_until)
-
-            row_y = by + max(acc_h, gaze_h) + 10
-            gap = 10
-
-            # Left-click badge
-            left_text = f"L: {left_click_count}"
-            left_w, left_h = _badge_wh(left_text)
-
-            # Right-click badge
-            right_text = f"R: {right_click_count}"
-            right_w, right_h = _badge_wh(right_text)
-
-            # Choose colors; flash the one that was clicked last
-            left_bg  = COL["accent2"] if flash and (_last_click_side in ("left", "left_dbl")) else COL["accent"]
-            right_bg = COL["accent2"] if flash and (_last_click_side == "right") else COL["accent"]
-
-            # place from right edge inward, under existing badges
-            # first right badge
-            draw_card(canvas, bx-right_w, row_y, right_w, right_h, radius=14, color=right_bg)
-            put_text(canvas, right_text, (bx-right_w+12, row_y+right_h-12), 0.75, (255,255,255), 2)
-            bx -= (right_w + gap)
-
-            # then left badge
-            draw_card(canvas, bx-left_w, row_y, left_w, left_h, radius=14, color=left_bg)
-            put_text(canvas, left_text, (bx-left_w+12, row_y+left_h-12), 0.75, (255,255,255), 2)
-            # done; bx now points to left of click badges
-
-
-            # -------- Video card (just below the strip) --------
-            vy = strip_y + strip_h + 8
-            draw_card(canvas, vx - 16, vy - 16, vw + 32, vh + 12, radius=20, color=COL["card"])
+            
+            draw_card(canvas, vx, vy, vw, vh, radius=20, color=COL["card"])
             resized = cv2.resize(frame, (vw, vh))
             mask = _rounded_rect_mask(vh, vw, 16)
             roi = canvas[vy:vy+vh, vx:vx+vw]
             roi[:] = np.where(mask[..., None] == 255, resized, roi)
 
-            # overlay small gradient & blink count
-            overlay = roi.copy()
-            grad = np.linspace(110, 0, 110).astype(np.uint8)
-            grad = np.repeat(grad[:, None], vw, axis=1)
-            grad = cv2.merge([grad, grad, grad])
-            overlay[0:110] = cv2.addWeighted(overlay[0:110], 1.0, grad, 0.55, 0)
-            roi[:] = overlay
+            # ---- Right: Eye crops (side by side) ----
+            rx = vx + vw + 30
+            ry = y_top
+            
+            ry += 30 
+            # 🟩 Add section title here
+            put_text(canvas, "GAZE ESTIMATION RESULTS", (rx, ry - 15), 0.8, (255,255,255), 2)
+            ry += 80 
+            thumb_w, thumb_h = 120, 100
+            gap = 160  # space between left and right eye
+            if eye_left_view is not None and eye_right_view is not None:
+                left_thumb = cv2.resize(eye_left_view, (thumb_w, thumb_h))
+                right_thumb = cv2.resize(eye_right_view, (thumb_w, thumb_h))
 
-            put_text(canvas, f"Blinks: {blink_total}", (vx+20, vy+40), 0.8, COL["text"], 2)
+                # Create a blank gap (same height, gap width, same channels)
+                spacer = np.full((thumb_h, gap, 3), COL["bg"], dtype=np.uint8)
+
+                # Combine with gap
+                combined = np.hstack([left_thumb, spacer, right_thumb])
+
+                # Paste into canvas
+                canvas[ry:ry+thumb_h, rx:rx+2*thumb_w+gap] = combined
+
+                # Labels (adjusted for gap)
+                put_text(canvas, "LEFT EYE", (rx, ry-6), 0.6, (255,255,255))
+                put_text(canvas, "RIGHT EYE", (rx+thumb_w+gap+10, ry-6), 0.6, (255,255,255))
+
+                ry += thumb_h + 30
+
+            # ---- Gaze + accuracy ----
+            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent2"])
+            put_text(canvas, f"GAZE    : {gaze.upper()}  ({acc}%)", (rx+12, ry+32), 0.8, (255,255,255), 2)
+            ry += 70
+
+            # ---- Blink counters ----
+            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent"])
+            put_text(canvas, f"Long Blinks Count  : {blink_total}", (rx+12, ry+32), 0.8, (255,255,255), 2)
+            ry += 60
+            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent"])
+            put_text(canvas, f"Left Blink Count    : {left_blinks}", (rx+12, ry+32), 0.8, (255,255,255), 2)
+            ry += 60
+            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent"])
+            put_text(canvas, f"Right Blink Count   : {right_blinks}", (rx+12, ry+32), 0.8, (255,255,255), 2)
 
             return canvas
-
+        
+        
+        
+    
 
         output = np.zeros((900,820,3), dtype="uint8")
         ret, img = cap.read()
@@ -945,6 +940,20 @@ def main():
         
         # UI-only mirror
         display = cv2.flip(img, 1)
+        
+        
+        if ui_app:
+            try:
+                ui_app.update_from_gaze(
+                    frame=display,  # raw frame or processed one
+                    gaze=gaze,
+                    acc=accuracy,
+                    blink_total=blink_total,
+                    left=left_click_count,
+                    right=right_click_count
+                )
+            except Exception as e:
+                print("UI update failed:", e)
 
         # img = cv2.flip(img, 1)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -970,6 +979,7 @@ def main():
             if pts.shape[0] >= 478:
                 mesh_points = pts
 
+        flipped_frame = cv2.flip(img, 1)  # horizontally flip the video feed
         # If no usable landmarks, render UI and continue
         if mesh_points is None:
             if 't_prev' not in globals():
@@ -978,17 +988,34 @@ def main():
             t_prev = time.perf_counter()
 
             ui = compose_ui(
-                frame=display,
-                eye_left_view=None,
-                eye_right_view=None,
-                gaze="--",
-                acc=0,
-                blink_total=blink_total,
-                fps=fps
+            frame=flipped_frame,
+            eye_left_view=eye_img_l_view,
+            eye_right_view=eye_img_r_view,
+            gaze=gaze,
+            acc=accuracy,
+            blink_total=blink_total,
+            left_blinks=left_click_count,   # or your left blink variable
+            right_blinks=right_click_count, # or your right blink variable
+            fps=fps
             )
-            cv2.imshow("result", ui)
-            if cv2.waitKey(1) in (ord('q'), ord('Q')): break
-            continue
+            
+            if ui_app:
+                try:
+                    ui_app.update_from_gaze(
+                        frame=display,  # raw frame or processed one
+                        gaze=gaze,
+                        acc=accuracy,
+                        blink_total=blink_total,
+                        left=left_click_count,
+                        right=right_click_count
+                    )
+                except Exception as e:
+                    print("UI update failed:", e)
+
+            if show_video:
+                cv2.imshow("Real Time Gaze Estimation", ui)
+                if cv2.waitKey(1) in (ord('q'), ord('Q')): break
+                continue
 
         # ---------------- EARs (safe) ----------------
         left_ear  = eye_aspect_ratio(mesh_points, LEFT_EYE_LANDMARKS)
@@ -1002,17 +1029,35 @@ def main():
             t_prev = time.perf_counter()
 
             ui = compose_ui(
-                frame=display,
-                eye_left_view=None,
-                eye_right_view=None,
-                gaze="--",
-                acc=0,
+                frame=flipped_frame,
+                eye_left_view=eye_img_l_view,
+                eye_right_view=eye_img_r_view,
+                gaze=gaze,
+                acc=accuracy,
                 blink_total=blink_total,
+                left_blinks=left_click_count,   # or your left blink variable
+                right_blinks=right_click_count, # or your right blink variable
                 fps=fps
             )
-            cv2.imshow("result", ui)
-            if cv2.waitKey(1) in (ord('q'), ord('Q')): break
-            continue
+            
+            
+            if ui_app:
+                try:
+                    ui_app.update_from_gaze(
+                        frame=display,  # raw frame or processed one
+                        gaze=gaze,
+                        acc=accuracy,
+                        blink_total=blink_total,
+                        left=left_click_count,
+                        right=right_click_count
+                    )
+                except Exception as e:
+                    print("UI update failed:", e)
+                    
+            if show_video:
+                cv2.imshow("Real Time Gaze Estimation", ui)
+                if cv2.waitKey(1) in (ord('q'), ord('Q')): break
+                continue
 
         # Now it’s safe to use EAR values
         avg_ear = (left_ear + right_ear) / 2
@@ -1072,27 +1117,52 @@ def main():
 
         if both_closed:
             if long_blink_start is None:
-                long_blink_start = t
-            else:
+                long_blink_start = t  # mark the time when blink started
+        else:
+            # Blink ended — eyes reopened
+            if long_blink_start is not None:
                 held = t - long_blink_start
-                if long_blink_armed and (t >= long_blink_cooldown_until) and held >= LONG_BLINK_SEC:
-                    _warp_to_next_anchor()
-                    winsound.Beep(1200, 120)  # optional audio cue
-                    blink_total += 1 
+                print(f"Blink duration: {held:.2f}s")
+
+                if long_blink_armed and (t >= long_blink_cooldown_until):
+                    if held >= 3.0:  # 2+ seconds
+                        toggle_scroll_mode()
+                        winsound.Beep(900, 150)
+                    elif held >= LONG_BLINK_SEC:  # 1–2 seconds
+                        _warp_to_next_anchor()
+                        winsound.Beep(1200, 120)
+                        blink_total += 1
+
                     long_blink_armed = False
                     _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
                     long_blink_cooldown_until = t + LONG_BLINK_COOLDOWN
-        else:
-            # only fully reopen re-arms; flutter won't reset timer
-            if both_open:
-                long_blink_start = None
-                if not long_blink_armed and (t >= long_blink_cooldown_until):
-                    long_blink_armed = True
+
+                long_blink_start = None  # reset timer
+
+            # Re-arm after cooldown
+            if not long_blink_armed and (t >= long_blink_cooldown_until):
+                long_blink_armed = True
+
 
         if not results.multi_face_landmarks:
-            cv2.imshow("result", output)  # or whatever you draw
-            if cv2.waitKey(1) in (ord('q'), ord('Q')): break
-            continue
+
+            if ui_app:
+                try:
+                    ui_app.update_from_gaze(
+                        frame=display,  # raw frame or processed one
+                        gaze=gaze,
+                        acc=accuracy,
+                        blink_total=blink_total,
+                        left=left_click_count,
+                        right=right_click_count
+                    )
+                except Exception as e:
+                    print("UI update failed:", e)
+                    
+            if show_video:       
+                cv2.imshow("Real Time Gaze Estimation", output)  # or whatever you draw
+                if cv2.waitKey(1) in (ord('q'), ord('Q')): break
+                continue
 
             
             
@@ -1120,31 +1190,8 @@ def main():
         both_closed = (left_ear < EAR_CLOSED) and (right_ear < EAR_CLOSED)
         both_open   = (left_ear > EAR_OPEN_HYST) and (right_ear > EAR_OPEN_HYST)
 
-        if both_closed:
-            if long_blink_start is None:
-                long_blink_start = t
-                # debug
-                print(f"[long-blink] timer started at {long_blink_start:.2f}")
-            else:
-                held = t - long_blink_start
-                if long_blink_armed and (t >= long_blink_cooldown_until) and held >= LONG_BLINK_SEC:
-                    # cycle anchors: center → left → top → right → bottom → center...
-                    _warp_to_next_anchor()
-                    winsound.Beep(1200, 120)
-                    print(f"[long-blink] WARP after {held:.2f}s")
-                    long_blink_armed = False
-                    long_blink_cooldown_until = t + LONG_BLINK_COOLDOWN
-        else:
-            # only fully reopen re-arms; minor eyelid flutter won't reset timer
-            if both_open:
-                long_blink_start = None
-                if not long_blink_armed and (t >= long_blink_cooldown_until):
-                    long_blink_armed = True
-                    print("[long-blink] re-armed")
-
-
-
-
+    
+        # ---------------- Draw iris landmarks (for visualization) ----------------
 
         if results.multi_face_landmarks:
             for face_landmarks in results.multi_face_landmarks:
@@ -1288,22 +1335,39 @@ def main():
                 t_prev = time.perf_counter()
             fps = 1.0 / max(1e-6, (time.perf_counter() - t_prev))
             t_prev = time.perf_counter()
-
+            
+            
+            flipped_frame = cv2.flip(img, 1)  
             # --- Compose polished UI ---
             ui = compose_ui(
-                frame=display,  
-                # your camera frame (BGR)
+                frame=flipped_frame,
                 eye_left_view=eye_img_r_view,
                 eye_right_view=eye_img_l_view,
                 gaze=gaze,
                 acc=accuracy,
                 blink_total=blink_total,
+                left_blinks=left_click_count,   # or your left blink variable
+                right_blinks=right_click_count, # or your right blink variable
                 fps=fps
             )
-
-            cv2.imshow("result", ui)
             
-                    
+            if ui_app:
+                try:
+                    ui_app.update_from_gaze(
+                        frame=display,  # raw frame or processed one
+                        gaze=gaze,
+                        acc=accuracy,
+                        blink_total=blink_total,
+                        left=left_click_count,
+                        right=right_click_count
+                    )
+                except Exception as e:
+                    print("UI update failed:", e)
+
+            if show_video:
+                cv2.imshow("Real Time Gaze Estimation", ui)
+        
+                        
         if cv2.waitKey(1) == ord('q') or cv2.waitKey(1) == ord('Q') : 
             break
     cap.release()

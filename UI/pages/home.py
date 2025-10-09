@@ -4,10 +4,23 @@ from UI.theme import Colors, Fonts
 from UI.widgets import RoundedCard, PillButton
 from .base import BasePage
 from .sidebar import Sidebar
-
+import threading
+from UI.pages import gaze_runner
 
 def F(name, default):
     return getattr(Fonts, name, default)
+
+def launch_gaze_app():
+        try:
+            # messagebox.showinfo("LOOK TRACK VISION", "Starting gaze estimation system...")
+            # # Run the gaze runner in a background thread (so it doesn't freeze the UI)
+            # 🟩 Run gaze system in background (no video window)
+            threading.Thread(
+                target=lambda: gaze_runner.main(enable_mouse_control=True, show_video=False),
+                daemon=True
+            ).start()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to start gaze system:\n{e}")
 
 
 class HomePage(BasePage):
@@ -30,6 +43,8 @@ class HomePage(BasePage):
         self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
 
         self._build_home_content(self.main_col)
+        
+    
 
     def _build_home_content(self, parent):
         fr = tk.Frame(parent, bg=Colors.page_bg)
@@ -105,7 +120,7 @@ class HomePage(BasePage):
         # === Start Button ===
         start_btn = PillButton(
             scroll_frame, text="START APPLICATION",
-            command=lambda: messagebox.showinfo("Start", "Application started!")
+            command=launch_gaze_app
         )
         start_btn.pack(anchor="e", pady=(16, 6), padx=8)
 
