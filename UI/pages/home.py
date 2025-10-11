@@ -12,6 +12,7 @@ from winotify import Notification, audio
 import time
 import pyttsx3
 
+
 def F(name, default):
     return getattr(Fonts, name, default)
 
@@ -20,6 +21,7 @@ def speak(message):
     engine = pyttsx3.init()
     engine.say(message)
     engine.runAndWait()
+
 
 def launch_gaze_app():
     try:
@@ -31,19 +33,19 @@ def launch_gaze_app():
 
         # 🕒 Start a rest reminder timer (10 minutes)
         def rest_reminder_timer():
-            time.sleep(30)  # 10 minutes = 600 seconds
-            winsound.Beep(800, 400)  # optional beep
+            time.sleep(30)  # For demo (10 mins = 600 sec)
+            winsound.Beep(800, 400)
 
             toast = Notification(
-                app_id="Look Track Vision",  # registers your app in Action Center
+                app_id="Look Track Vision",
                 title="Eye Care Reminder",
                 msg="You are using Look Track Vision for 10 minutes.\nTake a short rest and then continue!",
-                icon=r"E:\0001_FYP\GazeDesktop\assets\eyelogo.ico",  # ← path to your icon
-                duration="long"  # 'short' (~5 s) or 'long' (~25 s)
+                icon=r"E:\0001_FYP\GazeDesktop\assets\eyelogo.ico",
+                duration="long"
             )
             toast.set_audio(audio.Reminder, loop=False)
             toast.show()
-            speak("You are using Look Track Vision for 10 minutes.\nTake a short rest and then continue!")
+            speak("You are using Look Track Vision for 10 minutes. Take a short rest and then continue!")
 
         threading.Thread(target=rest_reminder_timer, daemon=True).start()
 
@@ -56,34 +58,34 @@ class HomePage(BasePage):
         super().__init__(parent, controller)
         self.overlay.configure(bg=Colors.page_bg)
 
-        # Use grid for 2-column layout
+        # === Layout: Sidebar + Main Column ===
         self.overlay.grid_rowconfigure(0, weight=1)
-        self.overlay.grid_columnconfigure(0, weight=0)   # sidebar fixed
-        self.overlay.grid_columnconfigure(1, weight=1)   # content expand
+        self.overlay.grid_columnconfigure(0, weight=0)
+        self.overlay.grid_columnconfigure(1, weight=1)
 
-        # Sidebar (left)
         Sidebar(self.overlay, controller).grid(
             row=0, column=0, sticky="nsw", padx=(20, 10), pady=20
         )
 
-        # Main content (right)
         self.main_col = tk.Frame(self.overlay, bg=Colors.page_bg)
         self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
+        self.main_col.grid_rowconfigure(0, weight=1)
+        self.main_col.grid_columnconfigure(0, weight=1)
 
         self._build_home_content(self.main_col)
-        
-    
 
+    # ----------------------------------------------------------------
     def _build_home_content(self, parent):
         fr = tk.Frame(parent, bg=Colors.page_bg)
         fr.pack(fill="both", expand=True)
 
-        # === Hero ===
+        # === Hero Card ===
         hero = RoundedCard(fr, radius=18, pad=20, bg=Colors.dark_card, tight=True)
         hero.pack(fill="x", padx=8, pady=(8, 4))
         tk.Label(hero.body, text="Welcome to LOOK TRACK VISION",
                  fg="white", bg=Colors.dark_card,
                  font=F("h1b", ("Segoe UI", 20, "bold"))).pack(pady=(2, 0))
+
         subtitle = tk.Label(
             hero.body,
             text=("A smart assistant that lets you control your computer with just your eyes and voice.\n"
@@ -97,26 +99,51 @@ class HomePage(BasePage):
             wraplength=max(150, int(e.width * 0.92))
         ))
 
-        # === Scrollable Area ===
+        # === Scrollable Canvas ===
         canvas = tk.Canvas(fr, bg=Colors.page_bg, highlightthickness=0)
         scrollbar = tk.Scrollbar(fr, orient="vertical", command=canvas.yview)
         scroll_frame = tk.Frame(canvas, bg=Colors.page_bg)
-
         window_id = canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+
+        # Adjust scrollable area dynamically
         scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.bind("<Configure>", lambda e: canvas.itemconfig(window_id, width=e.width))
+        canvas.configure(yscrollcommand=scrollbar.set)
 
         canvas.pack(fill="both", expand=True, side="left")
         scrollbar.pack(side="right", fill="y")
 
-        # reuse your control cards, voice tips, tray, instructions, start btn...
-        self._make_card(scroll_frame, "Control Mode",
+        # === Mouse wheel scroll support (same as InfoPage) ===
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        def _bind_scroll(event):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+            canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+
+        def _unbind_scroll(event):
+            canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
+
+        scroll_frame.bind("<Enter>", _bind_scroll)
+        scroll_frame.bind("<Leave>", _unbind_scroll)
+
+        # === Row frame for Control Mode & Voice Tips ===
+        row_frame = tk.Frame(scroll_frame, bg=Colors.page_bg)
+        row_frame.pack(fill="x", padx=8, pady=(8, 4))
+
+        # Left card (Control Mode)
+        self._make_card(row_frame, "Control Mode",
                         "Select how you want to control apps using your gaze – automatic or manual.",
                         [("Auto Control", "auto"), ("Manual Control", "manual")])
-        
 
-        # === Voice Tips ===
-        self._make_card(scroll_frame, "Voice Tips",
+        # Spacer
+        tk.Frame(row_frame, width=16, bg=Colors.page_bg).pack(side="left")
+
+        # Right card (Voice Tips)
+        self._make_card(row_frame, "Voice Tips",
                         "Turn voice tips ON or OFF while using gaze control.",
                         [("Turn ON", "on"), ("Turn OFF", "off")],
                         radio_var=tk.StringVar(value="on"))
@@ -132,38 +159,29 @@ class HomePage(BasePage):
             ("👁️", "Left Eye Blink", "Left Click"),
             ("👁️", "Right Eye Blink", "Right Click"),
         ])
-        self._make_instruction_section(scroll_frame, "Typing & Voice", [
-            ("🎤", "Typing Field", "Voice prompt: 'Speak to type the text'"),
-            ("⌨️", "Virtual Keyboard", "AI suggests words while typing"),
-        ])
-        self._make_instruction_section(scroll_frame, "Health & Rest", [
-            ("⏱️", "Screen Time", "Tracks usage time"),
-            ("⚠️", "Rest Reminder", "Popup: 'Please rest your eyes' after set time"),
-            ("⚙️", "Custom Duration", "Choose when and where reminders appear"),
-        ])
+
         self._make_instruction_section(scroll_frame, "Interface", [
             ("➡️", "Sidebar Arrow", "Right-center arrow → open instructions"),
         ])
 
         # === Start Button ===
-        start_btn = PillButton(
-            scroll_frame, text="START APPLICATION",
-            command=launch_gaze_app
-        )
+        start_btn = PillButton(scroll_frame, text="START APPLICATION", command=launch_gaze_app)
         start_btn.pack(anchor="e", pady=(16, 6), padx=8)
 
         # Spacer
         tk.Frame(scroll_frame, height=40, bg=Colors.page_bg).pack(fill="x")
 
-    # ---------------- Reusable Helpers ----------------
+    # ----------------------------------------------------------------
+    # Reusable UI helpers
     def _make_card(self, parent, title, desc, options, radio_var=None):
         card = RoundedCard(parent, radius=12, pad=12,
                            bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
-        card.pack(fill="x", pady=6, padx=8)
+        card.pack(side="left", fill="both", expand=True, pady=6)
 
         tk.Label(card.body, text=title,
                  fg=Colors.card_head, bg=Colors.glass_bg,
-                 font=F("h2b", ("Segoe UI", 12, "bold"))).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
+                 font=F("h2b", ("Segoe UI", 12, "bold"))
+                 ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
         tk.Label(card.body, text=desc,
                  fg=Colors.card_text, bg=Colors.glass_bg,
                  font=F("body", ("Segoe UI", 10))
@@ -215,7 +233,7 @@ class HomePage(BasePage):
                  ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
         for i, (icon, label, desc) in enumerate(entries, start=1):
-            tk.Label(card.body, text=icon + " " + label,
+            tk.Label(card.body, text=f"{icon} {label}",
                      fg="white", bg=Colors.dark_card,
                      font=F("body", ("Segoe UI", 10, "bold"))
                      ).grid(row=i, column=0, sticky="w", padx=6, pady=2)
