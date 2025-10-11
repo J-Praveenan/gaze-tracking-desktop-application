@@ -22,14 +22,10 @@ class GazeTestPage(BasePage):
         self.overlay.grid_columnconfigure(0, weight=0)
         self.overlay.grid_columnconfigure(1, weight=1)
 
-        # Sidebar
-        Sidebar(self.overlay, controller).grid(
-            row=0, column=0, sticky="nsw", padx=(20, 10), pady=20
-        )
 
         # Content area
         card = RoundedCard(self.overlay, radius=18, pad=20, bg=Colors.glass_bg)
-        card.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
+        card.grid(row=0, column=1, sticky="nsew", padx=(0, 20))
 
         tk.Label(card.body, text="Real-Time Gaze Test",
                  fg=Colors.card_head, bg=Colors.glass_bg,

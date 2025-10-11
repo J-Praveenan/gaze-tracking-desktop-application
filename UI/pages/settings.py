@@ -20,10 +20,6 @@ class SettingsPage(BasePage):
         self.overlay.grid_columnconfigure(0, weight=0)  # sidebar
         self.overlay.grid_columnconfigure(1, weight=1)  # content
 
-        # Sidebar (shared across pages)
-        Sidebar(self.overlay, controller).grid(
-            row=0, column=0, sticky="nsw", padx=(20, 10), pady=20
-        )
 
         # Main content card
         self.main_col = RoundedCard(
@@ -34,7 +30,7 @@ class SettingsPage(BasePage):
             border_color="#4b5563",
             border_width=2
         )
-        self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
+        self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20))
 
         # Title
         tk.Label(

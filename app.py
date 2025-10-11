@@ -8,6 +8,7 @@ from UI.pages.settings import SettingsPage
 from threading import Thread
 from voice.voice_typing import run_voice_typing_loop
 import gaze_estimation 
+from UI.pages.sidebar import Sidebar
 import threading
 
 # ...
@@ -70,7 +71,7 @@ class App(tk.Tk):
         self.title(APP_TITLE)
         self.geometry("1180x760")
         self.minsize(1000, 680)
-        self.configure(bg=Colors.bg)
+        self.configure(bg=Colors.page_bg)
 
         apply_base_style(self)
 
@@ -82,9 +83,23 @@ class App(tk.Tk):
         self.header = TitleBar(self, logo_img=self.get_logo(70), title_text=APP_TITLE)
         self.header.pack(fill="x", side="top")
 
-        # Page container
-        self.container = tk.Frame(self, bg=Colors.bg)
-        self.container.pack(fill="both", expand=True)
+        # Main frame holds sidebar + content (so we can grid safely)
+        main_frame = tk.Frame(self, bg=Colors.page_bg)
+        main_frame.pack(fill="both", expand=True)
+
+        # === Layout using grid (inside main_frame) ===
+        main_frame.grid_rowconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(1, weight=1)
+
+        # Sidebar (created once)
+        self.sidebar = Sidebar(main_frame, self)
+        self.sidebar.grid(row=0, column=0, sticky="nsw", padx=(20, 10), pady=20)
+
+        # Page container (for right content)
+        self.container = tk.Frame(main_frame, bg=Colors.page_bg)
+        self.container.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
+
+
 
         # --- Instantiate pages ---
         self.pages = {}
@@ -134,8 +149,37 @@ class App(tk.Tk):
         page.place(relx=0, rely=0, relwidth=1, relheight=1)
 
     def show(self, name: str):
+        # raise the requested page
         self.pages[name].tkraise()
         self.pages[name].on_show()
+
+        # Check if this page should hide the sidebar
+        if name in ("SplashPage", "GuideVideoPage"):
+            # Hide sidebar
+            self.sidebar.grid_remove()
+
+            # Set full background to dark mode for splash/guide
+            self.configure(bg=Colors.bg)
+            self.container.configure(bg=Colors.bg)
+
+            # Also change main frame background
+            self.container.master.configure(bg=Colors.bg)  # main_frame
+        else:
+            # Show sidebar again
+            self.sidebar.grid()
+
+            # Restore the light page background for normal pages
+            self.configure(bg=Colors.page_bg)
+            self.container.configure(bg=Colors.page_bg)
+            self.container.master.configure(bg=Colors.page_bg)  # main_frame
+
+            # highlight correct sidebar item
+            key = name.lower().replace("page", "")
+            self.sidebar.highlight_selected(key)
+
+
+
+
 
     # ------------- window resize -------------
     def _on_resize(self, _evt=None):

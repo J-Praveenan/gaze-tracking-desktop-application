@@ -17,17 +17,13 @@ class TipsPage(BasePage):
         self.overlay.grid_columnconfigure(0, weight=0)   # sidebar
         self.overlay.grid_columnconfigure(1, weight=1)   # content
 
-        # Sidebar
-        Sidebar(self.overlay, controller).grid(
-            row=0, column=0, sticky="nsw", padx=(20, 10), pady=20
-        )
 
         # Content area as rounded card
         card = RoundedCard(
             self.overlay, radius=18, 
             bg=Colors.dark_card, tight=False
         )
-        card.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
+        card.grid(row=0, column=1, sticky="nsew", padx=(0, 20))
 
         # Embed Guide video inside the card body
         guide_path = Path(__file__).resolve().parents[2] / "assets" / "guide.mp4"
