@@ -30,7 +30,7 @@ class SettingsPage(BasePage):
             border_color="#4b5563",
             border_width=2
         )
-        self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
+        self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20))
 
         # Title
         tk.Label(

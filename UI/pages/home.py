@@ -65,7 +65,7 @@ class HomePage(BasePage):
 
 
         self.main_col = tk.Frame(self.overlay, bg=Colors.page_bg)
-        self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
+        self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20))
         self.main_col.grid_rowconfigure(0, weight=1)
         self.main_col.grid_columnconfigure(0, weight=1)
 

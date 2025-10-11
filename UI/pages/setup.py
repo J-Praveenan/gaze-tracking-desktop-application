@@ -31,7 +31,7 @@ class SetupPage(BasePage):
             self.overlay, radius=18, 
             bg=Colors.dark_card, tight=False
         )
-        card.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
+        card.grid(row=0, column=1, sticky="nsew", padx=(0, 20))
 
         # Show guide-style video
         guide_path = Path(__file__).resolve().parents[2] / "assets" / "guide.mp4"
