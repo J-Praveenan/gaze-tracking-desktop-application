@@ -63,9 +63,6 @@ class HomePage(BasePage):
         self.overlay.grid_columnconfigure(0, weight=0)
         self.overlay.grid_columnconfigure(1, weight=1)
 
-        Sidebar(self.overlay, controller).grid(
-            row=0, column=0, sticky="nsw", padx=(20, 10), pady=20
-        )
 
         self.main_col = tk.Frame(self.overlay, bg=Colors.page_bg)
         self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
