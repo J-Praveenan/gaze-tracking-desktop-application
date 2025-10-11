@@ -25,7 +25,7 @@ class GazeTestPage(BasePage):
 
         # Content area
         card = RoundedCard(self.overlay, radius=18, pad=20, bg=Colors.glass_bg)
-        card.grid(row=0, column=1, sticky="nsew", padx=(0, 20), pady=20)
+        card.grid(row=0, column=1, sticky="nsew", padx=(0, 20))
 
         tk.Label(card.body, text="Real-Time Gaze Test",
                  fg=Colors.card_head, bg=Colors.glass_bg,
