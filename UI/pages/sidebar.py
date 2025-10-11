@@ -99,7 +99,7 @@ class Sidebar(RoundedCard):
 
         r = 1
         _nav_row(r, "home", "Home", "HomePage", icon_path=home_icon_path); r += 1
-        _nav_row(r, "setup", "Set Up Gaze Tracking", "SetupPage", icon_path=gaze_set_up_icon_path); r += 1
+        _nav_row(r, "setup", "Calibration", "SetupPage", icon_path=gaze_set_up_icon_path); r += 1
         _nav_row(r, "gaze_test", "Gaze Test", "GazeTestPage", icon_path=gaze_test_icon_path); r += 1
         _nav_row(r, "tips", "Tips", "TipsPage", icon_path=tips_icon_path); r += 1
         tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=r, column=0, sticky="nsew"); r += 1
