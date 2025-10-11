@@ -80,13 +80,13 @@ run.bat
 run.sh
 
 # Media / generated
-*.mp4
-*.avi
-*.mov
-*.jpg
-*.jpeg
-*.png
-*.gif
+# *.mp4
+# *.avi
+# *.mov
+# *.jpg
+# *.jpeg
+# *.png
+# *.gif
 
 # VLC / third_party binaries
 third_party/vlc/
