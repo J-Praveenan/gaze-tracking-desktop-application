@@ -24,10 +24,6 @@ class SetupPage(BasePage):
         self.overlay.grid_columnconfigure(0, weight=0)
         self.overlay.grid_columnconfigure(1, weight=1)
 
-        # Sidebar
-        Sidebar(self.overlay, controller).grid(
-            row=0, column=0, sticky="nsw", padx=(20, 10), pady=20
-        )
 
 
         # Content area as rounded card

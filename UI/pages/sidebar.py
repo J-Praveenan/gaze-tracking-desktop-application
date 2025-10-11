@@ -29,6 +29,13 @@ class Sidebar(RoundedCard):
         self.selected_key = None
         self._build_sidebar(self.body)
         self.after(100, lambda: self.highlight_selected("home"))
+        
+    def _rebind_hover(self):
+            for key, btn in self._nav_btns.items():
+                btn.bind("<Enter>", lambda e, k=key: btn.configure(bg="#2b3947"))
+                btn.bind("<Leave>", lambda e, k=key: (
+                        btn.configure(bg="#2b3947" if k == self.selected_key else Colors.sidebar_bg)
+                    ))
 
     def _build_sidebar(self, parent):
         parent.configure(bg=Colors.sidebar_bg)
@@ -46,17 +53,33 @@ class Sidebar(RoundedCard):
                 self._icons[key] = icon  # ✅ keep reference
             else:
                 icon = None
+            
+        
+
                 
             
             def on_click():
+                # Step 1: store the selected key globally
+                self.controller.selected_page_key = key
+
+                # Step 2: visually highlight now
                 self.highlight_selected(key)
 
-                # Proper delayed navigation (no tuple auto-execution)
-                def do_switch():
-                    self.controller.show(target_page)
-                    self.highlight_selected(key)  # reapply highlight after page load
+                # Step 3: disable hover during transition to prevent flicker
+                for btn in self._nav_btns.values():
+                    btn.unbind("<Enter>")
+                    btn.unbind("<Leave>")
 
-                self.controller.after(1,do_switch)
+                # Step 4: switch the page
+                self.after(100, lambda: self.controller.show(target_page))
+
+                # Step 5: after page load finishes, re-apply highlight (fix for redraw)
+                self.after(250, lambda: self.highlight_selected(key))
+
+                # Step 6: re-enable hover
+                self.after(300, self._rebind_hover)
+
+
 
             btn = tk.Button(
                 cont, text=("  " + text),image=icon,
@@ -91,20 +114,21 @@ class Sidebar(RoundedCard):
         
     # 🔹 Highlight selected sidebar item
     def highlight_selected(self, key):
+        if key not in self._nav_rows:
+            return  # safety check (can happen if sidebar isn't ready yet)
+
+        self.selected_key = key
         for k, cont in self._nav_rows.items():
             if k == key:
                 cont.configure(
                     bg=Colors.sidebar_bg,
                     highlightbackground="white",
+                    highlightcolor="white",
                     highlightthickness=2,
                     bd=0
                 )
-                self._nav_btns[k].configure(bg="#2b3947")  # active bg
-                self.selected_key = key
+                self._nav_btns[k].configure(bg="#2b3947")
             else:
-                cont.configure(
-                    bg=Colors.sidebar_bg,
-                    highlightthickness=0,
-                    bd=0
-                )
+                cont.configure(bg=Colors.sidebar_bg, highlightthickness=0, bd=0)
                 self._nav_btns[k].configure(bg=Colors.sidebar_bg)
+
