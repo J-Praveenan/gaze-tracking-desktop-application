@@ -1,43 +1,123 @@
-# === Core runtime ===
-pillow>=10.0.0
-python-vlc>=3.0.18121
-
-# === Image / numerical processing ===
-numpy>=1.24
-opencv-python>=4.9
-mediapipe>=0.10.10
-
-# === Dependencies ===
-dlib @ file:///D:/Desktop_Application/gaze-tracking-desktop-application/dlib-19.24.1-cp311-cp311-win_amd64.whl
-imutils
+absl-py==2.3.1
+anyio==4.11.0
+astunparse==1.6.3
+attrs==25.3.0
+av==15.1.0
+cachetools==5.5.2
+certifi==2025.8.3
+cffi==1.17.1
+charset-normalizer==3.4.3
+click==8.2.1
+colorama==0.4.6
+coloredlogs==15.0.1
+comtypes==1.4.12
+contourpy==1.3.3
+ctranslate2==4.3.1
+customtkinter==5.2.2
+cycler==0.12.1
+darkdetect==0.8.0
+dlib @ file:///E:/0001_FYP/GazeDesktop/Data/dlib-19.24.1-cp311-cp311-win_amd64.whl#sha256=6f1a5ee167975d7952b28e0ce4495f1d9a77644761cf5720fb66d7c6188ae496
+faster-whisper==1.2.0
+filelock==3.19.1
+flatbuffers==25.2.10
+fonttools==4.59.2
+fsspec==2025.7.0
+gast==0.6.0
+google-auth==2.40.3
+google-auth-oauthlib==1.2.2
+google-pasta==0.2.0
+grpcio==1.74.0
+h5py==3.14.0
+huggingface-hub==0.34.4
+humanfriendly==10.0
+idna==3.10
+imutils==0.5.4
+jax==0.7.1
+jaxlib==0.7.1
+Jinja2==3.1.6
+joblib==1.5.2
+keras==3.11.3
+keyboard==0.13.5
+kiwisolver==1.4.9
+libclang==18.1.1
+llvmlite==0.44.0
+Markdown==3.8.2
+markdown-it-py==4.0.0
+MarkupSafe==3.0.2
+matplotlib==3.10.5
+mdurl==0.1.2
+mediapipe==0.10.21
+ml_dtypes==0.5.3
+more-itertools==10.7.0
+MouseInfo==0.1.3
+mpmath==1.3.0
+namex==0.1.0
+networkx==3.5
+nltk==3.9.1
+noisereduce==3.0.3
+numba==0.61.2
+numpy==1.26.4
+oauthlib==3.3.1
+onnxruntime==1.22.1
+openai-whisper==20250625
+opencv-contrib-python==4.11.0.86
+opt_einsum==3.4.0
+optree==0.17.0
+packaging==25.0
+pillow==11.3.0
+protobuf==6.32.0
+pyasn1==0.6.1
+pyasn1_modules==0.4.2
+PyAutoGUI==0.9.54
+pycparser==2.22
+PyGetWindow==0.0.9
+Pygments==2.19.2
+PyMsgBox==1.0.9
+pyparsing==3.2.3
+pyperclip==1.9.0
+pypiwin32==223
+pyreadline3==3.5.4
+PyRect==0.2.0
+PyScreeze==1.0.1
+python-dateutil==2.9.0.post0
+python-vlc==3.0.21203
+pyttsx3==2.99
+pytweening==1.2.0
+pywin32==311
+PyYAML==6.0.2
+regex==2025.8.29
+requests==2.32.5
+requests-oauthlib==2.0.0
+rich==14.1.0
+rsa==4.9.1
+safetensors==0.6.2
+scipy==1.16.1
+sentencepiece==0.2.1
+silero-vad==6.0.0
+six==1.17.0
+sniffio==1.3.1
+sounddevice==0.5.2
+SpeechRecognition==3.14.3
+sympy==1.14.0
+tensorboard==2.20.0
+tensorboard-data-server==0.7.2
 tensorflow==2.20.0
-pyautogui
-pywin32
-SpeechRecognition
-pyttsx3
-openai-whisper
-keyboard
-transformers
-uiautomation
-
-# pip install opencv-contrib-python
-# pip install mediapipe
-# pip install numpy
-# pip install E:\0001_FYP\GazeDesktop\Data\dlib-19.24.1-cp311-cp311-win_amd64.whl
-# pip install imutils
-# pip install tensorflow==2.15
-# pip install pyautogui
-# pip install pywin32
-# pip install SpeechRecognition
-# pip install pyttsx3
-# pip install openai-whisper
-# pip install keyboard
-# pip install transformers
-# pip install uiautomation
-
-
-
-
-
-
-
+tensorflow-cpu==2.15.1
+tensorflow-estimator==2.15.0
+tensorflow-intel==2.15.1
+tensorflow-io-gcs-filesystem==0.31.0
+termcolor==3.1.0
+tiktoken==0.11.0
+tokenizers==0.22.0
+torch==2.8.0
+torchaudio==2.8.0
+tqdm==4.67.1
+transformers==4.56.0
+typing_extensions==4.15.0
+uiautomation==2.0.29
+urllib3==2.5.0
+watchfiles==1.1.0
+Werkzeug==3.1.3
+win10toast==0.9
+winotify==1.1.0
+wrapt==1.14.2
