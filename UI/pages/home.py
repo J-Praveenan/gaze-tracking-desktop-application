@@ -6,21 +6,49 @@ from .base import BasePage
 from .sidebar import Sidebar
 import threading
 from UI.pages import gaze_runner
+import winsound
+from win10toast import ToastNotifier
+from winotify import Notification, audio
+import time
+import pyttsx3
 
 def F(name, default):
     return getattr(Fonts, name, default)
 
+
+def speak(message):
+    engine = pyttsx3.init()
+    engine.say(message)
+    engine.runAndWait()
+
 def launch_gaze_app():
-        try:
-            # messagebox.showinfo("LOOK TRACK VISION", "Starting gaze estimation system...")
-            # # Run the gaze runner in a background thread (so it doesn't freeze the UI)
-            # 🟩 Run gaze system in background (no video window)
-            threading.Thread(
-                target=lambda: gaze_runner.main(enable_mouse_control=True, show_video=False),
-                daemon=True
-            ).start()
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to start gaze system:\n{e}")
+    try:
+        # 🟢 Start gaze control in background
+        threading.Thread(
+            target=lambda: gaze_runner.main(enable_mouse_control=True, show_video=False),
+            daemon=True
+        ).start()
+
+        # 🕒 Start a rest reminder timer (10 minutes)
+        def rest_reminder_timer():
+            time.sleep(30)  # 10 minutes = 600 seconds
+            winsound.Beep(800, 400)  # optional beep
+
+            toast = Notification(
+                app_id="Look Track Vision",  # registers your app in Action Center
+                title="Eye Care Reminder",
+                msg="You are using Look Track Vision for 10 minutes.\nTake a short rest and then continue!",
+                icon=r"E:\0001_FYP\GazeDesktop\assets\eyelogo.ico",  # ← path to your icon
+                duration="long"  # 'short' (~5 s) or 'long' (~25 s)
+            )
+            toast.set_audio(audio.Reminder, loop=False)
+            toast.show()
+            speak("You are using Look Track Vision for 10 minutes.\nTake a short rest and then continue!")
+
+        threading.Thread(target=rest_reminder_timer, daemon=True).start()
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to start gaze system:\n{e}")
 
 
 class HomePage(BasePage):
