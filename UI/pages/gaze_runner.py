@@ -191,11 +191,11 @@ def main(enable_mouse_control=False, show_video=False):
     with open(THRESH_FILE, "r", encoding="utf-8") as f:
             thresholds = json.load(f)
 
-    # LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"] + 4
-    # RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"] - 4
+    LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"] + 1
+    RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"] - 1
     
-    LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"]
-    RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"]
+    # LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"]
+    # RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"]
     
     UP_THRESHOLD = thresholds["UP_THRESHOLD"]
     DOWN_THRESHOLD = thresholds["DOWN_THRESHOLD"] 
@@ -237,7 +237,7 @@ def main(enable_mouse_control=False, show_video=False):
     # --- Long-blink tuning ---
 
     # --- Wink & long-blink tuning (adjust to taste) ---
-    EAR_CLOSED = 0.2           # eye considered closed below this
+    EAR_CLOSED = 0.18           # eye considered closed below this
     EAR_OPEN_HYST = 0.16        # must be clearly open above this
     WINK_OPEN_MARGIN = 0.02     # the OTHER eye must be this much more open
     WINK_MIN_SEC = 0.08        # ignore micro twitches
@@ -761,14 +761,14 @@ def main(enable_mouse_control=False, show_video=False):
         if gaze == "down" or landmark_down_boolean:
             gaze = "down"
             print("Final Gaze direction: ", gaze)
+        if gaze == "up" :
+            gaze = "up"
+            print("Final Gaze direction: ", gaze)
         elif gaze == "center" or landmark_center_boolean:
             gaze = "center"
             print("Final Gaze direction: ", gaze)       
         elif gaze == "right" and landmark_right_boolean:
             gaze = "right"
-            print("Final Gaze direction: ", gaze)
-        elif gaze == "up" :
-            gaze = "up"
             print("Final Gaze direction: ", gaze)      
         elif gaze == "left" and landmark_left_boolean:
             gaze = "left"
