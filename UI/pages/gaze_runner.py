@@ -5,6 +5,7 @@ from tensorflow.keras.models import load_model
 import mediapipe as mp
 from pathlib import Path
 from Voice_Model.voice_autodictation import start_voice_autodictation
+from voice.voice_typing import run_voice_typing_loop
 import winsound
 import pyautogui
 import time
@@ -112,6 +113,9 @@ def _start_cursor_smoother():
 
 
 def main(enable_mouse_control=False, show_video=False):
+    if enable_mouse_control:
+        threading.Thread(
+            target=run_voice_typing_loop, daemon=True).start()
     # ===== THEME (approximate to your 2nd screenshot; tweak hex to match exactly) =====
     def _hex(h):  # hex -> BGR tuple for OpenCV
         h = h.lstrip('#')
@@ -716,7 +720,7 @@ def main(enable_mouse_control=False, show_video=False):
         elif left_eye_offset_y > DOWN_THRESHOLD and right_eye_offset_y > DOWN_THRESHOLD:
             landmark_down_boolean = True
             print("Looking DOWN (Landmarks)")
-        if (right_eye_horizontal_offset >= LEFT_THRESHOLD) and (left_eye_horizontal_offset >= LEFT_THRESHOLD):
+        elif (right_eye_horizontal_offset >= LEFT_THRESHOLD) and (left_eye_horizontal_offset >= LEFT_THRESHOLD):
             landmark_left_boolean = True
             print("Looking LEFT (Landmarks)")
         elif (right_eye_horizontal_offset <= RIGHT_THRESHOLD) and (left_eye_horizontal_offset <= RIGHT_THRESHOLD):
@@ -761,7 +765,7 @@ def main(enable_mouse_control=False, show_video=False):
         if gaze == "down" or landmark_down_boolean:
             gaze = "down"
             print("Final Gaze direction: ", gaze)
-        if gaze == "up" :
+        elif gaze == "up" :
             gaze = "up"
             print("Final Gaze direction: ", gaze)
         elif gaze == "center" or landmark_center_boolean:
@@ -1376,4 +1380,4 @@ def main(enable_mouse_control=False, show_video=False):
 
 def run():
     main()
-    start_voice_autodictation()
+    # start_voice_autodictation()
