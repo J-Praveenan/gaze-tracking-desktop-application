@@ -3,12 +3,18 @@ from UI.theme import Colors, Fonts
 from UI.widgets import RoundedCard
 from PIL import Image, ImageTk
 import os
-home_icon_path = "E:/0001_FYP/GazeDesktop/assets/home.png"  # or your uploaded path
-setting_icon_path = "E:/0001_FYP/GazeDesktop/assets/setting.png" 
-tips_icon_path = "E:/0001_FYP/GazeDesktop/assets/tips.png" 
-info_icon_path = "E:/0001_FYP/GazeDesktop/assets/info.png" 
-gaze_set_up_icon_path = "E:/0001_FYP/GazeDesktop/assets/gaze_set_up.png" 
-gaze_test_icon_path = "E:/0001_FYP/GazeDesktop/assets/gaze_test.png" 
+
+# Get the absolute project root (two levels up from this file)
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+ASSETS_DIR = os.path.join(ROOT_DIR, "assets")
+
+# Build paths dynamically
+home_icon_path = os.path.join(ASSETS_DIR, "home.png")
+setting_icon_path = os.path.join(ASSETS_DIR, "setting.png")
+tips_icon_path = os.path.join(ASSETS_DIR, "tips.png")
+info_icon_path = os.path.join(ASSETS_DIR, "info.png")
+gaze_set_up_icon_path = os.path.join(ASSETS_DIR, "gaze_set_up.png")
+gaze_test_icon_path = os.path.join(ASSETS_DIR, "gaze_test.png")
 
 def F(name, default):
     return getattr(Fonts, name, default)
