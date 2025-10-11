@@ -155,12 +155,7 @@ def _report_callback_exception(self, exc, val, tb):
     traceback.print_exception(exc, val, tb)
 
 if __name__ == "__main__":
-    
-    Thread(target=run_voice_typing_loop, daemon=True).start()
-    
-    # Start gaze tracker (main.py) in background thread
-    # threading.Thread(target=gaze_estimation.main, daemon=True).start()
-    
+      
     # install Tk callback error reporter
     tk.Tk.report_callback_exception = _report_callback_exception
     
