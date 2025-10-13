@@ -68,9 +68,13 @@ INTEGRATED_UI = "ui_app" in globals() and ui_app is not None
 
 
 def speak(message):
-    engine = pyttsx3.init()
-    engine.say(message)
-    engine.runAndWait()
+    try:
+        engine = pyttsx3.init()
+        engine.say(message)
+        engine.runAndWait()
+    except RuntimeError:
+        # If another thread is already running pyttsx3
+        print("[WARN] pyttsx3 is busy — skipping speech.")
 
 def toggle_scroll_mode():
     """Toggle between cursor move and scroll modes."""
@@ -285,14 +289,6 @@ def main(enable_mouse_control=False, show_video=False):
 
 
     _anchor_points = _compute_anchors()
-
-    # # start smoother once at startup (after imports)
-    # if enable_mouse_control:
-    #     _start_cursor_smoother()
-    #     speak("Gaze control enabled.")
-        
-
-
 
     # ===== UI sizing =====
     UI_W = 1600        # overall canvas width  (↑ this to make everything wider)

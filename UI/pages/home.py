@@ -58,12 +58,16 @@ def launch_gaze_app():
             def rest_reminder_timer():
                 time.sleep(reminder_minutes * 60)  # convert minutes to seconds
                 winsound.Beep(800, 400)
+                
+                base_dir = Path(__file__).resolve().parents[2]
+                assets_dir = base_dir / "assets"
+                icon_path = assets_dir / "eyelogo.ico"
 
                 toast = Notification(
                     app_id="Look Track Vision",
                     title="Eye Care Reminder",
                     msg=f"You are using Look Track Vision for {reminder_minutes} minutes.\nTake a short rest!",
-                    icon=r"E:\0001_FYP\GazeDesktop\assets\eyelogo.ico",
+                    icon=str(icon_path),
                     duration="long"
                 )
                 toast.set_audio(audio.Reminder, loop=False)
