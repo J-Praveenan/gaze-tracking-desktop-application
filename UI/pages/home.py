@@ -15,6 +15,7 @@ from PIL import Image, ImageTk
 import os
 from pathlib import Path
 import json
+from UI.widgets import RoundedButton  # 👈 add import
 
 def F(name, default):
     return getattr(Fonts, name, default)
@@ -228,46 +229,37 @@ class HomePage(BasePage):
             if not self.app_running:
                 launch_gaze_app()
                 self.app_running = True
-                start_btn.config(
-                    text="  STOP APPLICATION  ",
-                    image=power_off_icon,
-                    bg="#dc2626",           # red tone
-                    activebackground="#b91c1c",
-                )
+                start_btn.bg = "#dc2626"          # red
+                start_btn.activebg = "#b91c1c"
+                start_btn.text = "STOP APPLICATION"
+                start_btn.icon = power_off_icon
+                start_btn.delete("all")           # clear old graphics
+                start_btn._draw_button()          # redraw new state
                 speak("Gaze control started.")
             else:
-                # If you have a stop handler, call it here
                 self.app_running = False
-                start_btn.config(
-                    text="  START APPLICATION  ",
-                    image=power_on_icon,
-                    bg="#2563eb",           # blue tone
-                    activebackground="#1e40af",
-                )
+                start_btn.bg = "#2563eb"          # blue
+                start_btn.activebg = "#1e40af"
+                start_btn.text = "START APPLICATION"
+                start_btn.icon = power_on_icon
+                start_btn.delete("all")
+                start_btn._draw_button()
                 speak("Gaze control stopped.")
 
-        # --- Rounded Pill Button with Icon ---
-        start_btn = PillButton(
-            scroll_frame,
-            text="  START APPLICATION  ",
-            command=toggle_app
-        )
-        if power_on_icon:
-            start_btn.config(image=power_on_icon, compound="left")
-            start_btn.image = power_on_icon
 
-        start_btn.config(
-            font=("Segoe UI Semibold", 11),
-            fg="white",
-            bg="#2563eb",
-            activeforeground="white",
-            borderwidth=0,
-            cursor="hand2",
-            pady=8,
-            padx=16
-        )
 
+        # --- True Rounded Button ---
+        start_btn = RoundedButton(
+    scroll_frame,
+    text="START APPLICATION",
+    radius=25,
+    bg="#2563eb",
+    activebg="#1e40af",
+    icon=power_on_icon,       # 👈 pass icon here
+    command=toggle_app
+)
         start_btn.pack(anchor="center", pady=(20, 10))
+
 
 
         # Spacer

@@ -1,8 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from UI.theme import Colors, Fonts
-
-
+from tkinter import font as tkfont
 class RoundedCard(tk.Frame):
     def __init__(self, parent, border_color="#222", border_width=0,
                  radius=16, pad=12, bg=None, tight=True, **kwargs):
@@ -103,3 +102,79 @@ class PillButton(tk.Button):
                          font=("Segoe UI", 10, "bold"),
                          fg=Colors.pill_fg, bg=Colors.pill_bg, activebackground="#2563eb",
                          bd=0, padx=18, pady=8, cursor="hand2")
+
+
+
+
+class RoundedButton(tk.Canvas):
+    def __init__(self, parent, text="", radius=16,
+                 padding_x=18, padding_y=8,
+                 bg="#2563eb", fg="white",
+                 command=None, activebg="#1e40af",
+                 font=None, icon=None):
+        super().__init__(parent, highlightthickness=0, bg=parent["bg"], bd=0)
+        self.command = command
+        self.bg = bg
+        self.fg = fg
+        self.activebg = activebg
+        self.text = text
+        self.icon = icon
+        self.radius = radius
+        self.padding_x = padding_x
+        self.padding_y = padding_y
+        self.font = font or ("Segoe UI Semibold", 11)
+
+        self.bind("<Button-1>", self._on_click)
+        self.bind("<Enter>", lambda e: self._set_color(self.activebg))
+        self.bind("<Leave>", lambda e: self._set_color(self.bg))
+
+        self._draw_button()
+
+    def _set_color(self, color):
+        self.itemconfig("button", fill=color)
+        self.itemconfig("side", fill=color)
+
+    def _draw_button(self):
+        fnt = tkfont.Font(font=self.font)
+        text_w = fnt.measure(self.text)
+        text_h = fnt.metrics("linespace")
+
+        # button size
+        height = text_h + 2 * self.padding_y
+        width = text_w + 2 * self.padding_x
+
+        # Add icon space if present
+        icon_space = height * 0.8 if self.icon else 0
+        width += icon_space
+
+        self.config(width=width, height=height)
+        r = min(self.radius, height // 2)
+
+        # --- shape ---
+        self.create_oval(0, 0, height, height, fill=self.bg, outline="", tags=("button", "side"))
+        self.create_oval(width - height, 0, width, height, fill=self.bg, outline="", tags=("button", "side"))
+        self.create_rectangle(height / 2, 0, width - height / 2, height,
+                            fill=self.bg, outline="", tags=("button", "side"))
+
+        # --- compute total centered content width ---
+        icon_gap = height * 0.35 if self.icon else 0  # 👈 adjustable spacing between icon & text
+        total_content_width = text_w + (icon_space if self.icon else 0) + icon_gap
+        start_x = (width - total_content_width) / 2
+
+        # --- draw icon ---
+        if self.icon:
+            icon_x = start_x + height * 0.4
+            self.create_image(icon_x, height / 2, image=self.icon)
+            start_x += icon_space + icon_gap  # move text start after icon + gap
+
+        # --- draw text ---
+        text_x = start_x + text_w / 2
+        self.create_text(
+            text_x, height / 2,
+            text=self.text, fill=self.fg,
+            font=self.font, tags="text"
+        )
+
+    def _on_click(self, event):
+        if self.command:
+            self.command()
