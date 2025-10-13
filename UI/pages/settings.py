@@ -13,6 +13,55 @@ def F(name, default):
     return getattr(Fonts, name, default)
 
 
+# ---------------------------------------------------------------------
+# 🔘 Modern Toggle Switch Widget (Pure Tkinter)
+# ---------------------------------------------------------------------
+class ModernToggle(tk.Canvas):
+    def __init__(self, parent, width=50, height=26, on_toggle=None, initial=False, **kwargs):
+        super().__init__(parent, width=width, height=height,
+                         highlightthickness=0, bg=Colors.glass_bg, **kwargs)
+        self.on_toggle = on_toggle
+        self.state = tk.BooleanVar(value=initial)
+        self.width = width
+        self.height = height
+        self.radius = height // 2
+        self.circle_pos = self.width - self.height if self.state.get() else 2
+        self._draw_toggle()
+        self.bind("<Button-1>", self._toggle)
+
+    def _draw_toggle(self):
+        self.delete("all")
+        if self.state.get():
+            # Blue ON state
+            self.create_oval(0, 0, self.height, self.height, fill="#2563eb", outline="#2563eb")
+            self.create_oval(self.width - self.height, 0, self.width, self.height, fill="#2563eb", outline="#2563eb")
+            self.create_rectangle(self.radius, 0, self.width - self.radius, self.height,
+                                  fill="#2563eb", outline="#2563eb")
+            # Circle (white)
+            self.create_oval(self.width - self.height + 2, 2, self.width - 2, self.height - 2,
+                             fill="white", outline="")
+        else:
+            # Gray OFF state
+            self.create_oval(0, 0, self.height, self.height, fill="#9ca3af", outline="#9ca3af")
+            self.create_oval(self.width - self.height, 0, self.width, self.height, fill="#9ca3af", outline="#9ca3af")
+            self.create_rectangle(self.radius, 0, self.width - self.radius, self.height,
+                                  fill="#9ca3af", outline="#9ca3af")
+            self.create_oval(2, 2, self.height - 2, self.height - 2, fill="white", outline="")
+
+    def _toggle(self, event=None):
+        self.state.set(not self.state.get())
+        self._draw_toggle()
+        if self.on_toggle:
+            self.on_toggle(self.state.get())
+
+    def get(self):
+        return self.state.get()
+
+    def set(self, value: bool):
+        self.state.set(value)
+        self._draw_toggle()
+
+
 class SettingsPage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
@@ -80,18 +129,22 @@ class SettingsPage(BasePage):
         ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
         # === Toggle ===
-        self.enable_var = tk.BooleanVar(value=data.get("enabled", False))
-        enable_chk = tk.Checkbutton(
+        # === Toggle Switch ===
+        tk.Label(
             card.body,
-            text="Enable reminder notifications",
-            variable=self.enable_var,
+            text="Enable reminder notifications:",
             bg=Colors.glass_bg,
             fg=Colors.card_text,
-            font=("Segoe UI", 12),
-            activebackground=Colors.glass_bg,
-            command=self._toggle_enable
+            font=("Segoe UI", 12)
+        ).grid(row=1, column=0, sticky="w", padx=10, pady=6)
+
+        self.toggle = ModernToggle(
+            card.body,
+            initial=data.get("enabled", False),
+            on_toggle=lambda val: self._toggle_enable()
         )
-        enable_chk.grid(row=1, column=0, sticky="w", padx=10, pady=6, columnspan=3)
+        self.toggle.grid(row=1, column=1, sticky="w", padx=10, pady=6)
+
 
         # === Duration entry + dropdown ===
         tk.Label(card.body, text="Duration (minutes):", bg=Colors.glass_bg,font=("Segoe UI", 12),
@@ -121,7 +174,7 @@ class SettingsPage(BasePage):
     # ----------------------------------------------------------------
     def _toggle_enable(self):
         """Enable or disable input fields based on toggle state."""
-        state = "normal" if self.enable_var.get() else "disabled"
+        state = "normal" if self.toggle.get() else "disabled"
         self.dropdown.configure(state=state)
 
     # ----------------------------------------------------------------
@@ -137,7 +190,7 @@ class SettingsPage(BasePage):
             return
 
         data = {
-            "enabled": self.enable_var.get(),
+            "enabled":  self.toggle.get(),
             "duration": duration
         }
 
