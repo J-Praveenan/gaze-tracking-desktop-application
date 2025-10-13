@@ -1064,6 +1064,10 @@ def main(enable_mouse_control=False, show_video=False):
                 continue
 
         # Now it’s safe to use EAR values
+        if left_ear is None or right_ear is None:
+            # Skip frame if eyes not detected properly
+            continue
+
         avg_ear = (left_ear + right_ear) / 2
         is_eye_closed = avg_ear < EAR_THRESHOLD
         

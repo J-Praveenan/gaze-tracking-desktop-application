@@ -11,7 +11,8 @@ from win10toast import ToastNotifier
 from winotify import Notification, audio
 import time
 import pyttsx3
-
+from pathlib import Path
+import json
 
 def F(name, default):
     return getattr(Fonts, name, default)
@@ -30,24 +31,44 @@ def launch_gaze_app():
             target=lambda: gaze_runner.main(enable_mouse_control=True, show_video=False),
             daemon=True
         ).start()
+        
+        
+        # 🕒 Load reminder settings
+        base_dir = Path(__file__).resolve().parents[2]
+        data_dir = base_dir / "Data"
+        data_dir.mkdir(exist_ok=True)
+        settings_path = data_dir / "notification_remainder_time.json"
+        reminder_enabled = False
+        reminder_minutes = 10
+        
+        if settings_path.exists():
+            try:
+                with open(settings_path, "r") as f:
+                    data = json.load(f)
+                    reminder_enabled = data.get("enabled", False)
+                    reminder_minutes = data.get("duration", 10)
+            except Exception:
+                pass
 
-        # 🕒 Start a rest reminder timer (10 minutes)
-        def rest_reminder_timer():
-            time.sleep(30)  # For demo (10 mins = 600 sec)
-            winsound.Beep(800, 400)
+ # 🕒 Start reminder if enabled
+        if reminder_enabled:
+            # 🕒 Start a rest reminder timer (10 minutes)
+            def rest_reminder_timer():
+                time.sleep(reminder_minutes * 60)  # convert minutes to seconds
+                winsound.Beep(800, 400)
 
-            toast = Notification(
-                app_id="Look Track Vision",
-                title="Eye Care Reminder",
-                msg="You are using Look Track Vision for 10 minutes.\nTake a short rest and then continue!",
-                icon=r"E:\0001_FYP\GazeDesktop\assets\eyelogo.ico",
-                duration="long"
-            )
-            toast.set_audio(audio.Reminder, loop=False)
-            toast.show()
-            speak("You are using Look Track Vision for 10 minutes. Take a short rest and then continue!")
+                toast = Notification(
+                    app_id="Look Track Vision",
+                    title="Eye Care Reminder",
+                    msg=f"You are using Look Track Vision for {reminder_minutes} minutes.\nTake a short rest!",
+                    icon=r"E:\0001_FYP\GazeDesktop\assets\eyelogo.ico",
+                    duration="long"
+                )
+                toast.set_audio(audio.Reminder, loop=False)
+                toast.show()
+                speak(f"You are using Look Track Vision for {reminder_minutes} minutes. Take a short rest!")
 
-        threading.Thread(target=rest_reminder_timer, daemon=True).start()
+            threading.Thread(target=rest_reminder_timer, daemon=True).start()
 
     except Exception as e:
         messagebox.showerror("Error", f"Failed to start gaze system:\n{e}")
