@@ -11,6 +11,8 @@ from win10toast import ToastNotifier
 from winotify import Notification, audio
 import time
 import pyttsx3
+from PIL import Image, ImageTk
+import os
 from pathlib import Path
 import json
 
@@ -151,20 +153,40 @@ class HomePage(BasePage):
         # === Row frame for Control Mode & Voice Tips ===
         row_frame = tk.Frame(scroll_frame, bg=Colors.page_bg)
         row_frame.pack(fill="x", padx=8, pady=(8, 4))
+        row_frame.grid_columnconfigure(0, weight=1)
+        row_frame.grid_columnconfigure(1, weight=1)
 
-        # Left card (Control Mode)
-        self._make_card(row_frame, "Control Mode",
-                        "Select how you want to control apps using your gaze – automatic or manual.",
-                        [("Auto Control", "auto"), ("Manual Control", "manual")])
+        # Create cards
+        control_card = self._make_card(
+            row_frame, "Control Mode",
+            "Select how you want to control apps using your gaze – automatic or manual.",
+            [("Auto Control", "auto"), ("Manual Control", "manual")]
+        )
+        voice_card = self._make_card(
+            row_frame, "Voice Tips",
+            "Turn voice tips ON or OFF while using gaze control.",
+            [("Turn ON", "on"), ("Turn OFF", "off")],
+            radio_var=tk.StringVar(value="on")
+        )
 
-        # Spacer
-        tk.Frame(row_frame, width=16, bg=Colors.page_bg).pack(side="left")
+        # Initially position them side-by-side
+        control_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=(0, 8))
+        voice_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=(0, 8))
 
-        # Right card (Voice Tips)
-        self._make_card(row_frame, "Voice Tips",
-                        "Turn voice tips ON or OFF while using gaze control.",
-                        [("Turn ON", "on"), ("Turn OFF", "off")],
-                        radio_var=tk.StringVar(value="on"))
+        # Adjust layout on resize
+        def adjust_layout(event):
+            if event.width < 600:
+                # Stack vertically on small screens
+                control_card.grid_configure(row=0, column=0, columnspan=2, padx=0)
+                voice_card.grid_configure(row=1, column=0, columnspan=2, padx=0)
+            else:
+                # Side by side on large screens
+                control_card.grid_configure(row=0, column=0, columnspan=1, padx=(0, 8))
+                voice_card.grid_configure(row=0, column=1, columnspan=1, padx=(8, 0))
+
+        row_frame.bind("<Configure>", adjust_layout)
+
+
 
         # === Hide to Tray ===
         self._make_checkbox_card(scroll_frame)
@@ -182,9 +204,71 @@ class HomePage(BasePage):
             ("➡️", "Sidebar Arrow", "Right-center arrow → open instructions"),
         ])
 
-        # === Start Button ===
-        start_btn = PillButton(scroll_frame, text="START APPLICATION", command=launch_gaze_app)
-        start_btn.pack(anchor="e", pady=(16, 6), padx=8)
+        # === Start / Stop Application Button with Icon ==
+
+        ASSETS_DIR = os.path.join(os.path.dirname(__file__), "../../assets")
+        power_on_path = os.path.join(ASSETS_DIR, "power_on.png")
+        power_off_path = os.path.join(ASSETS_DIR, "power_off.png")
+
+        # Load icons safely
+        def load_icon(path, size=(22, 22)):
+            try:
+                img = Image.open(path).resize(size, Image.LANCZOS)
+                return ImageTk.PhotoImage(img)
+            except Exception:
+                return None
+
+        power_on_icon = load_icon(power_on_path)
+        power_off_icon = load_icon(power_off_path)
+
+        # --- Button state ---
+        self.app_running = False
+
+        def toggle_app():
+            if not self.app_running:
+                launch_gaze_app()
+                self.app_running = True
+                start_btn.config(
+                    text="  STOP APPLICATION  ",
+                    image=power_off_icon,
+                    bg="#dc2626",           # red tone
+                    activebackground="#b91c1c",
+                )
+                speak("Gaze control started.")
+            else:
+                # If you have a stop handler, call it here
+                self.app_running = False
+                start_btn.config(
+                    text="  START APPLICATION  ",
+                    image=power_on_icon,
+                    bg="#2563eb",           # blue tone
+                    activebackground="#1e40af",
+                )
+                speak("Gaze control stopped.")
+
+        # --- Rounded Pill Button with Icon ---
+        start_btn = PillButton(
+            scroll_frame,
+            text="  START APPLICATION  ",
+            command=toggle_app
+        )
+        if power_on_icon:
+            start_btn.config(image=power_on_icon, compound="left")
+            start_btn.image = power_on_icon
+
+        start_btn.config(
+            font=("Segoe UI Semibold", 11),
+            fg="white",
+            bg="#2563eb",
+            activeforeground="white",
+            borderwidth=0,
+            cursor="hand2",
+            pady=8,
+            padx=16
+        )
+
+        start_btn.pack(anchor="center", pady=(20, 10))
+
 
         # Spacer
         tk.Frame(scroll_frame, height=40, bg=Colors.page_bg).pack(fill="x")
@@ -193,22 +277,24 @@ class HomePage(BasePage):
     # Reusable UI helpers
     def _make_card(self, parent, title, desc, options, radio_var=None):
         card = RoundedCard(parent, radius=12, pad=12,
-                           bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
-        card.pack(side="left", fill="both", expand=True, pady=6)
-
+                       bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
+        # Remove .pack() here
         tk.Label(card.body, text=title,
-                 fg=Colors.card_head, bg=Colors.glass_bg,
-                 font=F("h2b", ("Segoe UI", 12, "bold"))
-                 ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
+                fg=Colors.card_head, bg=Colors.glass_bg,
+                font=F("h2b", ("Segoe UI", 12, "bold"))
+                ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
         tk.Label(card.body, text=desc,
-                 fg=Colors.card_text, bg=Colors.glass_bg,
-                 font=F("body", ("Segoe UI", 10))
-                 ).grid(row=1, column=0, columnspan=2, sticky="w", padx=6, pady=(0, 8))
+                fg=Colors.card_text, bg=Colors.glass_bg,
+                font=F("body", ("Segoe UI", 10))
+                ).grid(row=1, column=0, columnspan=2, sticky="w", padx=6, pady=(0, 8))
 
         var = radio_var or tk.StringVar(value=options[0][1])
         for i, (label, value) in enumerate(options):
             tk.Radiobutton(card.body, text=label, variable=var, value=value,
-                           bg=Colors.glass_bg, anchor="w").grid(row=2, column=i, sticky="w", padx=16, pady=(0, 10))
+                        bg=Colors.glass_bg, anchor="w").grid(row=2, column=i, sticky="w", padx=16, pady=(0, 10))
+
+        return card
+
 
     def _make_checkbox_card(self, parent):
         card = RoundedCard(parent, radius=12, pad=12,
