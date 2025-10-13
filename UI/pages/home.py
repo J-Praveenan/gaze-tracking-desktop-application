@@ -11,6 +11,8 @@ from win10toast import ToastNotifier
 from winotify import Notification, audio
 import time
 import pyttsx3
+from PIL import Image, ImageTk
+import os
 
 
 def F(name, default):
@@ -181,9 +183,71 @@ class HomePage(BasePage):
             ("➡️", "Sidebar Arrow", "Right-center arrow → open instructions"),
         ])
 
-        # === Start Button ===
-        start_btn = PillButton(scroll_frame, text="START APPLICATION", command=launch_gaze_app)
-        start_btn.pack(anchor="e", pady=(16, 6), padx=8)
+        # === Start / Stop Application Button with Icon ==
+
+        ASSETS_DIR = os.path.join(os.path.dirname(__file__), "../../assets")
+        power_on_path = os.path.join(ASSETS_DIR, "power_on.png")
+        power_off_path = os.path.join(ASSETS_DIR, "power_off.png")
+
+        # Load icons safely
+        def load_icon(path, size=(22, 22)):
+            try:
+                img = Image.open(path).resize(size, Image.LANCZOS)
+                return ImageTk.PhotoImage(img)
+            except Exception:
+                return None
+
+        power_on_icon = load_icon(power_on_path)
+        power_off_icon = load_icon(power_off_path)
+
+        # --- Button state ---
+        self.app_running = False
+
+        def toggle_app():
+            if not self.app_running:
+                launch_gaze_app()
+                self.app_running = True
+                start_btn.config(
+                    text="  STOP APPLICATION  ",
+                    image=power_off_icon,
+                    bg="#dc2626",           # red tone
+                    activebackground="#b91c1c",
+                )
+                speak("Gaze control started.")
+            else:
+                # If you have a stop handler, call it here
+                self.app_running = False
+                start_btn.config(
+                    text="  START APPLICATION  ",
+                    image=power_on_icon,
+                    bg="#2563eb",           # blue tone
+                    activebackground="#1e40af",
+                )
+                speak("Gaze control stopped.")
+
+        # --- Rounded Pill Button with Icon ---
+        start_btn = PillButton(
+            scroll_frame,
+            text="  START APPLICATION  ",
+            command=toggle_app
+        )
+        if power_on_icon:
+            start_btn.config(image=power_on_icon, compound="left")
+            start_btn.image = power_on_icon
+
+        start_btn.config(
+            font=("Segoe UI Semibold", 11),
+            fg="white",
+            bg="#2563eb",
+            activeforeground="white",
+            borderwidth=0,
+            cursor="hand2",
+            pady=8,
+            padx=16
+        )
+
+        start_btn.pack(anchor="center", pady=(20, 10))
+
 
         # Spacer
         tk.Frame(scroll_frame, height=40, bg=Colors.page_bg).pack(fill="x")
