@@ -308,7 +308,30 @@ class HomePage(BasePage):
         tray_var = tk.BooleanVar(value=False)
 
         def toggle_tick():
-            tray_toggle.config(text="✔" if tray_var.get() else "")
+            # tray_toggle.config(text="✔" if tray_var.get() else "")
+            root_window = self.winfo_toplevel()
+
+            if tray_var.get():
+                # ✅ Instantly show tick before minimizing
+                tray_toggle.config(text="✔")
+                root_window.update_idletasks()  # force UI refresh before minimize
+
+                # ✅ Minimize app window to taskbar (hide to tray)
+                root_window.after(100, root_window.iconify)
+                speak("Application minimized to tray.")
+            else:
+                # ✅ Optional: restore app window when unchecked
+                root_window.deiconify()
+                tray_toggle.config(text="")
+                speak("Application restored.")
+                
+        # When the window is restored manually (e.g., from taskbar)
+        def on_restore(event):
+            tray_var.set(False)
+            tray_toggle.config(text="")
+
+        # Bind to window deiconify event
+        self.bind_all("<Map>", on_restore)
 
         tk.Label(card.body, text="Hide to tray",
                  fg=Colors.card_head, bg=Colors.glass_bg,

@@ -3,6 +3,8 @@ from UI.theme import Colors, Fonts
 from UI.widgets import RoundedCard
 from PIL import Image, ImageTk
 import os
+import subprocess
+import sys
 
 # Get the absolute project root (two levels up from this file)
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
@@ -15,6 +17,7 @@ tips_icon_path = os.path.join(ASSETS_DIR, "tips.png")
 info_icon_path = os.path.join(ASSETS_DIR, "info.png")
 gaze_set_up_icon_path = os.path.join(ASSETS_DIR, "gaze_set_up.png")
 gaze_test_icon_path = os.path.join(ASSETS_DIR, "gaze_test.png")
+keyboard_icon_path = os.path.join(ASSETS_DIR, "keyboard.png")
 
 def F(name, default):
     return getattr(Fonts, name, default)
@@ -59,6 +62,21 @@ class Sidebar(RoundedCard):
                 
             
             def on_click():
+                
+                # ✅ Special case: Virtual Keyboard
+                if key == "keyboard":
+                    try:
+                        # Launch Windows On-Screen Keyboard
+                        subprocess.Popen("osk.exe", shell=True)
+                        
+                         # ✅ Minimize the main app window automatically
+                        root_window = self.controller.winfo_toplevel()
+                        root_window.iconify()  # minimizes the Tkinter main window
+                    except Exception as e:
+                        print("Error launching On-Screen Keyboard:", e)
+                    return  # stop here so it doesn’t try to switch pages
+                
+                
                 # Step 1: store the selected key globally
                 self.controller.selected_page_key = key
 
@@ -104,6 +122,7 @@ class Sidebar(RoundedCard):
         _nav_row(r, "tips", "Tips", "TipsPage", icon_path=tips_icon_path); r += 1
         tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=r, column=0, sticky="nsew"); r += 1
         _nav_row(r, "info", "Information", "InfoPage", icon_path=info_icon_path); r += 1
+        _nav_row(r, "keyboard", "Virtual Keyboard", "KeyboardPage", icon_path=keyboard_icon_path); r += 1
         
         # spacer row (row=99 expands to fill available space)
         tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=99, column=0, sticky="nsew")
