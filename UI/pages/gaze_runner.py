@@ -88,10 +88,15 @@ def speak(message: str):
         except Exception as e:
             print(f"[WARN] TTS error: {e}")    
 
+_last_toggle_time = 0
 
 def toggle_scroll_mode():
     """Toggle between cursor move and scroll modes."""
-    global SCROLL_MODE
+    global SCROLL_MODE, _last_toggle_time
+
+    if time.time() - _last_toggle_time < 1:
+        return # This ignores rapid toggles
+        
     SCROLL_MODE = not SCROLL_MODE
     mode = "🧾 Scroll Mode" if SCROLL_MODE else "🖱️ Cursor Mode"
     if mode == "🖱️ Cursor Mode":
