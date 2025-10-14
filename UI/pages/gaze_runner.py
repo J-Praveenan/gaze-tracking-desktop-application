@@ -65,16 +65,29 @@ _anchor_idx = 0
 # Determine if we are running in integrated Tkinter mode
 INTEGRATED_UI = "ui_app" in globals() and ui_app is not None
 
+_tts_engine = pyttsx3.init()
+_tts_lock = Lock()
 
+# def speak(message):
+#     try:
+#         engine = pyttsx3.init()
+#         engine.say(message)
+#         engine.runAndWait()
+#     except RuntimeError:
+#         # If another thread is already running pyttsx3
+#         print("[WARN] pyttsx3 is busy — skipping speech.")
 
-def speak(message):
-    try:
-        engine = pyttsx3.init()
-        engine.say(message)
-        engine.runAndWait()
-    except RuntimeError:
-        # If another thread is already running pyttsx3
-        print("[WARN] pyttsx3 is busy — skipping speech.")
+#This is faster and no repeated initialization
+
+def speak(message: str):
+     """Thread-safe, non-blocking speech output."""
+     with _tts_lock:
+        try:
+            _tts_engine.say(message)
+            _tts_engine.runAndWait()
+        except Exception as e:
+            print(f"[WARN] TTS error: {e}")    
+
 
 def toggle_scroll_mode():
     """Toggle between cursor move and scroll modes."""
