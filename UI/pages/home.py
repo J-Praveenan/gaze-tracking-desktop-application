@@ -15,6 +15,7 @@ from PIL import Image, ImageTk
 import os
 from pathlib import Path
 import json
+from UI.widgets import RoundedButton  # 👈 add import
 
 
 gaze_thread = None  # global reference
@@ -214,12 +215,14 @@ class HomePage(BasePage):
 
         # === Instructions ===
         self._make_instruction_section(scroll_frame, "Eye & Blink Controls", [
-            ("👀", "Eye Movement", "Pointer moves where you look"),
-            ("🎯", "App Open", "Pointer starts at the center"),
-            ("✨", "Both Eyes Blink", "Cycle pointer: Left → Top → Right → Bottom → Center"),
-            ("👁️", "Left Eye Blink", "Left Click"),
-            ("👁️", "Right Eye Blink", "Right Click"),
-        ])
+    ("👀", "Eye Movement", "Pointer moves in the direction you look (Left, Right, Up, Down, Center)"),
+    ("🎯", "App Open", "Pointer starts at the center of the screen when the application launches"),
+    ("✨", "Both Eyes Blink", "Cycles pointer position in order — Left → Top → Right → Bottom → Center"),
+    ("👁️", "Left Eye Blink", "Performs a Left Click"),
+    ("👁️", "Right Eye Blink", "Performs a Right Click"),
+    ("😴", "Long Blink ( > 2s )", "Activates Scroll Mode — allows hands-free scrolling until eyes reopen"),
+])
+
 
         self._make_instruction_section(scroll_frame, "Interface", [
             ("➡️", "Sidebar Arrow", "Right-center arrow → open instructions"),
@@ -249,47 +252,44 @@ class HomePage(BasePage):
             if not self.app_running:
                 launch_gaze_app(enable_mouse_control=True)
                 self.app_running = True
-                start_btn.config(
-                    text="  STOP APPLICATION  ",
-                    image=power_off_icon,
-                    bg="#dc2626",           # red tone
-                    activebackground="#b91c1c",
-                )
+                start_btn.bg = "#dc2626"          # red
+                start_btn.activebg = "#b91c1c"
+                start_btn.text = "STOP APPLICATION"
+                start_btn.icon = power_off_icon
+                start_btn.delete("all")           # clear old graphics
+                start_btn._draw_button()          # redraw new state
                 speak("Gaze control started.")
             else:
                  # ✅ STOP gaze control
                 launch_gaze_app(enable_mouse_control=False)
                 self.app_running = False
-                start_btn.config(
-                    text="  START APPLICATION  ",
-                    image=power_on_icon,
-                    bg="#2563eb",           # blue tone
-                    activebackground="#1e40af",
-                )
+                start_btn.bg = "#2563eb"          # blue
+                start_btn.activebg = "#1e40af"
+                start_btn.text = "START APPLICATION"
+                start_btn.icon = power_on_icon
+                start_btn.delete("all")
+                start_btn._draw_button()
                 speak("Gaze control stopped.")
 
-        # --- Rounded Pill Button with Icon ---
-        start_btn = PillButton(
-            scroll_frame,
-            text="  START APPLICATION  ",
+
+
+        # --- Right-aligned START button ---
+        btn_frame = tk.Frame(scroll_frame, bg=Colors.page_bg)
+        btn_frame.pack(fill="x", pady=(20, 10))
+
+        start_btn = RoundedButton(
+            btn_frame,
+            text="START APPLICATION",
+            radius=25,
+            padding_x=22,
+            padding_y=10,
+            bg="#2563eb",
+            activebg="#1e40af",
+            icon=power_on_icon,
             command=toggle_app
         )
-        if power_on_icon:
-            start_btn.config(image=power_on_icon, compound="left")
-            start_btn.image = power_on_icon
+        start_btn.pack(side="right", padx=(0, 20))
 
-        start_btn.config(
-            font=("Segoe UI Semibold", 11),
-            fg="white",
-            bg="#2563eb",
-            activeforeground="white",
-            borderwidth=0,
-            cursor="hand2",
-            pady=8,
-            padx=16
-        )
-
-        start_btn.pack(anchor="center", pady=(20, 10))
 
 
         # Spacer
@@ -382,10 +382,14 @@ class HomePage(BasePage):
                  ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
         for i, (icon, label, desc) in enumerate(entries, start=1):
-            tk.Label(card.body, text=f"{icon} {label}",
-                     fg="white", bg=Colors.dark_card,
-                     font=F("body", ("Segoe UI", 10, "bold"))
-                     ).grid(row=i, column=0, sticky="w", padx=6, pady=2)
+            # Add fixed-width container for uniform alignment
+            label_text = f"{icon:<3} {label}"  # 👈 Ensures consistent spacing for emojis
+            tk.Label(card.body, text=label_text,
+                    fg="white", bg=Colors.dark_card,
+                    font=F("body", ("Segoe UI", 10, "bold")),
+                    anchor="w", justify="left", width=22  # 👈 fixed width for uniform column
+                    ).grid(row=i, column=0, sticky="w", padx=(6, 0), pady=2)
+
             tk.Label(card.body, text=desc,
                      fg="#d1d5db", bg=Colors.dark_card,
                      font=F("body", ("Segoe UI", 10))
