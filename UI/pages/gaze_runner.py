@@ -27,6 +27,15 @@ from UI.widgets import RoundedCard, PillButton
 from UI.pages.base import BasePage
 from UI.pages.sidebar import Sidebar
 
+
+# ---- Global control flag ----
+RUN_GAZE = False
+RUN_GAZE_LOCK = threading.Lock()
+
+# Add this
+SMOOTHER_STOP = threading.Event()
+stop_signal = threading.Event()
+
 # main.py (simplified snippet)
 # global reference to the Tkinter app
 ui_app = None
@@ -90,7 +99,7 @@ def toggle_scroll_mode():
 
 
 def _start_cursor_smoother():
-        global _smoother_started, _target_pos
+        global _smoother_started, _target_pos, SMOOTHER_STOP
         if _smoother_started:
             return
         _smoother_started = True
@@ -98,10 +107,12 @@ def _start_cursor_smoother():
         # init target at current cursor
         x, y = pyautogui.position()
         _target_pos = (x, y)
+        
+        SMOOTHER_STOP.clear()  # reset stop signal before starting
 
         def _loop():
             period = 1.0 / SMOOTH_HZ
-            while True:
+            while not SMOOTHER_STOP.is_set():  # 🔹 check stop flag
                 try:
                     cx, cy = pyautogui.position()
                     tx, ty = _target_pos
@@ -112,14 +123,34 @@ def _start_cursor_smoother():
                 except Exception:
                     pass
                 time.sleep(period)
+            
+            print("[INFO] Cursor smoother stopped.")
+            # reset smoother state
+            global _smoother_started
+            _smoother_started = False
 
         threading.Thread(target=_loop, daemon=True).start()
 
 
 def main(enable_mouse_control=False, show_video=False):
-    if enable_mouse_control:
-        threading.Thread(
-            target=run_voice_typing_loop, daemon=True).start()
+    
+    global RUN_GAZE
+    
+    global stop_signal
+    stop_signal.clear()  # ✅ reset stop event before starting new session
+
+   
+    # 🟩 Start gaze control
+    with RUN_GAZE_LOCK:
+        RUN_GAZE = True
+    print("[INFO] Starting gaze control.")
+    
+    if not enable_mouse_control:
+        print("[INFO] Running in TEST MODE (no mouse control).")
+    else:
+        print("[INFO] Running in FULL CONTROL MODE (mouse enabled).")
+
+    
     # ===== THEME (approximate to your 2nd screenshot; tweak hex to match exactly) =====
     def _hex(h):  # hex -> BGR tuple for OpenCV
         h = h.lstrip('#')
@@ -849,6 +880,10 @@ def main(enable_mouse_control=False, show_video=False):
 
 
     while cap.isOpened():
+        with RUN_GAZE_LOCK:
+            if not RUN_GAZE:
+                print("[INFO] Gaze loop stopped by user.")
+                break
         
         
         # swap your compose_ui(...) with this one
@@ -1381,3 +1416,14 @@ def main(enable_mouse_control=False, show_video=False):
 def run():
     main()
     # start_voice_autodictation()
+
+
+
+def stop_gaze():
+    """Safely stop the running gaze control loop."""
+    global RUN_GAZE, SMOOTHER_STOP
+    with RUN_GAZE_LOCK:
+        RUN_GAZE = False
+    SMOOTHER_STOP.set()  # 🔹 stops cursor smoother thread
+    print("[INFO] Gaze control stopped (via stop_gaze()).")
+

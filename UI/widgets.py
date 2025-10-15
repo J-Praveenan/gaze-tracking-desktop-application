@@ -1,7 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
 from UI.theme import Colors, Fonts
+from PIL import Image, ImageTk
+from pathlib import Path
+import os
 from tkinter import font as tkfont
+import threading
+
+
+
 class RoundedCard(tk.Frame):
     def __init__(self, parent, border_color="#222", border_width=0,
                  radius=16, pad=12, bg=None, tight=True, **kwargs):
@@ -77,23 +84,92 @@ class RoundedCard(tk.Frame):
         )
 
 class TitleBar(tk.Frame):
-    """Header with logo + title and a thin bottom border."""
-    def __init__(self, parent, logo_img=None, title_text=""):
+    """Header with logo + title and a thin bottom border, plus Start/Stop button."""
+    def __init__(self, parent, logo_img=None, title_text="", on_toggle_gaze=None):
         super().__init__(parent, bg="#dbeafe", height=48, highlightthickness=0)
         self.pack_propagate(False)
+
+        self.on_toggle_gaze = on_toggle_gaze  # ✅ callback from parent
+        self.app_running = False
+
+        # Left side logo + title
         self.logo = tk.Label(self, image=logo_img, bg=self["bg"])
         self.logo.image = logo_img
         self.logo.pack(side="left", padx=(10, 8), pady=6)
-        self.title = tk.Label(self, text=title_text, font=("Segoe UI", 14, "bold"),
-                              bg=self["bg"], fg="#111827")
+
+        self.title = tk.Label(
+            self, text=title_text,
+            font=("Segoe UI", 14, "bold"), bg=self["bg"], fg="#111827"
+        )
         self.title.pack(side="left")
+
+        # Load icons
+        ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+        self.power_on_icon = ImageTk.PhotoImage(Image.open(ASSETS_DIR / "power_on.png").resize((20, 20)))
+        self.power_off_icon = ImageTk.PhotoImage(Image.open(ASSETS_DIR / "power_off.png").resize((20, 20)))
+
+        # Button
+        self.square_btn = tk.Button(
+            self,
+            text=" START", image=self.power_on_icon,
+            compound="left", font=("Segoe UI", 10, "bold"),
+            fg="white", bg="#2563eb", activebackground="#1e40af",
+            activeforeground="white", bd=0, relief="flat",
+            padx=10, pady=4, cursor="hand2",
+            command=self._toggle_gaze
+        )
+        self.square_btn.pack(side="right", padx=(0, 50), pady=6)
+
         self.border = tk.Frame(parent, bg="#1d4ed8", height=2)
         self.border.pack(fill="x", side="top")
 
+    def _toggle_gaze(self):
+        """Toggle start/stop state and delegate action to parent."""
+        self.app_running = not self.app_running
+        if self.on_toggle_gaze:
+            self.on_toggle_gaze(self.app_running)  # ✅ call parent callback
+
+        if self.app_running:
+            self.square_btn.config(
+                text=" STOP",
+                image=self.power_off_icon,
+                bg="#dc2626",
+                activebackground="#b91c1c"
+            )
+        else:
+            self.square_btn.config(
+                text=" START",
+                image=self.power_on_icon,
+                bg="#2563eb",
+                activebackground="#1e40af"
+            )
+
     def set_logo(self, img):
-        if img is None: return
-        self.logo.configure(image=img)
-        self.logo.image = img
+        if img:
+            self.logo.configure(image=img)
+            self.logo.image = img
+        
+    def update_gaze_button(self, running: bool):
+        """Update the TitleBar button appearance."""
+        if running:
+            self.square_btn.config(
+                text=" STOP",
+                image=self.power_off_icon,
+                bg="#dc2626",
+                activebackground="#b91c1c"
+            )
+            self.app_running = True
+        else:
+            self.square_btn.config(
+                text=" START",
+                image=self.power_on_icon,
+                bg="#2563eb",
+                activebackground="#1e40af"
+            )
+            self.app_running = False
+
+
+
 
 class PillButton(tk.Button):
     """Rounded style button (visual)."""

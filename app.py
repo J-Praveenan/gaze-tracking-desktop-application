@@ -10,7 +10,6 @@ from voice.voice_typing import run_voice_typing_loop
 import gaze_estimation 
 from UI.pages.sidebar import Sidebar
 import threading
-
 # ...
 
 
@@ -51,7 +50,7 @@ from PIL import Image, ImageTk
 from UI.theme import Colors, apply_base_style
 from UI.widgets import TitleBar
 from UI.pages.splash import SplashPage
-from UI.pages.home import HomePage
+from UI.pages.home import HomePage, launch_gaze_app, speak
 from utils.paths import data_path
 from UI.pages.guide import GuideVideoPage
 from UI.pages.gaze_test import GazeTestPage
@@ -80,7 +79,8 @@ class App(tk.Tk):
         self._logo_raw = Image.open(LOGO_IMG_PATH) if LOGO_IMG_PATH.exists() else None
 
         # Header
-        self.header = TitleBar(self, logo_img=self.get_logo(70), title_text=APP_TITLE)
+        self.header = TitleBar(self, logo_img=self.get_logo(70), title_text=APP_TITLE,
+            on_toggle_gaze=self._handle_global_gaze_toggle)
         self.header.pack(fill="x", side="top")
 
         # Main frame holds sidebar + content (so we can grid safely)
@@ -125,6 +125,34 @@ class App(tk.Tk):
             return None
         img = self._logo_raw.copy().convert("RGBA").resize((size, size), Image.LANCZOS)
         return ImageTk.PhotoImage(img)
+    
+    def _handle_global_gaze_toggle(self, running: bool):
+        """Called by TitleBar or HomePage — controls gaze and syncs both buttons."""
+        from UI.pages.home import launch_gaze_app, speak
+
+        self.gaze_running = running  # update global state
+
+        if running:
+            launch_gaze_app(enable_mouse_control=True)
+            speak("Gaze control started.")
+        else:
+            launch_gaze_app(enable_mouse_control=False)
+            speak("Gaze control stopped.")
+
+        # ✅ Sync both buttons visually
+        self._sync_gaze_buttons()
+            
+            
+    def _sync_gaze_buttons(self):
+        """Sync the START/STOP button states across TitleBar and HomePage."""
+        # Update TitleBar
+        self.header.update_gaze_button(self.gaze_running)
+
+        # Update HomePage if it exists
+        home_page = self.pages.get("HomePage")
+        if home_page and hasattr(home_page, "update_gaze_button"):
+            home_page.update_gaze_button(self.gaze_running)
+            
 
     def get_bg_photo(self, w: int, h: int):
         """Return a PhotoImage that 'covers' the window."""
