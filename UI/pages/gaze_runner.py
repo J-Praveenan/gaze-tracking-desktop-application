@@ -34,6 +34,7 @@ RUN_GAZE_LOCK = threading.Lock()
 
 # Add this
 SMOOTHER_STOP = threading.Event()
+stop_signal = threading.Event()
 
 # main.py (simplified snippet)
 # global reference to the Tkinter app
@@ -134,18 +135,20 @@ def _start_cursor_smoother():
 def main(enable_mouse_control=False, show_video=False):
     
     global RUN_GAZE
+    
+    global stop_signal
+    stop_signal.clear()  # ✅ reset stop event before starting new session
 
-    # 🟥 If called with enable_mouse_control=False → stop running loop
-    if not enable_mouse_control:
-        with RUN_GAZE_LOCK:
-            RUN_GAZE = False
-        print("[INFO] Stop signal received — terminating gaze control.")
-        return
-
+   
     # 🟩 Start gaze control
     with RUN_GAZE_LOCK:
         RUN_GAZE = True
     print("[INFO] Starting gaze control.")
+    
+    if not enable_mouse_control:
+        print("[INFO] Running in TEST MODE (no mouse control).")
+    else:
+        print("[INFO] Running in FULL CONTROL MODE (mouse enabled).")
 
     
     # ===== THEME (approximate to your 2nd screenshot; tweak hex to match exactly) =====

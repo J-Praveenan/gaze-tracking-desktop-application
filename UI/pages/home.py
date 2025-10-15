@@ -19,6 +19,8 @@ from UI.widgets import RoundedButton  # 👈 add import
 
 
 gaze_thread = None  # global reference
+stop_reminder_event = threading.Event()
+
 
 def F(name, default):
     return getattr(Fonts, name, default)
@@ -31,10 +33,13 @@ def speak(message):
 
 
 def launch_gaze_app(enable_mouse_control=False):
-    global gaze_thread
+    global gaze_thread, stop_reminder_event
     try:
+        
         # 🟢 Start gaze control in background
         if enable_mouse_control:
+            # Reset stop flag for both gaze and reminder
+            stop_reminder_event.clear()
             # 🟢 Start gaze control only if not already running
             if gaze_thread and gaze_thread.is_alive():
                 print("[INFO] Gaze already running.")
@@ -71,26 +76,33 @@ def launch_gaze_app(enable_mouse_control=False):
                 pass
 
  # 🕒 Start reminder if enabled
-        if reminder_enabled:
-            # 🕒 Start a rest reminder timer (10 minutes)
+# === Start reminder if enabled ===
+        if enable_mouse_control and reminder_enabled:
             def rest_reminder_timer():
-                time.sleep(reminder_minutes * 60)  # convert minutes to seconds
-                winsound.Beep(800, 400)
-                
-                base_dir = Path(__file__).resolve().parents[2]
-                assets_dir = base_dir / "assets"
-                icon_path = assets_dir / "eyelogo.ico"
+                start_time = time.time()
+                while not stop_reminder_event.is_set():
+                    elapsed = time.time() - start_time
+                    if elapsed >= reminder_minutes * 60:
+                        # 🔔 Time’s up → show notification only once
+                        winsound.Beep(800, 400)
 
-                toast = Notification(
-                    app_id="Look Track Vision",
-                    title="Eye Care Reminder",
-                    msg=f"You are using Look Track Vision for {reminder_minutes} minutes.\nTake a short rest!",
-                    icon=str(icon_path),
-                    duration="long"
-                )
-                toast.set_audio(audio.Reminder, loop=False)
-                toast.show()
-                speak(f"You are using Look Track Vision for {reminder_minutes} minutes. Take a short rest!")
+                        base_dir = Path(__file__).resolve().parents[2]
+                        assets_dir = base_dir / "assets"
+                        icon_path = assets_dir / "eyelogo.ico"
+
+                        toast = Notification(
+                            app_id="Look Track Vision",
+                            title="Eye Care Reminder",
+                            msg=f"You've been using Look Track Vision for {reminder_minutes} minutes.\nTake a short rest!",
+                            icon=str(icon_path),
+                            duration="long"
+                        )
+                        toast.set_audio(audio.Reminder, loop=False)
+                        toast.show()
+                        speak(f"You have been using Look Track Vision for {reminder_minutes} minutes. Take a short rest!")
+
+                        break  # exit loop after first notification
+                    time.sleep(1)
 
             threading.Thread(target=rest_reminder_timer, daemon=True).start()
 
@@ -249,27 +261,8 @@ class HomePage(BasePage):
         self.app_running = False
 
         def toggle_app():
-            if not self.app_running:
-                launch_gaze_app(enable_mouse_control=True)
-                self.app_running = True
-                start_btn.bg = "#dc2626"          # red
-                start_btn.activebg = "#b91c1c"
-                start_btn.text = "STOP APPLICATION"
-                start_btn.icon = power_off_icon
-                start_btn.delete("all")           # clear old graphics
-                start_btn._draw_button()          # redraw new state
-                speak("Gaze control started.")
-            else:
-                 # ✅ STOP gaze control
-                launch_gaze_app(enable_mouse_control=False)
-                self.app_running = False
-                start_btn.bg = "#2563eb"          # blue
-                start_btn.activebg = "#1e40af"
-                start_btn.text = "START APPLICATION"
-                start_btn.icon = power_on_icon
-                start_btn.delete("all")
-                start_btn._draw_button()
-                speak("Gaze control stopped.")
+            app = self.controller  # ✅ reference to App
+            app._handle_global_gaze_toggle(not self.app_running)
 
 
 
@@ -394,4 +387,22 @@ class HomePage(BasePage):
                      fg="#d1d5db", bg=Colors.dark_card,
                      font=F("body", ("Segoe UI", 10))
                      ).grid(row=i, column=1, sticky="w", padx=(6, 0), pady=2)
+            
+    def update_gaze_button(self, running: bool):
+        """Update the HomePage START/STOP button to match global state."""
+        self.app_running = running
+        if running:
+            self.start_btn.bg = "#dc2626"
+            self.start_btn.activebg = "#b91c1c"
+            self.start_btn.text = "STOP APPLICATION"
+            self.start_btn.icon = self.power_off_icon
+        else:
+            self.start_btn.bg = "#2563eb"
+            self.start_btn.activebg = "#1e40af"
+            self.start_btn.text = "START APPLICATION"
+            self.start_btn.icon = self.power_on_icon
+
+        self.start_btn.delete("all")
+        self.start_btn._draw_button()
+
 
