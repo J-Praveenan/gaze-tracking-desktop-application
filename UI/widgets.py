@@ -1,6 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 from UI.theme import Colors, Fonts
+from PIL import Image, ImageTk
+from pathlib import Path
+import os
 
 
 class RoundedCard(tk.Frame):
@@ -82,15 +85,52 @@ class TitleBar(tk.Frame):
     def __init__(self, parent, logo_img=None, title_text=""):
         super().__init__(parent, bg="#dbeafe", height=48, highlightthickness=0)
         self.pack_propagate(False)
+        
         self.logo = tk.Label(self, image=logo_img, bg=self["bg"])
         self.logo.image = logo_img
         self.logo.pack(side="left", padx=(10, 8), pady=6)
+        
         self.title = tk.Label(self, text=title_text, font=("Segoe UI", 14, "bold"),
                               bg=self["bg"], fg="#111827")
         self.title.pack(side="left")
+        
+        # === Right square button ===
+        # === Right square button ===
+        ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+        icon_path = ASSETS_DIR / "power_on.png"
+
+        try:
+            img = Image.open(icon_path).resize((20, 20), Image.LANCZOS)
+            self.icon_img = ImageTk.PhotoImage(img)  # ✅ Keep reference
+        except Exception as e:
+            print("Icon load failed:", e)
+            self.icon_img = None
+
+        self.square_btn = tk.Button(
+            self,
+            text=" START",              # 👈 Add label text
+            image=self.icon_img,        # 👈 Keep the icon
+            compound="left",            # 👈 Position icon to the left of text
+            font=("Segoe UI", 10, "bold"),
+            fg="white",
+            bg="#2563eb",
+            activebackground="#1e40af",
+            activeforeground="white",
+            bd=0,
+            relief="flat",
+            padx=10,                    # horizontal padding inside the button
+            pady=4,
+            cursor="hand2",
+        )
+        self.square_btn.pack(side="right", padx=(0, 50), pady=6)
+
+        
         self.border = tk.Frame(parent, bg="#1d4ed8", height=2)
         self.border.pack(fill="x", side="top")
-
+        
+    def _on_square_click(self):
+        print("[INFO] Top-right square button clicked")
+        # example: toggle gaze control or open settings
     def set_logo(self, img):
         if img is None: return
         self.logo.configure(image=img)

@@ -16,6 +16,9 @@ import os
 from pathlib import Path
 import json
 
+
+gaze_thread = None  # global reference
+
 def F(name, default):
     return getattr(Fonts, name, default)
 
@@ -26,13 +29,27 @@ def speak(message):
     engine.runAndWait()
 
 
-def launch_gaze_app():
+def launch_gaze_app(enable_mouse_control=False):
+    global gaze_thread
     try:
         # 🟢 Start gaze control in background
-        threading.Thread(
-            target=lambda: gaze_runner.main(enable_mouse_control=True, show_video=False),
-            daemon=True
-        ).start()
+        if enable_mouse_control:
+            # 🟢 Start gaze control only if not already running
+            if gaze_thread and gaze_thread.is_alive():
+                print("[INFO] Gaze already running.")
+                return
+
+            from UI.pages import gaze_runner
+            gaze_thread = threading.Thread(
+                target=lambda: gaze_runner.main(enable_mouse_control=True, show_video=False),
+                daemon=True
+            )
+            gaze_thread.start()
+        else:
+            # 🟥 Stop gaze control
+            from UI.pages import gaze_runner
+            gaze_runner.stop_gaze()
+            print("[INFO] Stop request sent to gaze thread.")
         
         
         # 🕒 Load reminder settings
@@ -230,7 +247,7 @@ class HomePage(BasePage):
 
         def toggle_app():
             if not self.app_running:
-                launch_gaze_app()
+                launch_gaze_app(enable_mouse_control=True)
                 self.app_running = True
                 start_btn.config(
                     text="  STOP APPLICATION  ",
@@ -240,7 +257,8 @@ class HomePage(BasePage):
                 )
                 speak("Gaze control started.")
             else:
-                # If you have a stop handler, call it here
+                 # ✅ STOP gaze control
+                launch_gaze_app(enable_mouse_control=False)
                 self.app_running = False
                 start_btn.config(
                     text="  START APPLICATION  ",
@@ -372,3 +390,4 @@ class HomePage(BasePage):
                      fg="#d1d5db", bg=Colors.dark_card,
                      font=F("body", ("Segoe UI", 10))
                      ).grid(row=i, column=1, sticky="w", padx=(6, 0), pady=2)
+
