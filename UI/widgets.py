@@ -113,7 +113,7 @@ class TitleBar(tk.Frame):
             self,
             text=" START", image=self.power_on_icon,
             compound="left", font=("Segoe UI", 10, "bold"),
-            fg="white", bg="#2563eb", activebackground="#1e40af",
+            fg="white", bg="#31A0EB", activebackground="#31A0EB",
             activeforeground="white", bd=0, relief="flat",
             padx=10, pady=4, cursor="hand2",
             command=self._toggle_gaze
@@ -133,15 +133,15 @@ class TitleBar(tk.Frame):
             self.square_btn.config(
                 text=" STOP",
                 image=self.power_off_icon,
-                bg="#dc2626",
-                activebackground="#b91c1c"
+                bg="#F65353",
+                activebackground="#F65353"
             )
         else:
             self.square_btn.config(
                 text=" START",
                 image=self.power_on_icon,
-                bg="#2563eb",
-                activebackground="#1e40af"
+                bg="#31A0EB",
+                activebackground="#31A0EB"
             )
 
     def set_logo(self, img):
@@ -155,16 +155,16 @@ class TitleBar(tk.Frame):
             self.square_btn.config(
                 text=" STOP",
                 image=self.power_off_icon,
-                bg="#dc2626",
-                activebackground="#b91c1c"
+                bg="#F65353",
+                activebackground="#F65353"
             )
             self.app_running = True
         else:
             self.square_btn.config(
                 text=" START",
                 image=self.power_on_icon,
-                bg="#2563eb",
-                activebackground="#1e40af"
+                bg="#31A0EB",
+                activebackground="#31A0EB"
             )
             self.app_running = False
 
@@ -185,8 +185,8 @@ class PillButton(tk.Button):
 class RoundedButton(tk.Canvas):
     def __init__(self, parent, text="", radius=16,
                  padding_x=18, padding_y=8,
-                 bg="#2563eb", fg="white",
-                 command=None, activebg="#1e40af",
+                 bg="#31A0EB", fg="white",
+                 command=None, activebg="#31A0EB",
                  font=None, icon=None):
         super().__init__(parent, highlightthickness=0, bg=parent["bg"], bd=0)
         self.command = command

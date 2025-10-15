@@ -136,6 +136,12 @@ def main(enable_mouse_control=False, show_video=False):
     
     global RUN_GAZE
     
+    with RUN_GAZE_LOCK:
+        if RUN_GAZE:
+            print("[INFO] Restarting gaze control...")
+            stop_gaze()
+            time.sleep(0.5)  # give it a moment to release the camera
+    
     global stop_signal
     stop_signal.clear()  # ✅ reset stop event before starting new session
 
@@ -845,7 +851,7 @@ def main(enable_mouse_control=False, show_video=False):
     # start smoother once at startup (after imports)
     if enable_mouse_control and not _smoother_started:
         _start_cursor_smoother()
-        speak("Gaze control enabled.")
+        # speak("Gaze control enabled.")
 
     # Set resolution for virtual camera
     height, width = frame.shape[:2]
@@ -1047,10 +1053,19 @@ def main(enable_mouse_control=False, show_video=False):
                 except Exception as e:
                     print("UI update failed:", e)
 
+            # if show_video:
+            #     cv2.imshow("Real Time Gaze Estimation", ui)
+            #     if cv2.waitKey(1) in (ord('q'), ord('Q')): break
+            #     continue
+            
             if show_video:
                 cv2.imshow("Real Time Gaze Estimation", ui)
-                if cv2.waitKey(1) in (ord('q'), ord('Q')): break
-                continue
+                key = cv2.waitKey(1) & 0xFF
+                if key in (ord('q'), ord('Q')):
+                    print("[INFO] Video window closed by user.")
+                    show_video = False  # ✅ disable further imshow calls
+                    cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close only the video window
+
 
         # ---------------- EARs (safe) ----------------
         left_ear  = eye_aspect_ratio(mesh_points, LEFT_EYE_LANDMARKS)
@@ -1089,10 +1104,19 @@ def main(enable_mouse_control=False, show_video=False):
                 except Exception as e:
                     print("UI update failed:", e)
                     
+            # if show_video:
+            #     cv2.imshow("Real Time Gaze Estimation", ui)
+            #     if cv2.waitKey(1) in (ord('q'), ord('Q')): break
+            #     continue
+            
             if show_video:
                 cv2.imshow("Real Time Gaze Estimation", ui)
-                if cv2.waitKey(1) in (ord('q'), ord('Q')): break
-                continue
+                key = cv2.waitKey(1) & 0xFF
+                if key in (ord('q'), ord('Q')):
+                    print("[INFO] Video window closed by user.")
+                    show_video = False  # ✅ disable further imshow calls
+                    cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close only the video window
+
 
         # Now it’s safe to use EAR values
         if left_ear is None or right_ear is None:
@@ -1407,8 +1431,14 @@ def main(enable_mouse_control=False, show_video=False):
                 cv2.imshow("Real Time Gaze Estimation", ui)
         
                         
-        if cv2.waitKey(1) == ord('q') or cv2.waitKey(1) == ord('Q') : 
-            break
+        # if cv2.waitKey(1) == ord('q') or cv2.waitKey(1) == ord('Q') : 
+        #     break
+        key = cv2.waitKey(1) & 0xFF
+        if key in (ord('q'), ord('Q')):
+            print("[INFO] Closing only video window (camera continues).")
+            cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close window only
+            show_video = False  # ✅ turn off display but keep detection alive
+            continue  # ✅ continue loop (don’t break)
     cap.release()
     cv2.destroyAllWindows()    
 
@@ -1421,9 +1451,11 @@ def run():
 
 def stop_gaze():
     """Safely stop the running gaze control loop."""
-    global RUN_GAZE, SMOOTHER_STOP
+    global RUN_GAZE, SMOOTHER_STOP, stop_signal
     with RUN_GAZE_LOCK:
         RUN_GAZE = False
-    SMOOTHER_STOP.set()  # 🔹 stops cursor smoother thread
+    SMOOTHER_STOP.set()
+    stop_signal.set()
     print("[INFO] Gaze control stopped (via stop_gaze()).")
+
 

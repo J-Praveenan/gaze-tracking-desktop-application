@@ -280,8 +280,8 @@ class HomePage(BasePage):
             radius=25,
             padding_x=22,
             padding_y=10,
-            bg="#2563eb",
-            activebg="#1e40af",
+            bg="#31A0EB",
+            activebg="#31A0EB",
             icon=self.power_on_icon,
             command=toggle_app
         )
@@ -396,13 +396,13 @@ class HomePage(BasePage):
         """Update the HomePage START/STOP button to match global state."""
         self.app_running = running
         if running:
-            self.start_btn.bg = "#dc2626"
-            self.start_btn.activebg = "#b91c1c"
+            self.start_btn.bg = "#F65353"
+            self.start_btn.activebg = "#F65353"
             self.start_btn.text = "STOP APPLICATION"
             self.start_btn.icon = self.power_off_icon
         else:
-            self.start_btn.bg = "#2563eb"
-            self.start_btn.activebg = "#1e40af"
+            self.start_btn.bg = "#31A0EB"
+            self.start_btn.activebg = "#31A0EB"
             self.start_btn.text = "START APPLICATION"
             self.start_btn.icon = self.power_on_icon
 

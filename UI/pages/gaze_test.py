@@ -46,10 +46,15 @@ class GazeTestPage(BasePage):
         start_btn.pack(pady=10)
 
     def _start_test(self):
-        # Run gaze detection in a separate thread so Tkinter UI stays responsive
+        # For the testing purpose make enable_mouse_control=False,
         # threading.Thread(target=run_gaze_test, daemon=True).start()
+        
+        if gaze_runner.RUN_GAZE:
+            print("[INFO] Gaze test already running — ignoring new start.")
+            return
+    
         threading.Thread(
-                target=lambda: gaze_runner.main(enable_mouse_control=False, show_video=True),
+                target=lambda: gaze_runner.main(enable_mouse_control=True, show_video=True),
                 daemon=True
             ).start()
  
