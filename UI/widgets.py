@@ -125,9 +125,9 @@ class TitleBar(tk.Frame):
 
     def _toggle_gaze(self):
         """Toggle start/stop state and delegate action to parent."""
-        self.app_running = not self.app_running
+        new_state = not self.app_running  # compute desired next state
         if self.on_toggle_gaze:
-            self.on_toggle_gaze(self.app_running)  # ✅ call parent callback
+            self.on_toggle_gaze(new_state)  # ✅ let App handle logic + sync
 
         if self.app_running:
             self.square_btn.config(
