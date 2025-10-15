@@ -256,6 +256,10 @@ class HomePage(BasePage):
 
         power_on_icon = load_icon(power_on_path)
         power_off_icon = load_icon(power_off_path)
+        
+        self.power_on_icon = power_on_icon
+        self.power_off_icon = power_off_icon
+
 
         # --- Button state ---
         self.app_running = False
@@ -270,7 +274,7 @@ class HomePage(BasePage):
         btn_frame = tk.Frame(scroll_frame, bg=Colors.page_bg)
         btn_frame.pack(fill="x", pady=(20, 10))
 
-        start_btn = RoundedButton(
+        self.start_btn = RoundedButton(
             btn_frame,
             text="START APPLICATION",
             radius=25,
@@ -278,10 +282,10 @@ class HomePage(BasePage):
             padding_y=10,
             bg="#2563eb",
             activebg="#1e40af",
-            icon=power_on_icon,
+            icon=self.power_on_icon,
             command=toggle_app
         )
-        start_btn.pack(side="right", padx=(0, 20))
+        self.start_btn.pack(side="right", padx=(0, 20))
 
 
 

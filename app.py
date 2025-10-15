@@ -71,7 +71,7 @@ class App(tk.Tk):
         self.geometry("1180x760")
         self.minsize(1000, 680)
         self.configure(bg=Colors.page_bg)
-
+        self.gaze_running = False  # ✅ Add this line here
         apply_base_style(self)
 
         # Load originals (shared)
