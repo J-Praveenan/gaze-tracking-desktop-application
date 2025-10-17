@@ -2,6 +2,7 @@ import pyttsx3
 import pyautogui
 import time
 import keyboard
+from utils.common import speak_action_confirmation
 from voice.transcription import transcribe_from_mic
 import uiautomation as auto
 from uiautomation import UIAutomationInitializerInThread
@@ -92,7 +93,7 @@ def speak(message):
     engine.runAndWait()
 
 def voice_typing():
-    speak("Please type your message here")
+    speak_action_confirmation("Please type your message here")
     time.sleep(0.5)
     text = transcribe_from_mic(duration=3)
     time.sleep(0.5)

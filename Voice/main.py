@@ -6,6 +6,8 @@ from transcription import transcribe_from_mic
 import uiautomation as auto
 import win32gui
 
+from utils.common import speak_action_confirmation
+
 def is_text_field_focused():
     element = auto.GetFocusedControl()
     if element:
@@ -24,7 +26,7 @@ def speak(message):
     
 
 def voice_typing():
-    speak("Please type your message here")
+    speak_action_confirmation("Please type your message here")
     time.sleep(0.5)
     text = transcribe_from_mic(duration=5)
     time.sleep(0.5)
