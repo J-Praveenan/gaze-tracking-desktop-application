@@ -7,7 +7,7 @@ from .sidebar import Sidebar
 import json
 from pathlib import Path
 from tkinter import ttk, messagebox
-
+from utils.system_tray import SystemTrayIcon
 
 def F(name, default):
     return getattr(Fonts, name, default)
@@ -144,6 +144,8 @@ class SettingsPage(BasePage):
             on_toggle=lambda val: self._toggle_enable()
         )
         self.toggle.grid(row=1, column=1, sticky="w", padx=10, pady=6)
+        self._build_voice_settings(self.main_col.body)
+        self._build_tray_settings(self.main_col.body)
 
 
         # === Duration entry + dropdown ===
@@ -170,6 +172,100 @@ class SettingsPage(BasePage):
 
         # Initial toggle state
         self._toggle_enable()
+
+
+    def _build_voice_settings(self, parent):
+        from utils import common
+
+        card = RoundedCard(parent, radius=12, pad=12,
+                        bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
+        card.pack(fill="x", pady=8)
+
+        tk.Label(
+            card.body,
+            text="Voice Preferences",
+            fg=Colors.card_head,
+            bg=Colors.glass_bg,
+            font=F("h2b", ("Segoe UI", 13, "bold"))
+        ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
+
+        # --- Voice Tips Toggle ---
+        tk.Label(card.body, text="Voice Tips:", bg=Colors.glass_bg,
+                fg=Colors.card_text, font=("Segoe UI", 12)).grid(row=1, column=0, sticky="w", padx=10, pady=6)
+        voice_tips_toggle = ModernToggle(
+            card.body,
+            initial=common.voice_tips_enabled,
+            on_toggle=lambda val: self._on_voice_tips_toggle(val)
+        )
+        voice_tips_toggle.grid(row=1, column=1, sticky="w", padx=10, pady=6)
+
+        # --- Voice Action Confirmation Toggle ---
+        tk.Label(card.body, text="Voice Action Confirmation:", bg=Colors.glass_bg,
+                fg=Colors.card_text, font=("Segoe UI", 12)).grid(row=2, column=0, sticky="w", padx=10, pady=6)
+        voice_confirm_toggle = ModernToggle(
+            card.body,
+            initial=common.voice_action_confirmation,
+            on_toggle=lambda val: self._on_voice_confirm_toggle(val)
+        )
+        voice_confirm_toggle.grid(row=2, column=1, sticky="w", padx=10, pady=6)
+
+
+    def _on_voice_tips_toggle(self, val):
+        from utils import common
+        common.set_voice_tips(val)
+        state = "enabled" if val else "disabled"
+        common.speak_if_allowed(f"Voice tips {state}.")
+
+    def _on_voice_confirm_toggle(self, val):
+        from utils import common
+        common.set_voice_action_confirmation(val)
+        state = "enabled" if val else "disabled"
+        common.speak_action_confirmation(f"Voice action confirmations {state}.")
+
+
+    def _build_tray_settings(self, parent):
+        from utils.common import speak, speak_action_confirmation
+
+        card = RoundedCard(parent, radius=12, pad=12,
+                        bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
+        card.pack(fill="x", pady=8)
+
+        tk.Label(
+            card.body,
+            text="Hide to Tray",
+            fg=Colors.card_head,
+            bg=Colors.glass_bg,
+            font=F("h2b", ("Segoe UI", 13, "bold"))
+        ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
+
+        tray_var = tk.BooleanVar(value=False)
+
+        def toggle_tick():
+            root_window = self.winfo_toplevel()
+
+            if tray_var.get():
+                # Minimize & create tray icon
+                root_window.withdraw()  # hide completely from taskbar
+
+                def restore():
+                    root_window.deiconify()
+                    root_window.focus_force()
+
+                def exit_app():
+                    root_window.destroy()
+
+                tray = SystemTrayIcon(on_restore=restore, on_exit=exit_app)
+                tray.show()
+                speak_action_confirmation("Application minimized to tray.")
+            else:
+                root_window.deiconify()
+                speak("Application restored.")
+
+
+        tk.Label(card.body, text="Enable tray mode:", bg=Colors.glass_bg,
+                fg=Colors.card_text, font=("Segoe UI", 12)).grid(row=1, column=0, sticky="w", padx=10, pady=6)
+        ModernToggle(card.body, initial=False, on_toggle=lambda val: (tray_var.set(val), toggle_tick())
+                    ).grid(row=1, column=1, sticky="w", padx=10, pady=6)
 
     # ----------------------------------------------------------------
     def _toggle_enable(self):

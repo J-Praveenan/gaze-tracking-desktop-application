@@ -19,7 +19,7 @@ import webbrowser
 from json import JSONDecodeError
 from typing import Tuple
 import threading
-
+from utils.common import speak_action_confirmation
 import tkinter as tk
 import threading
 from UI.theme import Colors, Fonts
@@ -76,14 +76,6 @@ INTEGRATED_UI = "ui_app" in globals() and ui_app is not None
 
 
 
-def speak(message):
-    try:
-        engine = pyttsx3.init()
-        engine.say(message)
-        engine.runAndWait()
-    except RuntimeError:
-        # If another thread is already running pyttsx3
-        print("[WARN] pyttsx3 is busy — skipping speech.")
 
 def toggle_scroll_mode():
     """Toggle between cursor move and scroll modes."""
@@ -91,9 +83,9 @@ def toggle_scroll_mode():
     SCROLL_MODE = not SCROLL_MODE
     mode = "🧾 Scroll Mode" if SCROLL_MODE else "🖱️ Cursor Mode"
     if mode == "🖱️ Cursor Mode":
-        speak("Cursor mode is activated now")
+        speak_action_confirmation("Cursor mode is activated now")
     else:
-        speak("Scroll mode is activated now")
+        speak_action_confirmation("Scroll mode is activated now")
     print(f"[MODE SWITCHED] {mode}")
     winsound.Beep(1000 if SCROLL_MODE else 700, 150)
 
@@ -841,7 +833,7 @@ def main(enable_mouse_control=False, show_video=False):
 
 
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
 
     ret, frame = cap.read()
     if not ret:

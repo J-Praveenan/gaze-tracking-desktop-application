@@ -6,6 +6,8 @@ import tkinter as tk
 from UI.widgets import RoundedCard, PillButton
 from UI.theme import Colors, Fonts
 from .base import BasePage
+import utils.common as common
+
 
 # -------- VLC bootstrap (use bundled runtime) --------
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -142,13 +144,13 @@ class GuideVideoPage(BasePage):
     def _skip_video(self):
         try:
             if self.player and self.player.is_playing():
-                self.player.stop()   # stop playback immediately
-            # optional: free resources
-            # self.player.release()
+                self.player.stop()
+            common.video_playing = False  # 🟢 reset
         except Exception as e:
             print("skip_video error:", e)
 
         self.controller.show("HomePage")
+
 
     def _attach_handle(self):
         try:
@@ -171,20 +173,30 @@ class GuideVideoPage(BasePage):
         self._draw_progress()
 
         if self.player.get_state() == vlc.State.Ended:
+            common.video_playing = False  # 🟢 Unmute voice tips
             self.controller.show("HomePage")
             return
+
 
         self.after(200, self._poll_state)
 
     # ---------- controls ----------
     def _toggle_play(self):
         st = self.player.get_state()
-        if st in (vlc.State.Playing, vlc.State.Buffering):
-            self.player.pause()
-            self.btn_play.config(text="▶")
-        else:
-            self.player.play()
-            self.btn_play.config(text="❚❚")
+        try:
+            if st in (vlc.State.Playing, vlc.State.Buffering):
+                # 🔇 Pausing video → allow voice tips again
+                self.player.pause()
+                self.btn_play.config(text="▶")
+                common.video_playing = False
+            else:
+                # ▶ Starting video → mute voice tips
+                self.player.play()
+                self.btn_play.config(text="❚❚")
+                common.video_playing = True
+        except Exception as e:
+            print("toggle_play error:", e)
+
 
     def _seek_rel(self, secs: int):
         if self.duration <= 0: return

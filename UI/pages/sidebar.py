@@ -1,10 +1,16 @@
 import tkinter as tk
+from tkinter import ttk
 from UI.theme import Colors, Fonts
 from UI.widgets import RoundedCard
 from PIL import Image, ImageTk
 import os
 import subprocess
 import sys
+import utils.common as common 
+from utils.common import speak_if_allowed, voice_tips_enabled, video_playing  
+
+
+
 
 # Get the absolute project root (two levels up from this file)
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
@@ -32,13 +38,14 @@ class Sidebar(RoundedCard):
         self.selected_key = None
         self._build_sidebar(self.body)
         self.after(100, lambda: self.highlight_selected("home"))
-        
+
+    # ✅ Rebind hover highlight
     def _rebind_hover(self):
-            for key, btn in self._nav_btns.items():
-                btn.bind("<Enter>", lambda e, k=key: btn.configure(bg="#2b3947"))
-                btn.bind("<Leave>", lambda e, k=key: (
-                        btn.configure(bg="#2b3947" if k == self.selected_key else Colors.sidebar_bg)
-                    ))
+        for key, btn in self._nav_btns.items():
+            btn.bind("<Enter>", lambda e, k=key: btn.configure(bg="#2b3947"))
+            btn.bind("<Leave>", lambda e, k=key: (
+                btn.configure(bg="#2b3947" if k == self.selected_key else Colors.sidebar_bg)
+            ))
 
     def _build_sidebar(self, parent):
         parent.configure(bg=Colors.sidebar_bg)
@@ -49,63 +56,66 @@ class Sidebar(RoundedCard):
         def _nav_row(row_index, key, text, target_page, icon_path=None):
             cont = tk.Frame(wrap, bg=Colors.sidebar_bg)
             cont.grid(row=row_index, column=0, sticky="ew", pady=6)
-            
+
+            # load icon
             if icon_path and os.path.exists(icon_path):
                 img = Image.open(icon_path).resize((20, 20), Image.LANCZOS)
                 icon = ImageTk.PhotoImage(img)
-                self._icons[key] = icon  # ✅ keep reference
+                self._icons[key] = icon
             else:
                 icon = None
-            
-        
 
-                
-            
+            # ✅ unified click handler
             def on_click():
-                
-                # ✅ Special case: Virtual Keyboard
+                # Special case: open On-Screen Keyboard
                 if key == "keyboard":
                     try:
-                        # Launch Windows On-Screen Keyboard
                         subprocess.Popen("osk.exe", shell=True)
-                        
-                         # ✅ Minimize the main app window automatically
                         root_window = self.controller.winfo_toplevel()
-                        root_window.iconify()  # minimizes the Tkinter main window
+                        root_window.iconify()
                     except Exception as e:
                         print("Error launching On-Screen Keyboard:", e)
-                    return  # stop here so it doesn’t try to switch pages
-                
-                
-                # Step 1: store the selected key globally
-                self.controller.selected_page_key = key
+                    return
 
-                # Step 2: visually highlight now
+                # Step 1: highlight
+                self.controller.selected_page_key = key
                 self.highlight_selected(key)
 
-                # Step 3: disable hover during transition to prevent flicker
-                for btn in self._nav_btns.values():
-                    btn.unbind("<Enter>")
-                    btn.unbind("<Leave>")
-
-                # Step 4: switch the page
+                # Step 2: switch the page
                 self.after(100, lambda: self.controller.show(target_page))
-
-                # Step 5: after page load finishes, re-apply highlight (fix for redraw)
                 self.after(250, lambda: self.highlight_selected(key))
-
-                # Step 6: re-enable hover
                 self.after(300, self._rebind_hover)
 
+                # ✅ Step 3: voice tip (after navigation, if allowed)
+                instructions = {
+                    "HomePage": "You are now on the home page. You can start or stop gaze control here.",
+                    "SetupPage": "This is the calibration setup page. Follow the dots with your eyes to complete calibration.",
+                    "GazeTestPage": "This is the gaze test page. You can test and verify your gaze tracking.",
+                    "TipsPage": "This page provides tips and guidance for better accuracy.",
+                    "InfoPage": "This page shows detailed system information and controls.",
+                    "SettingsPage": "You can configure reminders and accessibility settings here."
+                }
+                if target_page in instructions:
+                    common.stop_speech()  # 🛑 stop previous speech first
+                    speak_if_allowed(instructions[target_page])
 
 
+            # ✅ Create button
             btn = tk.Button(
-                cont, text=("  " + text),image=icon,
-                compound="left", anchor="w",
+                cont,
+                text=("  " + text),
+                image=icon,
+                compound="left",
+                anchor="w",
                 font=F("h3", ("Segoe UI", 12, "bold")),
-                fg="white", bg=Colors.sidebar_bg, bd=0, relief="flat",
-                activebackground="#1d4ed8", activeforeground="white",
-                cursor="hand2", command=on_click
+                fg="white",
+                bg=Colors.sidebar_bg,
+                bd=0,
+                relief="flat",
+                activebackground="#1d4ed8",
+                activeforeground="white",
+                cursor="hand2",
+                command=on_click,
             )
             btn.configure(padx=12, pady=8)
             btn.bind("<Enter>", lambda e: btn.configure(bg="#2b3947"))
@@ -115,6 +125,7 @@ class Sidebar(RoundedCard):
             self._nav_rows[key] = cont
             self._nav_btns[key] = btn
 
+        # === Sidebar navigation buttons ===
         r = 1
         _nav_row(r, "home", "Home", "HomePage", icon_path=home_icon_path); r += 1
         _nav_row(r, "setup", "Calibration", "SetupPage", icon_path=gaze_set_up_icon_path); r += 1
@@ -123,19 +134,13 @@ class Sidebar(RoundedCard):
         tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=r, column=0, sticky="nsew"); r += 1
         _nav_row(r, "info", "Information", "InfoPage", icon_path=info_icon_path); r += 1
         _nav_row(r, "keyboard", "Virtual Keyboard", "KeyboardPage", icon_path=keyboard_icon_path); r += 1
-        
-        # spacer row (row=99 expands to fill available space)
         tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=99, column=0, sticky="nsew")
-
-        # settings pinned to bottom
         _nav_row(100, "settings", "Settings", "SettingsPage", icon_path=setting_icon_path)
-        
-        
+
     # 🔹 Highlight selected sidebar item
     def highlight_selected(self, key):
         if key not in self._nav_rows:
-            return  # safety check (can happen if sidebar isn't ready yet)
-
+            return
         self.selected_key = key
         for k, cont in self._nav_rows.items():
             if k == key:
@@ -144,10 +149,9 @@ class Sidebar(RoundedCard):
                     highlightbackground="white",
                     highlightcolor="white",
                     highlightthickness=2,
-                    bd=0
+                    bd=0,
                 )
                 self._nav_btns[k].configure(bg="#2b3947")
             else:
                 cont.configure(bg=Colors.sidebar_bg, highlightthickness=0, bd=0)
                 self._nav_btns[k].configure(bg=Colors.sidebar_bg)
-
