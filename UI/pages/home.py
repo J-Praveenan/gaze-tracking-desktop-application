@@ -3,6 +3,7 @@ from tkinter import messagebox
 from UI.theme import Colors, Fonts
 from UI.widgets import RoundedCard, PillButton
 from .base import BasePage
+from utils.common import speak, voice_tips_enabled
 from .sidebar import Sidebar
 import threading
 from UI.pages import gaze_runner
@@ -24,12 +25,6 @@ stop_reminder_event = threading.Event()
 
 def F(name, default):
     return getattr(Fonts, name, default)
-
-
-def speak(message):
-    engine = pyttsx3.init()
-    engine.say(message)
-    engine.runAndWait()
 
 
 def launch_gaze_app(enable_mouse_control=False):
@@ -75,8 +70,7 @@ def launch_gaze_app(enable_mouse_control=False):
             except Exception:
                 pass
 
- # 🕒 Start reminder if enabled
-# === Start reminder if enabled ===
+        # 🕒 Start reminder if enabled
         if enable_mouse_control and reminder_enabled:
             def rest_reminder_timer():
                 start_time = time.time()
@@ -196,12 +190,25 @@ class HomePage(BasePage):
             "Select how you want to control apps using your gaze – automatic or manual.",
             [("Auto Control", "auto"), ("Manual Control", "manual")]
         )
+        voice_var = tk.StringVar(value="on")
+
+        def on_voice_change(*_):
+            import utils.common as common
+            common.voice_tips_enabled = (voice_var.get() == "on")
+            state = "enabled" if common.voice_tips_enabled else "disabled"
+            common.speak(f"Voice tips {state}.")
+
+
+
+        voice_var.trace_add("write", on_voice_change)
+
         voice_card = self._make_card(
             row_frame, "Voice Tips",
             "Turn voice tips ON or OFF while using gaze control.",
             [("Turn ON", "on"), ("Turn OFF", "off")],
-            radio_var=tk.StringVar(value="on")
+            radio_var=voice_var
         )
+
 
         # Initially position them side-by-side
         control_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=(0, 8))
@@ -232,7 +239,8 @@ class HomePage(BasePage):
     ("✨", "Both Eyes Blink", "Cycles pointer position in order — Left → Top → Right → Bottom → Center"),
     ("👁️", "Left Eye Blink", "Performs a Left Click"),
     ("👁️", "Right Eye Blink", "Performs a Right Click"),
-    ("😴", "Long Blink ( > 2s )", "Activates Scroll Mode — allows hands-free scrolling until eyes reopen"),
+("😴", "Long Blink ( > 2s )", 
+ "Activates Scroll Mode — after activation, looking up scrolls up and looking down scrolls down until another long blink disables it."),
 ])
 
 

@@ -841,7 +841,7 @@ def main(enable_mouse_control=False, show_video=False):
 
 
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
 
     ret, frame = cap.read()
     if not ret:
