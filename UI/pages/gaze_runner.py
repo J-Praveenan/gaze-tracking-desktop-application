@@ -28,6 +28,40 @@ from UI.pages.base import BasePage
 from UI.pages.sidebar import Sidebar
 
 
+# ==== Load thresholds from JSON ====
+threshold_path = r"E:\FinalYearProject\GazeTrackingModel\GazeTrackingSystem\Data\threshold.json"
+
+if not os.path.exists(threshold_path):
+    raise FileNotFoundError("⚠️ Threshold file not found. Please run calibration first!")
+
+with open(threshold_path, "r") as f:
+    thresholds = json.load(f)
+    
+    
+    
+# Assign variables for readability
+# left_eye_horizontal_threshold_left_direction = thresholds["left_eye_horizontal_threshold_left_direction"] - 0.002
+# right_eye_horizontal_threshold_left_direction = thresholds["right_eye_horizontal_threshold_left_direction"] - 0.002
+# left_eye_horizontal_threshold_right_direction = thresholds["left_eye_horizontal_threshold_for_right_direction"] - 0.002
+# right_eye_horizontal_threshold_right_direction = thresholds["right_eye_horizontal_threshold_for_right_direction"] - 0.002
+# left_eye_vertical_threshold_up = thresholds["left_eye_vertical_threshold_for_up_direction"] - 0.0008
+# right_eye_vertical_threshold_up = thresholds["right_eye_vertical_threshold_for_up_direction"] - 0.0008
+# left_eye_vertical_threshold_down = thresholds["left_eye_vertical_threshold_for_down_direction"] - 0.003
+# right_eye_vertical_threshold_down = thresholds["right_eye_vertical_threshold_for_down_direction"] - 0.003
+
+
+left_eye_horizontal_threshold_left_direction = thresholds["left_eye_horizontal_threshold_left_direction"] 
+right_eye_horizontal_threshold_left_direction = thresholds["right_eye_horizontal_threshold_left_direction"] 
+
+left_eye_horizontal_threshold_right_direction = thresholds["left_eye_horizontal_threshold_for_right_direction"] 
+right_eye_horizontal_threshold_right_direction = thresholds["right_eye_horizontal_threshold_for_right_direction"] 
+
+left_eye_vertical_threshold_up = thresholds["left_eye_vertical_threshold_for_up_direction"]
+right_eye_vertical_threshold_up = thresholds["right_eye_vertical_threshold_for_up_direction"]
+
+left_eye_vertical_threshold_down = thresholds["left_eye_vertical_threshold_for_down_direction"] 
+right_eye_vertical_threshold_down = thresholds["right_eye_vertical_threshold_for_down_direction"]
+
 # ---- Global control flag ----
 RUN_GAZE = False
 RUN_GAZE_LOCK = threading.Lock()
@@ -482,11 +516,7 @@ def main(enable_mouse_control=False, show_video=False):
             _target_pos = (ntx, nty)
         
         
-        
-
-
-
-
+    
 
     LEFT_IRIS = [474, 475, 476, 477]
     RIGHT_IRIS = [469, 470, 471, 472]
@@ -604,34 +634,29 @@ def main(enable_mouse_control=False, show_video=False):
             - "closed" → both eyes closed
         """
     
-        if is_eye_closed:
-            return "closed", 100
+    
+        # =========================================== this is also need to change ======================================
+        # if is_eye_closed:
+        #     return "closed", 100
         
         
-        if blink_confirmed:
-            return "blink", accuracy
-        # elif (left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)) and (left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)) :
-        #     return "--"
+        # if blink_confirmed:
+        #     return "blink", accuracy
+
         # elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-        #     _click_debounced("left")   # trigger left click
+        #     _click_debounced("left")
         #     return "left_blink", 100
 
         # elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-        #     _click_debounced("right")  # trigger right click
+        #     _click_debounced("right") 
         #     return "right_blink", 100
-        elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            _click_debounced("left")
-            return "left_blink", 100
-
-        elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            _click_debounced("right") 
-            return "right_blink", 100
 
 
 
-            
+
         
-        
+
+        #========================================================================================
         
         # --- Left blink (wink) ---
         # if left_ear is not None and right_ear is not None:
@@ -730,8 +755,106 @@ def main(enable_mouse_control=False, show_video=False):
         landmark_down_boolean = False
         
         
+        # =================================TNew Calibrated Thresold Implementation=================================================================================================================
+        # =================================TNew Calibrated Threshold Implementation==================================
+        if mesh_points is None or len(mesh_points) < 478:
+            print("⚠️ No mesh points available this frame.")
+            return gaze, accuracy
+
+        # Convert mesh_points to normalized coordinates (0–1)
+        frame_h, frame_w = frame.shape[:2]
+        landmarks = [
+            type("Point", (), {"x": p[0] / frame_w, "y": p[1] / frame_h}) for p in mesh_points
+        ]
         
-        # if (right_eye_horizontal_offset >= LEFT_THRESHOLD) and (left_eye_horizontal_offset >= LEFT_THRESHOLD):
+        
+        # # (Optional) show iris landmarks
+        # left = [landmarks[374], landmarks[386]]
+        # right = [landmarks[145], landmarks[159]]
+
+        
+        
+        # ==== Compute eye landmark distances ====
+        # Left Eye
+        left_left_x1, left_left_x2 = landmarks[33].x, landmarks[471].x
+        left_right_x1, left_right_x2 = landmarks[469].x, landmarks[133].x
+        left_up_y1, left_up_y2 = landmarks[470].y, landmarks[159].y
+        left_down_y1, left_down_y2 = landmarks[159].y, landmarks[145].y
+
+        # # Right Eye
+        right_left_x1, right_left_x2 = landmarks[474].x, landmarks[362].x
+        right_right_x1, right_right_x2 = landmarks[469].x, landmarks[263].x
+        right_up_y1, right_up_y2 = landmarks[475].y, landmarks[386].y
+        right_down_y1, right_down_y2 = landmarks[386].y, landmarks[374].y
+        
+        
+    
+
+        # ==== Calculate direction values ====
+        left_eye_horizontal_for_left_direction = left_left_x2 - left_left_x1
+        right_eye_horizontal_for_left_direction = right_left_x1 - right_left_x2
+
+        left_eye_horizontal_for_right_direction = left_right_x2 - left_right_x1
+        right_eye_horizontal_for_right_direction = right_right_x2 - right_right_x1
+
+        left_eye_vertical_for_up_direction = left_up_y2 - left_up_y1
+        right_eye_vertical_for_up_direction = right_up_y2 - right_up_y1
+
+        left_eye_vertical_for_down_direction = left_down_y2 - left_down_y1
+        right_eye_vertical_for_down_direction = right_down_y2 - right_down_y1
+
+ 
+       
+        
+        if (
+            left_eye_horizontal_for_left_direction < left_eye_horizontal_threshold_left_direction
+            and right_eye_horizontal_for_left_direction < right_eye_horizontal_threshold_left_direction
+        ):
+            # landmark_left_boolean = True
+            landmark_right_boolean = True
+            print("Looking LEFT (Landmarks)")
+
+        elif (
+            left_eye_horizontal_for_right_direction < left_eye_horizontal_threshold_right_direction
+            and right_eye_horizontal_for_right_direction < right_eye_horizontal_threshold_right_direction
+        ):
+            # landmark_right_boolean = True
+            landmark_left_boolean = True
+            print("Looking RIGHT (Landmarks)")
+
+        elif (
+            left_eye_vertical_for_up_direction > left_eye_vertical_threshold_up
+            and right_eye_vertical_for_up_direction > right_eye_vertical_threshold_up
+        ):
+            landmark_up_boolean = True
+            print("Looking UP (Landmarks)")
+            
+        elif (
+            left_eye_vertical_for_down_direction < left_eye_vertical_threshold_down
+            and right_eye_vertical_for_down_direction < right_eye_vertical_threshold_down
+        ):
+            landmark_down_boolean = True
+            print("Looking DOWN (Landmarks)")
+
+        else:
+            landmark_center_boolean = True
+            print("Looking CENTER (Landmarks)")
+
+
+
+           
+            
+    
+        
+        # =================================This section should be change or remove=================================================================================================================
+        
+        # if (RIGHT_THRESHOLD < right_eye_horizontal_offset < LEFT_THRESHOLD) and (RIGHT_THRESHOLD < left_eye_horizontal_offset < LEFT_THRESHOLD):
+        #     landmark_center_boolean = True
+        #     print("Looking CENTER (Landmarks)")
+        # elif left_eye_offset_y > DOWN_THRESHOLD and right_eye_offset_y > DOWN_THRESHOLD:
+        #     landmark_down_boolean = True
+        #     print("Looking DOWN (Landmarks)")
+        # elif (right_eye_horizontal_offset >= LEFT_THRESHOLD) and (left_eye_horizontal_offset >= LEFT_THRESHOLD):
         #     landmark_left_boolean = True
         #     print("Looking LEFT (Landmarks)")
         # elif (right_eye_horizontal_offset <= RIGHT_THRESHOLD) and (left_eye_horizontal_offset <= RIGHT_THRESHOLD):
@@ -740,31 +863,9 @@ def main(enable_mouse_control=False, show_video=False):
         # elif delta_r_y <= UP_THRESHOLD and delta_l_y <= UP_THRESHOLD:
         #     landmark_up_boolean = True
         #     print("Looking UP (Landmarks)")
-        # elif left_eye_offset_y > DOWN_THRESHOLD and right_eye_offset_y > DOWN_THRESHOLD:
-        #     landmark_down_boolean = True
-        #     print("Looking DOWN (Landmarks)")
-        # elif (RIGHT_THRESHOLD < right_eye_horizontal_offset < LEFT_THRESHOLD) and (RIGHT_THRESHOLD < left_eye_horizontal_offset < LEFT_THRESHOLD):
-        #     landmark_center_boolean = True
-        #     print("Looking CENTER (Landmarks)")
-        
-        if (RIGHT_THRESHOLD < right_eye_horizontal_offset < LEFT_THRESHOLD) and (RIGHT_THRESHOLD < left_eye_horizontal_offset < LEFT_THRESHOLD):
-            landmark_center_boolean = True
-            print("Looking CENTER (Landmarks)")
-        elif left_eye_offset_y > DOWN_THRESHOLD and right_eye_offset_y > DOWN_THRESHOLD:
-            landmark_down_boolean = True
-            print("Looking DOWN (Landmarks)")
-        elif (right_eye_horizontal_offset >= LEFT_THRESHOLD) and (left_eye_horizontal_offset >= LEFT_THRESHOLD):
-            landmark_left_boolean = True
-            print("Looking LEFT (Landmarks)")
-        elif (right_eye_horizontal_offset <= RIGHT_THRESHOLD) and (left_eye_horizontal_offset <= RIGHT_THRESHOLD):
-            landmark_right_boolean = True
-            print("Looking RIGHT (Landmarks)")
-        elif delta_r_y <= UP_THRESHOLD and delta_l_y <= UP_THRESHOLD:
-            landmark_up_boolean = True
-            print("Looking UP (Landmarks)")
         
         
-
+        # ===================================================================================================================================================================================
 
             
         # Horizontal deltas (X axis)
@@ -794,16 +895,41 @@ def main(enable_mouse_control=False, show_video=False):
             print("Looking DOWN (CNN model prediction)")
             
         
+        
+       
+       
+       # --- Unified Prediction Logic (Blink/Wink/Gaze mutually exclusive) ---
 
+        # 1️⃣  Handle eye closure and blinks first (highest priority)
+        if is_eye_closed:
+            print("Final: BOTH EYES CLOSED")
+            return "closed", 100
+
+        elif blink_confirmed:
+            print("Final: NORMAL BLINK detected")
+            return "blink", accuracy
+
+        elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+            print("Final: LEFT WINK detected")
+            _click_debounced("left")
+            return "left_blink", 100
+
+        elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+            print("Final: RIGHT WINK detected")
+            _click_debounced("right")
+            return "right_blink", 100
+         
+        
+        # Final Gaze Decision Logic
         if gaze == "down" or landmark_down_boolean:
             gaze = "down"
             print("Final Gaze direction: ", gaze)
-        elif gaze == "up" :
+        elif gaze == "up" and landmark_up_boolean:
             gaze = "up"
-            print("Final Gaze direction: ", gaze)
+            print("Final Gaze direction: ", gaze)  
         elif gaze == "center" or landmark_center_boolean:
             gaze = "center"
-            print("Final Gaze direction: ", gaze)       
+            print("Final Gaze direction: ", gaze)     
         elif gaze == "right" and landmark_right_boolean:
             gaze = "right"
             print("Final Gaze direction: ", gaze)      
@@ -813,6 +939,10 @@ def main(enable_mouse_control=False, show_video=False):
         else:
             gaze = "center"
             print("Final Gaze direction: ", gaze)
+            
+            
+            
+        
 
         return gaze, accuracy
 
@@ -1161,6 +1291,7 @@ def main(enable_mouse_control=False, show_video=False):
                     _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
             _left_wink_start = None
 
+
         # 2) RIGHT-EYE WINK → RIGHT CLICK
         # right must be closed; left must be clearly open
         if right_closed and (left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)):
@@ -1330,6 +1461,7 @@ def main(enable_mouse_control=False, show_video=False):
             #=================PREDICTION PROCESS========================================
 
             gaze, accuracy = detect_gaze(
+                
                 eye_input_g, 
                 blink_confirmed, 
                 mesh_points, 
@@ -1457,5 +1589,7 @@ def stop_gaze():
     SMOOTHER_STOP.set()
     stop_signal.set()
     print("[INFO] Gaze control stopped (via stop_gaze()).")
+
+
 
 
