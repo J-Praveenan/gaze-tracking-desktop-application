@@ -35,8 +35,26 @@ def speak(message):
 # Launch / Stop Gaze Control + Reminder Timer
 # =====================================================================
 def launch_gaze_app(enable_mouse_control=False):
+    """Start or stop gaze tracking and handle rest reminders."""
     global gaze_thread, stop_reminder_event
     try:
+        base_dir = Path(__file__).resolve().parents[2]
+        data_dir = base_dir / "Data"
+        data_dir.mkdir(exist_ok=True)
+        config_path = data_dir / "configuration.json"
+
+        # Load unified config
+        reminder_enabled = False
+        reminder_minutes = 10
+        if config_path.exists():
+            try:
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                    reminder_enabled = config.get("reminder", {}).get("enabled", False)
+                    reminder_minutes = config.get("reminder", {}).get("duration", 10)
+            except Exception:
+                pass
+
         if enable_mouse_control:
             stop_reminder_event.clear()
 
@@ -52,27 +70,9 @@ def launch_gaze_app(enable_mouse_control=False):
             )
             gaze_thread.start()
         else:
-            # Stop gaze control
             from UI.pages import gaze_runner
             gaze_runner.stop_gaze()
             print("[INFO] Stop request sent to gaze thread.")
-
-        # Load reminder settings
-        base_dir = Path(__file__).resolve().parents[2]
-        data_dir = base_dir / "Data"
-        data_dir.mkdir(exist_ok=True)
-        settings_path = data_dir / "notification_remainder_time.json"
-        reminder_enabled = False
-        reminder_minutes = 10
-
-        if settings_path.exists():
-            try:
-                with open(settings_path, "r") as f:
-                    data = json.load(f)
-                    reminder_enabled = data.get("enabled", False)
-                    reminder_minutes = data.get("duration", 10)
-            except Exception:
-                pass
 
         # Start reminder if enabled
         if enable_mouse_control and reminder_enabled:
@@ -356,15 +356,15 @@ class HomePage(BasePage):
         from utils import common
         base_dir = Path(__file__).resolve().parents[2]
         data_dir = base_dir / "Data"
-        reminder_path = data_dir / "notification_remainder_time.json"
+        config_path = data_dir / "configuration.json"
 
         reminder_enabled, reminder_duration = False, 0
-        if reminder_path.exists():
+        if config_path.exists():
             try:
-                with open(reminder_path, "r") as f:
-                    data = json.load(f)
-                    reminder_enabled = data.get("enabled", False)
-                    reminder_duration = data.get("duration", 10)
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                    reminder_enabled = config.get("reminder", {}).get("enabled", False)
+                    reminder_duration = config.get("reminder", {}).get("duration", 10)
             except Exception:
                 pass
 

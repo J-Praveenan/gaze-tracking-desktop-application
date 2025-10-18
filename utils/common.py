@@ -5,57 +5,64 @@ import json
 from pathlib import Path
 
 # ==========================================================
-# Persistent state file
+# Unified Configuration File
 # ==========================================================
 BASE_DIR = Path(__file__).resolve().parents[1]  # one level above utils
 DATA_DIR = BASE_DIR / "Data"
-VOICE_FILE = DATA_DIR / "voice_control.json"
+CONFIG_FILE = DATA_DIR / "configuration.json"
 
 engine_lock = threading.Lock()
 video_playing = False
 current_speech_thread = None
 
 
-def _load_voice_settings():
-    """Load voice settings from JSON file, or set defaults if missing."""
+# ==========================================================
+# Helpers: Load & Save Configuration
+# ==========================================================
+def _load_config():
+    """Load the unified configuration file, creating defaults if missing."""
     DATA_DIR.mkdir(exist_ok=True)
-    if VOICE_FILE.exists():
+    if CONFIG_FILE.exists():
         try:
-            with open(VOICE_FILE, "r") as f:
-                data = json.load(f)
-                return {
-                    "voice_tips_enabled": data.get("voice_tips_enabled", True),
-                    "voice_action_confirmation": data.get("voice_action_confirmation", True),
-                }
+            with open(CONFIG_FILE, "r") as f:
+                return json.load(f)
         except Exception:
             pass
-    # Default if file missing or invalid
-    default_data = {
-        "voice_tips_enabled": True,
-        "voice_action_confirmation": True,
+
+    # Default structure
+    default = {
+        "reminder": {"enabled": False, "duration": 10},
+        "voice": {"tips_enabled": True, "action_confirmation": True},
+        "tray": {"enabled": False},
+        "camera": {"index": 0}
     }
-    _save_voice_settings(default_data)
-    return default_data
+
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(default, f, indent=4)
+
+    return default
 
 
-def _save_voice_settings(data):
-    """Save the current voice control settings to file."""
+def _save_config(data):
+    """Save entire configuration back to configuration.json."""
     try:
         DATA_DIR.mkdir(exist_ok=True)
-        with open(VOICE_FILE, "w") as f:
+        with open(CONFIG_FILE, "w") as f:
             json.dump(data, f, indent=4)
     except Exception as e:
-        print("⚠️ Failed to save voice_control.json:", e)
-
-
-# Load at startup
-_voice_settings = _load_voice_settings()
-voice_tips_enabled = _voice_settings["voice_tips_enabled"]
-voice_action_confirmation = _voice_settings["voice_action_confirmation"]
+        print("⚠️ Failed to save configuration.json:", e)
 
 
 # ==========================================================
-# Voice functions
+# Load Voice Settings at Startup
+# ==========================================================
+_config = _load_config()
+voice_tips_enabled = _config.get("voice", {}).get("tips_enabled", True)
+voice_action_confirmation = _config.get("voice", {}).get("action_confirmation", True)
+
+
+# ==========================================================
+# Voice Engine Functions
 # ==========================================================
 def stop_speech():
     """Stop any currently running voice output immediately."""
@@ -78,11 +85,11 @@ def speak(text):
         with engine_lock:
             try:
                 engine = pyttsx3.init()
-                engine.setProperty('rate', 175)
-                engine.setProperty('volume', 1.0)
-                for v in engine.getProperty('voices'):
+                engine.setProperty("rate", 175)
+                engine.setProperty("volume", 1.0)
+                for v in engine.getProperty("voices"):
                     if "female" in v.name.lower():
-                        engine.setProperty('voice', v.id)
+                        engine.setProperty("voice", v.id)
                         break
                 engine.say(text)
                 engine.runAndWait()
@@ -114,23 +121,21 @@ def speak_action_confirmation(text):
 
 
 # ==========================================================
-# Public helpers for updating settings
+# Update Voice Settings (Persist in configuration.json)
 # ==========================================================
 def set_voice_tips(enabled: bool):
-    """Enable/disable voice tips and save to file."""
-    global voice_tips_enabled
+    """Enable/disable voice tips and save to unified configuration."""
+    global voice_tips_enabled, _config
     voice_tips_enabled = enabled
-    _save_voice_settings({
-        "voice_tips_enabled": voice_tips_enabled,
-        "voice_action_confirmation": voice_action_confirmation
-    })
+    _config["voice"]["tips_enabled"] = enabled
+    _save_config(_config)
+    print(f"[CONFIG] Voice Tips set to: {enabled}")
 
 
 def set_voice_action_confirmation(enabled: bool):
-    """Enable/disable voice action confirmation and save to file."""
-    global voice_action_confirmation
+    """Enable/disable voice confirmations and save to unified configuration."""
+    global voice_action_confirmation, _config
     voice_action_confirmation = enabled
-    _save_voice_settings({
-        "voice_tips_enabled": voice_tips_enabled,
-        "voice_action_confirmation": voice_action_confirmation
-    })
+    _config["voice"]["action_confirmation"] = enabled
+    _save_config(_config)
+    print(f"[CONFIG] Voice Action Confirmation set to: {enabled}")

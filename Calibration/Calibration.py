@@ -137,9 +137,26 @@ def save_thresholds(thresholds: dict):
 # Main Calibration
 # ==============================
 def calibrate_gaze():
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    # ==========================
+    # Load saved camera index
+    # ==========================
+    config_path = Path("Data") / "configuration.json"
+    camera_index = 0  # default fallback
+
+    if config_path.exists():
+        try:
+            with open(config_path, "r") as f:
+                config = json.load(f)
+                camera_index = config.get("camera", {}).get("index", 0)
+        except Exception as e:
+            print("⚠️ Failed to read configuration.json, using default camera (0):", e)
+
+    # ==========================
+    # Open the selected camera
+    # ==========================
+    cap = cv2.VideoCapture(camera_index)
     if not cap.isOpened():
-        raise RuntimeError("Could not open camera.")
+        raise RuntimeError(f"Could not open camera (index {camera_index}).")
 
     cv2.namedWindow(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
