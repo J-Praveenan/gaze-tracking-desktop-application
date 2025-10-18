@@ -5,6 +5,7 @@ from UI.widgets import RoundedCard
 from UI.pages.base import BasePage
 from UI.pages.sidebar import Sidebar
 from UI.pages.guide import GuideVideoPage
+from utils.common import video_playing
 
 
 class TipsPage(BasePage):

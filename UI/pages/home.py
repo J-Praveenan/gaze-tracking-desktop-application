@@ -1,13 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
 from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard, PillButton
+from UI.widgets import RoundedCard, RoundedButton
 from .base import BasePage
-from .sidebar import Sidebar
 import threading
-from UI.pages import gaze_runner
 import winsound
-from win10toast import ToastNotifier
 from winotify import Notification, audio
 import time
 import pyttsx3
@@ -15,32 +12,35 @@ from PIL import Image, ImageTk
 import os
 from pathlib import Path
 import json
-from UI.widgets import RoundedButton  # 👈 add import
 
 
-gaze_thread = None  # global reference
+# Global control thread state
+gaze_thread = None
 stop_reminder_event = threading.Event()
 
 
 def F(name, default):
+    """Font helper"""
     return getattr(Fonts, name, default)
 
 
 def speak(message):
+    """Speak helper using pyttsx3"""
     engine = pyttsx3.init()
     engine.say(message)
     engine.runAndWait()
 
 
+# =====================================================================
+# Launch / Stop Gaze Control + Reminder Timer
+# =====================================================================
 def launch_gaze_app(enable_mouse_control=False):
     global gaze_thread, stop_reminder_event
     try:
-        
-        # 🟢 Start gaze control in background
         if enable_mouse_control:
-            # Reset stop flag for both gaze and reminder
             stop_reminder_event.clear()
-            # 🟢 Start gaze control only if not already running
+
+            # Prevent multiple instances
             if gaze_thread and gaze_thread.is_alive():
                 print("[INFO] Gaze already running.")
                 return
@@ -52,20 +52,19 @@ def launch_gaze_app(enable_mouse_control=False):
             )
             gaze_thread.start()
         else:
-            # 🟥 Stop gaze control
+            # Stop gaze control
             from UI.pages import gaze_runner
             gaze_runner.stop_gaze()
             print("[INFO] Stop request sent to gaze thread.")
-        
-        
-        # 🕒 Load reminder settings
+
+        # Load reminder settings
         base_dir = Path(__file__).resolve().parents[2]
         data_dir = base_dir / "Data"
         data_dir.mkdir(exist_ok=True)
         settings_path = data_dir / "notification_remainder_time.json"
         reminder_enabled = False
         reminder_minutes = 10
-        
+
         if settings_path.exists():
             try:
                 with open(settings_path, "r") as f:
@@ -75,21 +74,17 @@ def launch_gaze_app(enable_mouse_control=False):
             except Exception:
                 pass
 
- # 🕒 Start reminder if enabled
-# === Start reminder if enabled ===
+        # Start reminder if enabled
         if enable_mouse_control and reminder_enabled:
             def rest_reminder_timer():
                 start_time = time.time()
                 while not stop_reminder_event.is_set():
                     elapsed = time.time() - start_time
                     if elapsed >= reminder_minutes * 60:
-                        # 🔔 Time’s up → show notification only once
                         winsound.Beep(800, 400)
-
                         base_dir = Path(__file__).resolve().parents[2]
                         assets_dir = base_dir / "assets"
                         icon_path = assets_dir / "eyelogo.ico"
-
                         toast = Notification(
                             app_id="Look Track Vision",
                             title="Eye Care Reminder",
@@ -100,40 +95,43 @@ def launch_gaze_app(enable_mouse_control=False):
                         toast.set_audio(audio.Reminder, loop=False)
                         toast.show()
                         speak(f"You have been using Look Track Vision for {reminder_minutes} minutes. Take a short rest!")
-
-                        break  # exit loop after first notification
+                        break
                     time.sleep(1)
-
             threading.Thread(target=rest_reminder_timer, daemon=True).start()
 
     except Exception as e:
         messagebox.showerror("Error", f"Failed to start gaze system:\n{e}")
 
 
+# =====================================================================
+# Home Page UI
+# =====================================================================
 class HomePage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
         self.overlay.configure(bg=Colors.page_bg)
+        
+        
 
-        # === Layout: Sidebar + Main Column ===
+        # Layout setup
         self.overlay.grid_rowconfigure(0, weight=1)
         self.overlay.grid_columnconfigure(0, weight=0)
         self.overlay.grid_columnconfigure(1, weight=1)
-
 
         self.main_col = tk.Frame(self.overlay, bg=Colors.page_bg)
         self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20))
         self.main_col.grid_rowconfigure(0, weight=1)
         self.main_col.grid_columnconfigure(0, weight=1)
 
+        self.app_running = False
         self._build_home_content(self.main_col)
 
-    # ----------------------------------------------------------------
+    # -----------------------------------------------------------------
     def _build_home_content(self, parent):
         fr = tk.Frame(parent, bg=Colors.page_bg)
         fr.pack(fill="both", expand=True)
 
-        # === Hero Card ===
+        # === Hero Section ===
         hero = RoundedCard(fr, radius=18, pad=20, bg=Colors.dark_card, tight=True)
         hero.pack(fill="x", padx=8, pady=(8, 4))
         tk.Label(hero.body, text="Welcome to LOOK TRACK VISION",
@@ -158,95 +156,168 @@ class HomePage(BasePage):
         scrollbar = tk.Scrollbar(fr, orient="vertical", command=canvas.yview)
         scroll_frame = tk.Frame(canvas, bg=Colors.page_bg)
         window_id = canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
-
-        # Adjust scrollable area dynamically
         scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.bind("<Configure>", lambda e: canvas.itemconfig(window_id, width=e.width))
         canvas.configure(yscrollcommand=scrollbar.set)
-
         canvas.pack(fill="both", expand=True, side="left")
         scrollbar.pack(side="right", fill="y")
 
-        # === Mouse wheel scroll support (same as InfoPage) ===
+
+        # ✅ Enable scroll from anywhere in the page
         def _on_mousewheel(event):
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        def _bind_scroll(event):
-            canvas.bind_all("<MouseWheel>", _on_mousewheel)
-            canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
-            canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+        # Windows / macOS
+        self.overlay.bind_all("<MouseWheel>", _on_mousewheel)
+        # Linux (if applicable)
+        self.overlay.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+        self.overlay.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
 
-        def _unbind_scroll(event):
-            canvas.unbind_all("<MouseWheel>")
-            canvas.unbind_all("<Button-4>")
-            canvas.unbind_all("<Button-5>")
 
-        scroll_frame.bind("<Enter>", _bind_scroll)
-        scroll_frame.bind("<Leave>", _unbind_scroll)
-
-        # === Row frame for Control Mode & Voice Tips ===
+        # === CONTROL MODE + SYSTEM STATUS ===
         row_frame = tk.Frame(scroll_frame, bg=Colors.page_bg)
         row_frame.pack(fill="x", padx=8, pady=(8, 4))
         row_frame.grid_columnconfigure(0, weight=1)
         row_frame.grid_columnconfigure(1, weight=1)
 
-        # Create cards
         control_card = self._make_card(
             row_frame, "Control Mode",
             "Select how you want to control apps using your gaze – automatic or manual.",
             [("Auto Control", "auto"), ("Manual Control", "manual")]
         )
-        voice_card = self._make_card(
-            row_frame, "Voice Tips",
-            "Turn voice tips ON or OFF while using gaze control.",
-            [("Turn ON", "on"), ("Turn OFF", "off")],
-            radio_var=tk.StringVar(value="on")
-        )
 
-        # Initially position them side-by-side
+        # --- System Status ---
+        from utils import common
+        base_dir = Path(__file__).resolve().parents[2]
+        data_dir = base_dir / "Data"
+        reminder_path = data_dir / "notification_remainder_time.json"
+
+        reminder_enabled, reminder_duration = False, 0
+        if reminder_path.exists():
+            try:
+                with open(reminder_path, "r") as f:
+                    data = json.load(f)
+                    reminder_enabled = data.get("enabled", False)
+                    reminder_duration = data.get("duration", 10)
+            except Exception:
+                pass
+
+        # Create the card
+        self.status_card = RoundedCard(
+    row_frame, radius=12, pad=12,
+    bg=Colors.glass_bg, border_color="#4b5563", border_width=2
+)
+
+
+        # --- Title ---
+        tk.Label(
+            self.status_card.body,
+            text="System Status",
+            fg=Colors.card_head,
+            bg=Colors.glass_bg,
+            font=F("h2b", ("Segoe UI", 12, "bold"))
+        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
+
+        # --- Helper to make neat aligned rows ---
+        def add_status_row(row, icon, label, value, color_icon="#1e293b", color_value="#111827"):
+            """Creates one aligned row inside the status card."""
+            tk.Label(
+                self.status_card.body,
+                text=icon,
+                fg=color_icon,
+                bg=Colors.glass_bg,
+                font=("Segoe UI Emoji", 11)
+            ).grid(row=row, column=0, sticky="w", padx=(6, 2), pady=2)
+
+            tk.Label(
+                self.status_card.body,
+                text=f"{label}:",
+                fg=Colors.card_text,
+                bg=Colors.glass_bg,
+                font=("Segoe UI", 10, "bold"),
+                anchor="w"
+            ).grid(row=row, column=1, sticky="w", padx=(0, 6), pady=2)
+
+            tk.Label(
+                self.status_card.body,
+                text=value,
+                fg=color_value,
+                bg=Colors.glass_bg,
+                font=("Segoe UI", 10),
+                anchor="w"
+            ).grid(row=row, column=2, sticky="w", padx=(0, 6), pady=2)
+
+        # --- Add neatly aligned rows ---
+        add_status_row(1, "🎯", "Gaze Control", "Enabled" if self.app_running else "Disabled")
+        add_status_row(2, "🔊", "Voice Tips", "Enabled" if common.voice_tips_enabled else "Disabled")
+        add_status_row(3, "🔔", "Voice Confirmation", "Enabled" if common.voice_action_confirmation else "Disabled")
+        add_status_row(4, "⏰", "Rest Reminder", f"ON ({reminder_duration} min)" if reminder_enabled else "OFF")
+
+        # --- Column alignment ---
+        for i in range(3):
+            self.status_card.body.grid_columnconfigure(i, weight=0)
+        self.status_card.body.grid_columnconfigure(2, weight=1)
+
+        # --- Place both cards ---
         control_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=(0, 8))
-        voice_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=(0, 8))
+        self.status_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=(0, 8))
 
-        # Adjust layout on resize
+
+        # ✅ Force equal height for both cards
+        def sync_card_heights():
+            self.status_card.update_idletasks()
+            control_card.update_idletasks()
+
+            # Get both total card heights (outer frames)
+            h1 = self.status_card.winfo_height()
+            h2 = control_card.winfo_height()
+            max_h = max(h1, h2)
+
+            # Apply the same height to both outer cards and inner bodies
+            self.status_card.configure(height=max_h)
+            control_card.configure(height=max_h)
+            self.status_card.body.configure(height=max_h - 30)
+            control_card.body.configure(height=max_h - 30)
+
+        # Run once and bind for resizing
+        row_frame.after(200, sync_card_heights)
+        row_frame.bind("<Configure>", lambda e: sync_card_heights())
+
+
+        # Run once and bind for resizing
+        row_frame.after(100, sync_card_heights)
+        row_frame.bind("<Configure>", lambda e: sync_card_heights())
+
+
+        # control_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=(0, 8))
+        # self.status_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=(0, 8))
+
+        # Responsive stacking
         def adjust_layout(event):
-            if event.width < 600:
-                # Stack vertically on small screens
+            if event.width < 950:
                 control_card.grid_configure(row=0, column=0, columnspan=2, padx=0)
-                voice_card.grid_configure(row=1, column=0, columnspan=2, padx=0)
+                self.status_card.grid_configure(row=1, column=0, columnspan=2, padx=0)
             else:
-                # Side by side on large screens
                 control_card.grid_configure(row=0, column=0, columnspan=1, padx=(0, 8))
-                voice_card.grid_configure(row=0, column=1, columnspan=1, padx=(8, 0))
+                self.status_card.grid_configure(row=0, column=1, columnspan=1, padx=(8, 0))
 
         row_frame.bind("<Configure>", adjust_layout)
 
-
-
-        # === Hide to Tray ===
-        self._make_checkbox_card(scroll_frame)
-
-        # === Instructions ===
+        # === Eye & Blink Controls ===
         self._make_instruction_section(scroll_frame, "Eye & Blink Controls", [
-    ("👀", "Eye Movement", "Pointer moves in the direction you look (Left, Right, Up, Down, Center)"),
-    ("🎯", "App Open", "Pointer starts at the center of the screen when the application launches"),
-    ("✨", "Both Eyes Blink", "Cycles pointer position in order — Left → Top → Right → Bottom → Center"),
-    ("👁️", "Left Eye Blink", "Performs a Left Click"),
-    ("👁️", "Right Eye Blink", "Performs a Right Click"),
-    ("😴", "Long Blink ( > 2s )", "Activates Scroll Mode — allows hands-free scrolling until eyes reopen"),
-])
-
-
-        self._make_instruction_section(scroll_frame, "Interface", [
-            ("➡️", "Sidebar Arrow", "Right-center arrow → open instructions"),
+            ("👀", "Eye Movement", "Pointer moves in the direction you look."),
+            ("🎯", "App Open", "Pointer starts at the center when the app launches."),
+            ("✨", "Both Eyes Blink", "Cycles pointer position."),
+            ("👁️", "Left Eye Blink", "Performs a Left Click."),
+            ("👁️", "Right Eye Blink", "Performs a Right Click."),
+            ("😴", "Long Blink (>2s)", "Activates Scroll Mode — look up/down to scroll."),
         ])
 
-        # === Start / Stop Application Button with Icon ==
-
+        # === Start / Stop Button ===
         ASSETS_DIR = os.path.join(os.path.dirname(__file__), "../../assets")
         power_on_path = os.path.join(ASSETS_DIR, "power_on.png")
         power_off_path = os.path.join(ASSETS_DIR, "power_off.png")
 
-        # Load icons safely
         def load_icon(path, size=(22, 22)):
             try:
                 img = Image.open(path).resize(size, Image.LANCZOS)
@@ -254,23 +325,13 @@ class HomePage(BasePage):
             except Exception:
                 return None
 
-        power_on_icon = load_icon(power_on_path)
-        power_off_icon = load_icon(power_off_path)
-        
-        self.power_on_icon = power_on_icon
-        self.power_off_icon = power_off_icon
-
-
-        # --- Button state ---
-        self.app_running = False
+        self.power_on_icon = load_icon(power_on_path)
+        self.power_off_icon = load_icon(power_off_path)
 
         def toggle_app():
-            app = self.controller  # ✅ reference to App
+            app = self.controller
             app._handle_global_gaze_toggle(not self.app_running)
 
-
-
-        # --- Right-aligned START button ---
         btn_frame = tk.Frame(scroll_frame, bg=Colors.page_bg)
         btn_frame.pack(fill="x", pady=(20, 10))
 
@@ -287,87 +348,212 @@ class HomePage(BasePage):
         )
         self.start_btn.pack(side="right", padx=(0, 20))
 
+       
 
+    # -----------------------------------------------------------------
+    def refresh_status(self):
+        """Rebuilds the aligned System Status section dynamically."""
+        from utils import common
+        base_dir = Path(__file__).resolve().parents[2]
+        data_dir = base_dir / "Data"
+        reminder_path = data_dir / "notification_remainder_time.json"
 
-        # Spacer
-        tk.Frame(scroll_frame, height=40, bg=Colors.page_bg).pack(fill="x")
+        reminder_enabled, reminder_duration = False, 0
+        if reminder_path.exists():
+            try:
+                with open(reminder_path, "r") as f:
+                    data = json.load(f)
+                    reminder_enabled = data.get("enabled", False)
+                    reminder_duration = data.get("duration", 10)
+            except Exception:
+                pass
 
-    # ----------------------------------------------------------------
-    # Reusable UI helpers
+        # Clear previous rows before redrawing
+        for widget in self.status_card.body.winfo_children():
+            widget.destroy()
+
+        # Title
+        tk.Label(
+            self.status_card.body,
+            text="System Status",
+            fg=Colors.card_head,
+            bg=Colors.glass_bg,
+            font=F("h2b", ("Segoe UI", 12, "bold"))
+        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
+
+        # Helper for neat alignment
+        def add_status_row(row, icon, label, value, color_icon="#1e293b", color_value="#111827"):
+            tk.Label(
+                self.status_card.body,
+                text=icon,
+                fg=color_icon,
+                bg=Colors.glass_bg,
+                font=("Segoe UI Emoji", 11)
+            ).grid(row=row, column=0, sticky="w", padx=(6, 2), pady=2)
+
+            tk.Label(
+                self.status_card.body,
+                text=f"{label}:",
+                fg=Colors.card_text,
+                bg=Colors.glass_bg,
+                font=("Segoe UI", 10, "bold"),
+                anchor="w"
+            ).grid(row=row, column=1, sticky="w", padx=(0, 6), pady=2)
+
+            tk.Label(
+                self.status_card.body,
+                text=value,
+                fg=color_value,
+                bg=Colors.glass_bg,
+                font=("Segoe UI", 10),
+                anchor="w"
+            ).grid(row=row, column=2, sticky="w", padx=(0, 6), pady=2)
+
+        # Add the dynamic rows again
+        add_status_row(1, "🎯", "Gaze Control", "Enabled" if self.app_running else "Disabled")
+        add_status_row(2, "🔊", "Voice Tips", "Enabled" if common.voice_tips_enabled else "Disabled")
+        add_status_row(3, "🔔", "Voice Confirmation", "Enabled" if common.voice_action_confirmation else "Disabled")
+        add_status_row(4, "⏰", "Rest Reminder", f"ON ({reminder_duration} min)" if reminder_enabled else "OFF")
+
+        # Ensure alignment stays correct
+        for i in range(3):
+            self.status_card.body.grid_columnconfigure(i, weight=0)
+        self.status_card.body.grid_columnconfigure(2, weight=1)
+
+    def on_show(self):
+        """Called when HomePage is shown again."""
+        self.refresh_status()
+
+    # -----------------------------------------------------------------
     def _make_card(self, parent, title, desc, options, radio_var=None):
+        """Reusable card for control settings"""
         card = RoundedCard(parent, radius=12, pad=12,
-                       bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
-        # Remove .pack() here
+                        bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
+
         tk.Label(card.body, text=title,
                 fg=Colors.card_head, bg=Colors.glass_bg,
                 font=F("h2b", ("Segoe UI", 12, "bold"))
                 ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
+
         tk.Label(card.body, text=desc,
                 fg=Colors.card_text, bg=Colors.glass_bg,
                 font=F("body", ("Segoe UI", 10))
                 ).grid(row=1, column=0, columnspan=2, sticky="w", padx=6, pady=(0, 8))
 
+        base_dir = Path(__file__).resolve().parents[2]
+        assets_dir = base_dir / "assets"
+        info_icon_path = assets_dir / "info_icon.png"
+
+        info_img = None
+        if info_icon_path.exists():
+            img = Image.open(info_icon_path).resize((14, 14), Image.LANCZOS)
+            info_img = ImageTk.PhotoImage(img)
+
+        def create_tooltip(widget, text):
+            tooltip = tk.Toplevel(widget)
+            tooltip.withdraw()
+            tooltip.overrideredirect(True)
+            tooltip.attributes("-topmost", True)
+            tooltip.attributes("-alpha", 0.95)
+
+            canvas = tk.Canvas(
+                tooltip,
+                bg="#1f2937",
+                highlightthickness=0,
+                bd=0,
+                width=300,
+                height=0
+            )
+            canvas.pack(fill="both", expand=True)
+
+            def draw_rounded_rect(x1, y1, x2, y2, radius=12, color="#1f2937"):
+                canvas.create_rectangle(x1 + radius, y1, x2 - radius, y1 + radius, fill=color, outline=color)
+                canvas.create_rectangle(x1, y1 + radius, x2, y2 - radius, fill=color, outline=color)
+                canvas.create_rectangle(x1 + radius, y2 - radius, x2 - radius, y2, fill=color, outline=color)
+                canvas.create_arc(x1, y1, x1 + 2*radius, y1 + 2*radius, start=90, extent=90, fill=color, outline=color)
+                canvas.create_arc(x2 - 2*radius, y1, x2, y1 + 2*radius, start=0, extent=90, fill=color, outline=color)
+                canvas.create_arc(x1, y2 - 2*radius, x1 + 2*radius, y2, start=180, extent=90, fill=color, outline=color)
+                canvas.create_arc(x2 - 2*radius, y2 - 2*radius, x2, y2, start=270, extent=90, fill=color, outline=color)
+
+            text_item = canvas.create_text(
+                20, 20,
+                text=text,
+                anchor="nw",
+                fill="white",
+                font=("Segoe UI", 9),
+                width=260
+            )
+
+            bbox = canvas.bbox(text_item)
+            padding = 20
+            new_h = (bbox[3] - bbox[1]) + padding * 2
+            new_w = 300
+            canvas.config(height=new_h)
+
+            draw_rounded_rect(5, 5, new_w - 5, new_h - 5, radius=12)
+            canvas.tag_raise(text_item)
+
+            def on_enter(_):
+                x = widget.winfo_rootx() + 25
+                y = widget.winfo_rooty() + 25
+                tooltip.geometry(f"+{x}+{y}")
+                tooltip.deiconify()
+                tooltip.lift()
+
+            def on_leave(_):
+                tooltip.withdraw()
+
+            widget.bind("<Enter>", on_enter)
+            widget.bind("<Leave>", on_leave)
+
         var = radio_var or tk.StringVar(value=options[0][1])
         for i, (label, value) in enumerate(options):
-            tk.Radiobutton(card.body, text=label, variable=var, value=value,
-                        bg=Colors.glass_bg, anchor="w").grid(row=2, column=i, sticky="w", padx=16, pady=(0, 10))
+            option_frame = tk.Frame(card.body, bg=Colors.glass_bg)
+            option_frame.grid(row=2, column=i, sticky="w", padx=20, pady=(5, 10))
 
+            rb = tk.Radiobutton(
+                option_frame,
+                text=label,
+                variable=var,
+                value=value,
+                bg=Colors.glass_bg,
+                anchor="w",
+                font=("Segoe UI", 11),
+                padx=6,
+                pady=5,
+                indicatoron=True,
+                relief="flat",
+                highlightthickness=0
+            )
+            rb.pack(side="left")
+
+            if info_img:
+                icon_label = tk.Label(option_frame, image=info_img, bg=Colors.glass_bg, cursor="hand2")
+                icon_label.image = info_img
+                icon_label.pack(side="left", padx=(6, 0))
+            else:
+                icon_label = tk.Label(option_frame, text="ℹ️", bg=Colors.glass_bg, fg="#0078D7", cursor="hand2")
+                icon_label.pack(side="left", padx=(6, 0))
+
+            tip_text = (
+                "Auto Control:\n"
+                "Automatically starts gaze tracking once the app launches.\n"
+                "Your eyes and blinks directly control the system — no manual activation needed."
+            ) if "auto" in value.lower() else (
+                "Manual Control:\n"
+                "System is ready but waits for you to enable gaze tracking manually.\n"
+                "Useful to avoid accidental gaze actions.\n\n"
+                "🗣️Say 'Start gaze control' — the mouse pointer will follow your gaze movements.\n"
+                "🗣️Say 'Stop gaze control' — gaze tracking stops without closing the LOOK TRACK VISION application."
+            )
+            create_tooltip(icon_label, tip_text)
+
+        # Let Tk handle natural height
+        card.body.update_idletasks()
         return card
 
 
-    def _make_checkbox_card(self, parent):
-        card = RoundedCard(parent, radius=12, pad=12,
-                           bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
-        card.pack(fill="x", pady=6, padx=8)
-
-        tray_var = tk.BooleanVar(value=False)
-
-        def toggle_tick():
-            # tray_toggle.config(text="✔" if tray_var.get() else "")
-            root_window = self.winfo_toplevel()
-
-            if tray_var.get():
-                # ✅ Instantly show tick before minimizing
-                tray_toggle.config(text="✔")
-                root_window.update_idletasks()  # force UI refresh before minimize
-
-                # ✅ Minimize app window to taskbar (hide to tray)
-                root_window.after(100, root_window.iconify)
-                speak("Application minimized to tray.")
-            else:
-                # ✅ Optional: restore app window when unchecked
-                root_window.deiconify()
-                tray_toggle.config(text="")
-                speak("Application restored.")
-                
-        # When the window is restored manually (e.g., from taskbar)
-        def on_restore(event):
-            tray_var.set(False)
-            tray_toggle.config(text="")
-
-        # Bind to window deiconify event
-        self.bind_all("<Map>", on_restore)
-
-        tk.Label(card.body, text="Hide to tray",
-                 fg=Colors.card_head, bg=Colors.glass_bg,
-                 font=F("h2b", ("Segoe UI", 12, "bold"))).grid(row=0, column=0, sticky="w")
-
-        tray_toggle = tk.Checkbutton(
-            card.body, variable=tray_var, indicatoron=False,
-            text="", width=2, height=1, command=toggle_tick,
-            bg="white", fg=Colors.glass_bg, font=("Segoe UI", 10, "bold")
-        )
-        tray_toggle.grid(row=0, column=1, sticky="e", padx=(8, 0))
-
-        tk.Label(card.body,
-                 text="When enabled, the app will minimize and continue running in the background.",
-                 fg=Colors.card_text, bg=Colors.glass_bg,
-                 font=F("body", ("Segoe UI", 9)),
-                 wraplength=400, justify="left"
-                 ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 0))
-
-        toggle_tick()
-
+    # -----------------------------------------------------------------
     def _make_instruction_section(self, parent, title, entries):
         card = RoundedCard(parent, radius=12, pad=12,
                            bg=Colors.dark_card, border_color=Colors.dark_card, border_width=0)
@@ -379,21 +565,20 @@ class HomePage(BasePage):
                  ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
         for i, (icon, label, desc) in enumerate(entries, start=1):
-            # Add fixed-width container for uniform alignment
-            label_text = f"{icon:<3} {label}"  # 👈 Ensures consistent spacing for emojis
+            label_text = f"{icon:<3} {label}"
             tk.Label(card.body, text=label_text,
-                    fg="white", bg=Colors.dark_card,
-                    font=F("body", ("Segoe UI", 10, "bold")),
-                    anchor="w", justify="left", width=22  # 👈 fixed width for uniform column
-                    ).grid(row=i, column=0, sticky="w", padx=(6, 0), pady=2)
-
+                     fg="white", bg=Colors.dark_card,
+                     font=F("body", ("Segoe UI", 10, "bold")),
+                     anchor="w", justify="left", width=22
+                     ).grid(row=i, column=0, sticky="w", padx=(6, 0), pady=2)
             tk.Label(card.body, text=desc,
                      fg="#d1d5db", bg=Colors.dark_card,
                      font=F("body", ("Segoe UI", 10))
                      ).grid(row=i, column=1, sticky="w", padx=(6, 0), pady=2)
-            
+
+    # -----------------------------------------------------------------
     def update_gaze_button(self, running: bool):
-        """Update the HomePage START/STOP button to match global state."""
+        """Update START/STOP button state."""
         self.app_running = running
         if running:
             self.start_btn.bg = "#F65353"
@@ -405,8 +590,5 @@ class HomePage(BasePage):
             self.start_btn.activebg = "#31A0EB"
             self.start_btn.text = "START APPLICATION"
             self.start_btn.icon = self.power_on_icon
-
         self.start_btn.delete("all")
         self.start_btn._draw_button()
-
-

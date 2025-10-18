@@ -54,7 +54,7 @@ class GazeTestPage(BasePage):
             return
     
         threading.Thread(
-                target=lambda: gaze_runner.main(enable_mouse_control=True, show_video=True),
+                target=lambda: gaze_runner.main(enable_mouse_control=False, show_video=True),
                 daemon=True
             ).start()
  
