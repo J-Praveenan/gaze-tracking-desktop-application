@@ -1,0 +1,16 @@
+{
+    "reminder": {
+        "enabled": true,
+        "duration": 2
+    },
+    "voice": {
+        "tips_enabled": false,
+        "action_confirmation": true
+    },
+    "tray": {
+        "enabled": true
+    },
+    "camera": {
+        "index": 1
+    }
+}
