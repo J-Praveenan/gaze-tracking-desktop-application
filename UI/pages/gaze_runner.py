@@ -205,9 +205,6 @@ def main(enable_mouse_control=False, show_video=False):
         if fill > 0:
             draw_card(img, x, y, fill, h, radius=radius, color=fg, shadow=False)
             
-            
-            
-
 
     ROOT = Path(__file__).resolve().parents[2]   # project root
     THRESH_FILE = ROOT / "Data" / "gaze_thresholds.json"
@@ -257,9 +254,7 @@ def main(enable_mouse_control=False, show_video=False):
 
     def _clamp(v, lo, hi):
         return max(lo, min(hi, v))
-
-    
-        
+     
     # --- Long-blink tuning ---
 
     # --- Wink & long-blink tuning (adjust to taste) ---
