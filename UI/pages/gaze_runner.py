@@ -233,19 +233,15 @@ def main(enable_mouse_control=False, show_video=False):
         pyautogui.click(x, y)
         
         
-        
+     
     # --- Gaze suppression after blinks/winks ---
     SUPPRESS_AFTER_BLINK_SEC = 0.15   # small quiet period after any wink/long-blink
     _suppress_until_ts = 0.0          # timestamp; while now < this, don't predict
-
-
 
     # ====== Mouse control settings ======
     CURSOR_STEP_PX = 40         # how far to move per command (tune this)
     CURSOR_MOVE_DURATION = 0.05 # slight easing; set 0 for instant
     ACCURACY_GATE = 65          # only move when model confidence >= this
-
-
 
     # ===== Smooth cursor controller =====
     pyautogui.FAILSAFE = False
@@ -276,7 +272,6 @@ def main(enable_mouse_control=False, show_video=False):
     long_blink_armed = True
     long_blink_cooldown_until = 0.0
 
-
     def _compute_anchors():
         sw, sh = pyautogui.size()
         m = ANCHOR_MARGIN_PX
@@ -289,6 +284,7 @@ def main(enable_mouse_control=False, show_video=False):
         }
 
     _anchor_idx = 0
+
     def _warp_to_next_anchor():
         """Recompute anchors each time in case resolution changed; then warp."""
         global _anchor_idx, _target_pos
@@ -457,11 +453,6 @@ def main(enable_mouse_control=False, show_video=False):
             nty = _clamp(ty + dy, 0, sh - 1)
             _target_pos = (ntx, nty)
         
-        
-        
-
-
-
 
 
     LEFT_IRIS = [474, 475, 476, 477]
@@ -514,8 +505,7 @@ def main(enable_mouse_control=False, show_video=False):
 
     class_labels = load_labels(CLASS_LABELS)
 
-
-        
+     
     # Blinking detection function
     mp_face_mesh = mp.solutions.face_mesh
     face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5)
