@@ -38,7 +38,7 @@ class Colors:
     sidebar_bg  = "#1f2a37"
     card_bg     = "#e0edff"
     dark_card   = "#1f2937"
-    pill_bg     = "#3b82f6"
+    pill_bg     = "#31A0EB"
     pill_fg     = "#ffffff"
     page_bg   = "#cfe3f5"    # overall page behind content (light blue/gray)
     glass_bg  = "#d9e9fb"    # cards/panels inside the page

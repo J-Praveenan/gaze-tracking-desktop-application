@@ -164,11 +164,11 @@ class SettingsPage(BasePage):
         save_btn = tk.Button(
             card.body,
             text="Save",
-            bg="#2563eb", fg="white",
+            bg="#31A0EB", fg="white",
             font=("Segoe UI", 12, "bold"),
             command=self._save_settings
         )
-        save_btn.grid(row=3, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 6))
+        save_btn.grid(row=3, column=0, columnspan=2, sticky="w", padx=10, pady=(12, 6))
 
         # Initial toggle state
         self._toggle_enable()

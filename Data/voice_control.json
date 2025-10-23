@@ -1,4 +1,4 @@
 {
-    "voice_tips_enabled": true,
-    "voice_action_confirmation": true
+    "voice_tips_enabled": false,
+    "voice_action_confirmation": false
 }

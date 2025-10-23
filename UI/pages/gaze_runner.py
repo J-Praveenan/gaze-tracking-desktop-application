@@ -39,29 +39,6 @@ with open(threshold_path, "r") as f:
     
     
     
-# Assign variables for readability
-# left_eye_horizontal_threshold_left_direction = thresholds["left_eye_horizontal_threshold_left_direction"] - 0.002
-# right_eye_horizontal_threshold_left_direction = thresholds["right_eye_horizontal_threshold_left_direction"] - 0.002
-# left_eye_horizontal_threshold_right_direction = thresholds["left_eye_horizontal_threshold_for_right_direction"] - 0.002
-# right_eye_horizontal_threshold_right_direction = thresholds["right_eye_horizontal_threshold_for_right_direction"] - 0.002
-# left_eye_vertical_threshold_up = thresholds["left_eye_vertical_threshold_for_up_direction"] - 0.0008
-# right_eye_vertical_threshold_up = thresholds["right_eye_vertical_threshold_for_up_direction"] - 0.0008
-# left_eye_vertical_threshold_down = thresholds["left_eye_vertical_threshold_for_down_direction"] - 0.003
-# right_eye_vertical_threshold_down = thresholds["right_eye_vertical_threshold_for_down_direction"] - 0.003
-
-
-left_eye_horizontal_threshold_left_direction = thresholds["left_eye_horizontal_threshold_left_direction"] 
-right_eye_horizontal_threshold_left_direction = thresholds["right_eye_horizontal_threshold_left_direction"] 
-
-left_eye_horizontal_threshold_right_direction = thresholds["left_eye_horizontal_threshold_for_right_direction"] 
-right_eye_horizontal_threshold_right_direction = thresholds["right_eye_horizontal_threshold_for_right_direction"] 
-
-left_eye_vertical_threshold_up = thresholds["left_eye_vertical_threshold_for_up_direction"]
-right_eye_vertical_threshold_up = thresholds["right_eye_vertical_threshold_for_up_direction"]
-
-left_eye_vertical_threshold_down = thresholds["left_eye_vertical_threshold_for_down_direction"] 
-right_eye_vertical_threshold_down = thresholds["right_eye_vertical_threshold_for_down_direction"]
-
 # ---- Global control flag ----
 RUN_GAZE = False
 RUN_GAZE_LOCK = threading.Lock()
@@ -99,6 +76,9 @@ right_click_count = 0
 _last_click_flash_until = 0.0
 _last_click_side = None
 
+_last_wink_time = 0.0
+WINK_SUPPRESS_SEC = 0.4   # 0.5 seconds after a wink, ignore gaze updates
+
 # ---- Anchor globals ----
 ANCHOR_MARGIN_PX = 24       # keep off the exact screen edge
 ANCHOR_ORDER = ("center", "left","center", "right","top","center","bottom")  # cycle order
@@ -107,6 +87,35 @@ _anchor_idx = 0
 
 # Determine if we are running in integrated Tkinter mode
 INTEGRATED_UI = "ui_app" in globals() and ui_app is not None
+
+
+class GazeSession:
+    def __init__(self, enable_mouse_control=False, show_video=True):
+        self.enable_mouse_control = enable_mouse_control
+        self.show_video = show_video
+        self.stop_event = threading.Event()
+        self.thread = None
+
+    def start(self):
+        if self.thread and self.thread.is_alive():
+            print("[INFO] Gaze session already running.")
+            return
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.thread.start()
+
+    def _run(self):
+        try:
+            print(f"[INFO] Starting Gaze Session (mouse_control={self.enable_mouse_control}, video={self.show_video})")
+            # ⬇️ Move your current `main()` body logic here ⬇️
+            main(enable_mouse_control=self.enable_mouse_control, show_video=self.show_video, external_stop=self.stop_event)
+        except Exception as e:
+            print("[ERROR] Gaze session crashed:", e)
+
+    def stop(self):
+        print("[INFO] Stopping Gaze Session")
+        RUN_GAZE = False
+        self.stop_event.set()
+
 
 
 
@@ -138,35 +147,42 @@ def _start_cursor_smoother():
 
         def _loop():
             period = 1.0 / SMOOTH_HZ
-            while not SMOOTHER_STOP.is_set():  # 🔹 check stop flag
+            while not SMOOTHER_STOP.is_set():
                 try:
                     cx, cy = pyautogui.position()
                     tx, ty = _target_pos
                     # exponential smoothing (lerp)
                     nx = cx + (tx - cx) * SMOOTH_ALPHA
                     ny = cy + (ty - cy) * SMOOTH_ALPHA
-                    pyautogui.moveTo(nx, ny, duration=0)  # instantaneous tiny step
+
+                    # ✅ Clamp cursor within screen bounds
+                    sw, sh = pyautogui.size()
+                    nx = max(0, min(nx, sw - 2))
+                    ny = max(0, min(ny, sh - 2))
+
+                    pyautogui.moveTo(nx, ny, duration=0)
                 except Exception:
                     pass
                 time.sleep(period)
-            
+
             print("[INFO] Cursor smoother stopped.")
-            # reset smoother state
             global _smoother_started
             _smoother_started = False
+
 
         threading.Thread(target=_loop, daemon=True).start()
 
 
-def main(enable_mouse_control=False, show_video=False):
+def main(enable_mouse_control=False, show_video=False, external_stop=None):
+    global _last_wink_time  # ✅ add this line
+    global RUN_GAZE, SMOOTHER_STOP
     
-    global RUN_GAZE
-    
-    with RUN_GAZE_LOCK:
-        if RUN_GAZE:
-            print("[INFO] Restarting gaze control...")
-            stop_gaze()
-            time.sleep(0.5)  # give it a moment to release the camera
+    # if RUN_GAZE:
+    #     print("[INFO] Gaze already active.")
+    #     return
+
+    # RUN_GAZE = True
+    SMOOTHER_STOP.clear()
     
     global stop_signal
     stop_signal.clear()  # ✅ reset stop event before starting new session
@@ -262,14 +278,24 @@ def main(enable_mouse_control=False, show_video=False):
     with open(THRESH_FILE, "r", encoding="utf-8") as f:
             thresholds = json.load(f)
 
-    LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"] + 1
-    RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"] - 1
+    # LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"] + 1
+    # RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"] - 1
     
     # LEFT_THRESHOLD = thresholds["LEFT_THRESHOLD"]
     # RIGHT_THRESHOLD = thresholds["RIGHT_THRESHOLD"]
     
-    UP_THRESHOLD = thresholds["UP_THRESHOLD"]
-    DOWN_THRESHOLD = thresholds["DOWN_THRESHOLD"] 
+    # UP_THRESHOLD = thresholds["UP_THRESHOLD"]
+    # DOWN_THRESHOLD = thresholds["DOWN_THRESHOLD"] 
+    
+    # New Threshold values ============================================
+    LEFT_EYE_LEFT_DIRECTION_THRESHOLD = thresholds["LEFT_EYE_LEFT_DIRECTION_THRESHOLD"]
+    RIGHT_EYE_LEFT_DIRECTION_THRESHOLD = thresholds["RIGHT_EYE_LEFT_DIRECTION_THRESHOLD"]
+    LEFT_EYE_RIGHT_DIRECTION_THRESHOLD = thresholds["LEFT_EYE_RIGHT_DIRECTION_THRESHOLD"]
+    RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD = thresholds["RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD"]
+    LEFT_EYE_UP_DIRECTION_THRESHOLD = thresholds["LEFT_EYE_UP_DIRECTION_THRESHOLD"] + 0.0005
+    RIGHT_EYE_UP_DIRECTION_THRESHOLD = thresholds["RIGHT_EYE_UP_DIRECTION_THRESHOLD"] + 0.0005
+    LEFT_EYE_DOWN_DIRECTION_THRESHOLD = thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"] - 0.005
+    RIGHT_EYE_DOWN_DIRECTION_THRESHOLD = thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"] - 0.005
 
     def click_on_blink():
         global _last_click_ts
@@ -414,7 +440,7 @@ def main(enable_mouse_control=False, show_video=False):
 
     # ===== Wink (single-eye blink) → click =====
     CLICK_COOLDOWN_SEC = 0.5     # reuse/adjust
-    WINK_MIN_SEC = 0.2  #0.08          # valid wink duration window
+    WINK_MIN_SEC = 0.08  #0.08          # valid wink duration window
     WINK_MAX_SEC = 1.20
     WINK_OPEN_MARGIN = 0.04      # other eye must be clearly open
 
@@ -567,7 +593,7 @@ def main(enable_mouse_control=False, show_video=False):
     face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5)
 
     # EAR threshold to consider blink
-    EAR_THRESHOLD = 0.1
+    EAR_THRESHOLD = 0.12  # 0.1
     CONSEC_FRAMES = 3
     blink_counter = 0
     blink_total = 0
@@ -628,6 +654,9 @@ def main(enable_mouse_control=False, show_video=False):
     
     
         # =========================================== this is also need to change ======================================
+        
+        
+        
         # if is_eye_closed:
         #     return "closed", 100
         
@@ -693,19 +722,19 @@ def main(enable_mouse_control=False, show_video=False):
             
             
         vertical_distance = mesh_points[145][1] - mesh_points[159][1]
-            # print("Vertical distance : ", vertical_distance)
+        # print("Vertical distance : ", vertical_distance)
             
-            # ==============Right Eye Gaze Detection========================
+        # ==============Right Eye Gaze Detection========================
         right_eye_center_x = (mesh_points[33][0] + mesh_points[133][0]) // 2
         right_iris_center_x = (mesh_points[469][0] + mesh_points[471][0]) // 2
         right_eye_horizontal_offset = right_iris_center_x - right_eye_center_x
-        print("Horizontal offset Right            : ", right_eye_horizontal_offset)
+        # print("Horizontal offset Right            : ", right_eye_horizontal_offset)
             
-            # ==============Left Eye Gaze Detection========================
+        # ==============Left Eye Gaze Detection========================
         left_eye_center_x = (mesh_points[362][0] + mesh_points[263][0]) // 2
         left_iris_center_x = (mesh_points[476][0] + mesh_points[474][0]) // 2
         left_eye_horizontal_offset = left_iris_center_x - left_eye_center_x
-        print("Horizontal offset Left             : ", left_eye_horizontal_offset)
+        # print("Horizontal offset Left             : ", left_eye_horizontal_offset)
         
             
             
@@ -734,12 +763,12 @@ def main(enable_mouse_control=False, show_video=False):
         left_eye_offset_y = (mesh_points[386][1] - mesh_points[374][1])
         right_eye_offset_y = (mesh_points[159][1] - mesh_points[145][1]) 
         
-        print("Right Eye Vertical Offset for DOWN : ", left_eye_offset_y)
-        print("Left Eye Vertical Offset for DOWN  : ", right_eye_offset_y)
+        # print("Right Eye Vertical Offset for DOWN : ", left_eye_offset_y)
+        # print("Left Eye Vertical Offset for DOWN  : ", right_eye_offset_y)
         
         
-        print("Right Eye Vertical Offset for UP   : ", delta_r_y)
-        print("Left Eye Vertical Offset for UP    : ", delta_l_y)
+        # print("Right Eye Vertical Offset for UP   : ", delta_r_y)
+        # print("Left Eye Vertical Offset for UP    : ", delta_l_y)
         
 
         
@@ -747,7 +776,7 @@ def main(enable_mouse_control=False, show_video=False):
         landmark_down_boolean = False
         
         
-        # =================================TNew Calibrated Thresold Implementation=================================================================================================================
+        # =================================TNew Calibrated Threshold Implementation=================================================================================================================
         # =================================TNew Calibrated Threshold Implementation==================================
         if mesh_points is None or len(mesh_points) < 478:
             print("⚠️ No mesh points available this frame.")
@@ -768,74 +797,154 @@ def main(enable_mouse_control=False, show_video=False):
         
         # ==== Compute eye landmark distances ====
         # Left Eye
-        left_left_x1, left_left_x2 = landmarks[33].x, landmarks[471].x
-        left_right_x1, left_right_x2 = landmarks[469].x, landmarks[133].x
-        left_up_y1, left_up_y2 = landmarks[470].y, landmarks[159].y
-        left_down_y1, left_down_y2 = landmarks[159].y, landmarks[145].y
+        # left_left_x1, left_left_x2 = landmarks[33].x, landmarks[471].x
+        # left_right_x1, left_right_x2 = landmarks[469].x, landmarks[133].x
+        # left_up_y1, left_up_y2 = landmarks[470].y, landmarks[159].y
+        # left_down_y1, left_down_y2 = landmarks[159].y, landmarks[145].y
 
-        # # Right Eye
-        right_left_x1, right_left_x2 = landmarks[474].x, landmarks[362].x
-        right_right_x1, right_right_x2 = landmarks[469].x, landmarks[263].x
-        right_up_y1, right_up_y2 = landmarks[475].y, landmarks[386].y
-        right_down_y1, right_down_y2 = landmarks[386].y, landmarks[374].y
+        # # # Right Eye
+        # right_left_x1, right_left_x2 = landmarks[474].x, landmarks[362].x
+        # right_right_x1, right_right_x2 = landmarks[469].x, landmarks[263].x
+        # right_up_y1, right_up_y2 = landmarks[475].y, landmarks[386].y
+        # right_down_y1, right_down_y2 = landmarks[386].y, landmarks[374].y
         
         
+        left_eye_left_direction_threshold = landmarks[263].x- landmarks[476].x
+        right_eye_left_direction_threshold = landmarks[133].x- landmarks[469].x
+        
+        left_eye_right_direction_threshold = landmarks[474].x- landmarks[362].x
+        right_eye_right_direction_threshold = landmarks[471].x- landmarks[33].x
+        
+        left_eye_up_direction_threshold = landmarks[386].y- landmarks[475].y
+        right_eye_up_direction_threshold = landmarks[159].y- landmarks[470].y
+        
+        left_eye_down_direction_threshold = landmarks[374].y- landmarks[386].y
+        right_eye_down_direction_threshold = landmarks[145].y- landmarks[159].y
+        
+        
+        #===================================================================
+        print("Vertical Offset for Up direction LEFT  EYE: ",landmarks[386].y- landmarks[475].y) 
+        print("Vertical Offset for Up direction RIGHT EYE: ",landmarks[159].y- landmarks[470].y)   
+        
+        print("Vertical Offset for Down direction LEFT EYE  : ",landmarks[374].y- landmarks[386].y) 
+        print("Vertical Offset for Down direction RIGHT  EYE: ",landmarks[145].y- landmarks[159].y) 
+        
+        
+        print("Horizontal Offset for Left direction LEFT EYE  : ",landmarks[263].x- landmarks[476].x) 
+        print("Horizontal Offset for Left direction RIGHT  EYE: ",landmarks[133].x- landmarks[469].x) 
+        
+        print("Horizontal Offset for Right direction LEFT EYE  : ",landmarks[474].x- landmarks[362].x) 
+        print("Horizontal Offset for Right direction RIGHT  EYE: ",landmarks[471].x- landmarks[33].x)
+         
     
-
+    
+    
         # ==== Calculate direction values ====
-        left_eye_horizontal_for_left_direction = left_left_x2 - left_left_x1
-        right_eye_horizontal_for_left_direction = right_left_x1 - right_left_x2
+        # left_eye_horizontal_for_left_direction = left_left_x2 - left_left_x1
+        # right_eye_horizontal_for_left_direction = right_left_x1 - right_left_x2
 
-        left_eye_horizontal_for_right_direction = left_right_x2 - left_right_x1
-        right_eye_horizontal_for_right_direction = right_right_x2 - right_right_x1
+        # left_eye_horizontal_for_right_direction = left_right_x2 - left_right_x1
+        # right_eye_horizontal_for_right_direction = right_right_x2 - right_right_x1
 
-        left_eye_vertical_for_up_direction = left_up_y2 - left_up_y1
-        right_eye_vertical_for_up_direction = right_up_y2 - right_up_y1
+        # left_eye_vertical_for_up_direction = left_up_y2 - left_up_y1
+        # right_eye_vertical_for_up_direction = right_up_y2 - right_up_y1
 
-        left_eye_vertical_for_down_direction = left_down_y2 - left_down_y1
-        right_eye_vertical_for_down_direction = right_down_y2 - right_down_y1
-
- 
-       
+        # left_eye_vertical_for_down_direction = left_down_y2 - left_down_y1
+        # right_eye_vertical_for_down_direction = right_down_y2 - right_down_y1
         
-        if (
-            left_eye_horizontal_for_left_direction < left_eye_horizontal_threshold_left_direction
-            and right_eye_horizontal_for_left_direction < right_eye_horizontal_threshold_left_direction
+        
+        if(left_eye_down_direction_threshold <= 0 and right_eye_down_direction_threshold <= 0):
+            print("=================Both EYE Closed====================")
+            return "BOTH_BLINK", 100
+        elif(left_eye_down_direction_threshold < LEFT_EYE_DOWN_DIRECTION_THRESHOLD and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD):
+            print("=================LEFT EYE Closed====================")
+            return "LEFT_BLINK", 100
+        elif(left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD and right_eye_down_direction_threshold < RIGHT_EYE_DOWN_DIRECTION_THRESHOLD):
+            print("=================RIGHT EYE Closed====================")  
+            return "RIGHT_BLINK", 100
+
+       
+            
+        if((left_eye_left_direction_threshold > LEFT_EYE_LEFT_DIRECTION_THRESHOLD
+            and right_eye_left_direction_threshold > RIGHT_EYE_LEFT_DIRECTION_THRESHOLD)and(left_eye_right_direction_threshold > LEFT_EYE_RIGHT_DIRECTION_THRESHOLD
+            and right_eye_right_direction_threshold > RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD)and(left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD
+            and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD)and(left_eye_up_direction_threshold < LEFT_EYE_UP_DIRECTION_THRESHOLD
+            and right_eye_up_direction_threshold < RIGHT_EYE_UP_DIRECTION_THRESHOLD)):
+            # landmark_center_boolean = True
+            gaze = "center"
+        
+        elif (
+            (left_eye_down_direction_threshold < LEFT_EYE_DOWN_DIRECTION_THRESHOLD
+            and right_eye_down_direction_threshold < RIGHT_EYE_DOWN_DIRECTION_THRESHOLD) or gaze == "down"
         ):
-            # landmark_left_boolean = True
-            landmark_right_boolean = True
+            gaze = "down"
+            print("Final Gaze direction: ", gaze)
+        
+        elif (
+            (left_eye_up_direction_threshold > LEFT_EYE_UP_DIRECTION_THRESHOLD
+            and right_eye_up_direction_threshold > RIGHT_EYE_UP_DIRECTION_THRESHOLD) and gaze == "up"
+        ):
+            gaze = "up"
+            print("Final Gaze direction: ", gaze) 
+            
+        elif (
+            (left_eye_right_direction_threshold < LEFT_EYE_RIGHT_DIRECTION_THRESHOLD
+            and right_eye_right_direction_threshold < RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD) and gaze == "right"
+        ):
+            gaze = "right"
+            print("Final Gaze direction: ", gaze) 
+        
+        elif (
+            (left_eye_left_direction_threshold < LEFT_EYE_LEFT_DIRECTION_THRESHOLD
+            and right_eye_left_direction_threshold < RIGHT_EYE_LEFT_DIRECTION_THRESHOLD) and gaze == "left"
+        ):
+            gaze = "left"
+            print("Final Gaze direction: ", gaze)         
+            
+        else:
+            gaze = "center"
+            print("Final Gaze direction: ", gaze) 
+            
+            
+        
+        
+        if((left_eye_left_direction_threshold > LEFT_EYE_LEFT_DIRECTION_THRESHOLD
+            and right_eye_left_direction_threshold > RIGHT_EYE_LEFT_DIRECTION_THRESHOLD)and(left_eye_right_direction_threshold > LEFT_EYE_RIGHT_DIRECTION_THRESHOLD
+            and right_eye_right_direction_threshold > RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD)and(left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD
+            and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD)and(left_eye_up_direction_threshold < LEFT_EYE_UP_DIRECTION_THRESHOLD
+            and right_eye_up_direction_threshold < RIGHT_EYE_UP_DIRECTION_THRESHOLD)):
+            print("Looking CENTER (Landmarks)")
+            
+        elif (
+            left_eye_down_direction_threshold < LEFT_EYE_DOWN_DIRECTION_THRESHOLD
+            and right_eye_down_direction_threshold < RIGHT_EYE_DOWN_DIRECTION_THRESHOLD 
+        ):
+            print("Looking DOWN (Landmarks)")
+        
+        elif (
+            left_eye_up_direction_threshold > LEFT_EYE_UP_DIRECTION_THRESHOLD
+            and right_eye_up_direction_threshold > RIGHT_EYE_UP_DIRECTION_THRESHOLD 
+        ):
+            print("Looking UP (Landmarks)")
+        
+            
+        elif (
+            left_eye_right_direction_threshold < LEFT_EYE_RIGHT_DIRECTION_THRESHOLD
+            and right_eye_right_direction_threshold < RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD 
+        ):
+            print("Looking RIGHT (Landmarks)")
+        
+        elif (
+            left_eye_left_direction_threshold < LEFT_EYE_LEFT_DIRECTION_THRESHOLD
+            and right_eye_left_direction_threshold < RIGHT_EYE_LEFT_DIRECTION_THRESHOLD 
+        ):
             print("Looking LEFT (Landmarks)")
 
-        elif (
-            left_eye_horizontal_for_right_direction < left_eye_horizontal_threshold_right_direction
-            and right_eye_horizontal_for_right_direction < right_eye_horizontal_threshold_right_direction
-        ):
-            # landmark_right_boolean = True
-            landmark_left_boolean = True
-            print("Looking RIGHT (Landmarks)")
-
-        elif (
-            left_eye_vertical_for_up_direction > left_eye_vertical_threshold_up
-            and right_eye_vertical_for_up_direction > right_eye_vertical_threshold_up
-        ):
-            landmark_up_boolean = True
-            print("Looking UP (Landmarks)")
             
-        elif (
-            left_eye_vertical_for_down_direction < left_eye_vertical_threshold_down
-            and right_eye_vertical_for_down_direction < right_eye_vertical_threshold_down
-        ):
-            landmark_down_boolean = True
-            print("Looking DOWN (Landmarks)")
-
         else:
-            landmark_center_boolean = True
             print("Looking CENTER (Landmarks)")
 
-
-
-           
-            
+    
     
         
         # =================================This section should be change or remove=================================================================================================================
@@ -843,18 +952,21 @@ def main(enable_mouse_control=False, show_video=False):
         # if (RIGHT_THRESHOLD < right_eye_horizontal_offset < LEFT_THRESHOLD) and (RIGHT_THRESHOLD < left_eye_horizontal_offset < LEFT_THRESHOLD):
         #     landmark_center_boolean = True
         #     print("Looking CENTER (Landmarks)")
-        # elif left_eye_offset_y > DOWN_THRESHOLD and right_eye_offset_y > DOWN_THRESHOLD:
+        # if left_eye_offset_y < DOWN_THRESHOLD and right_eye_offset_y < DOWN_THRESHOLD:
         #     landmark_down_boolean = True
         #     print("Looking DOWN (Landmarks)")
-        # elif (right_eye_horizontal_offset >= LEFT_THRESHOLD) and (left_eye_horizontal_offset >= LEFT_THRESHOLD):
+        # elif (right_eye_horizontal_offset > LEFT_THRESHOLD) and (left_eye_horizontal_offset > LEFT_THRESHOLD):
         #     landmark_left_boolean = True
         #     print("Looking LEFT (Landmarks)")
-        # elif (right_eye_horizontal_offset <= RIGHT_THRESHOLD) and (left_eye_horizontal_offset <= RIGHT_THRESHOLD):
+        # elif (right_eye_horizontal_offset < RIGHT_THRESHOLD) and (left_eye_horizontal_offset < RIGHT_THRESHOLD):
         #     landmark_right_boolean = True
         #     print("Looking RIGHT (Landmarks)")
-        # elif delta_r_y <= UP_THRESHOLD and delta_l_y <= UP_THRESHOLD:
+        # elif delta_r_y < UP_THRESHOLD and delta_l_y < UP_THRESHOLD:
         #     landmark_up_boolean = True
         #     print("Looking UP (Landmarks)")
+        # else:
+        #     landmark_center_boolean = True
+        #     print("Looking CENTER (Landmarks)")
         
         
         # ===================================================================================================================================================================================
@@ -885,54 +997,75 @@ def main(enable_mouse_control=False, show_video=False):
             print("Looking UP (CNN model prediction)")
         elif gaze == "down":
             print("Looking DOWN (CNN model prediction)")
+        else:
+            print("Looking CENTER (CNN model prediction)")
             
         
-        
        
        
-       # --- Unified Prediction Logic (Blink/Wink/Gaze mutually exclusive) ---
+        # --- Unified Prediction Logic (Blink/Wink/Gaze mutually exclusive) ---
 
         # 1️⃣  Handle eye closure and blinks first (highest priority)
-        if is_eye_closed:
-            print("Final: BOTH EYES CLOSED")
-            return "closed", 100
+        # if is_eye_closed:
+        #     print("Final: BOTH EYES CLOSED")
+        #     return "closed", 100
 
-        elif blink_confirmed:
-            print("Final: NORMAL BLINK detected")
-            return "blink", accuracy
+        # if blink_confirmed:
+        #     print("Final: NORMAL BLINK detected")
+        #     return "blink", accuracy
 
-        elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            print("Final: LEFT WINK detected")
-            _click_debounced("left")
-            return "left_blink", 100
 
-        elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            print("Final: RIGHT WINK detected")
-            _click_debounced("right")
-            return "right_blink", 100
+        
+        # if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     print("Final: LEFT WINK detected")
+        #     _click_debounced("left")
+        #     return "left_blink", 100
+
+        # elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     print("Final: RIGHT WINK detected")
+        #     _click_debounced("right")
+        #     return "right_blink", 100
          
         
         # Final Gaze Decision Logic
-        if gaze == "down" or landmark_down_boolean:
-            gaze = "down"
-            print("Final Gaze direction: ", gaze)
-        elif gaze == "up" and landmark_up_boolean:
-            gaze = "up"
-            print("Final Gaze direction: ", gaze)  
-        elif gaze == "center" or landmark_center_boolean:
-            gaze = "center"
-            print("Final Gaze direction: ", gaze)     
-        elif gaze == "right" and landmark_right_boolean:
-            gaze = "right"
-            print("Final Gaze direction: ", gaze)      
-        elif gaze == "left" and landmark_left_boolean:
-            gaze = "left"
-            print("Final Gaze direction: ", gaze)
-        else:
-            gaze = "center"
-            print("Final Gaze direction: ", gaze)
+        
+        # if gaze == "up" and landmark_up_boolean:
+        #     gaze = "up"
+        #     print("Final Gaze direction: ", gaze)  
+        # elif gaze == "down" or landmark_down_boolean:
+        #     gaze = "down"
+        #     print("Final Gaze direction: ", gaze)
+        # elif gaze == "center" or landmark_center_boolean:
+        #     gaze = "center"
+        #     print("Final Gaze direction: ", gaze)     
+        # elif gaze == "right" and landmark_right_boolean:
+        #     gaze = "right"
+        #     print("Final Gaze direction: ", gaze)      
+        # elif gaze == "left" and landmark_left_boolean:
+        #     gaze = "left"
+        #     print("Final Gaze direction: ", gaze)
+        # else:
+        #     gaze = "center"
+        #     print("Final Gaze direction: ", gaze)
+           
+           
+           
             
-            
+        # Blink/Wink Detection 
+
+        # if is_eye_closed:
+        #     return "closed", 100
+                
+        # elif blink_confirmed:
+        #     return "blink", accuracy
+
+        # elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     _click_debounced("left")
+        #     return "left_blink", 100
+
+        # elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     _click_debounced("right") 
+        #     return "right_blink", 100
             
         
 
@@ -963,7 +1096,7 @@ def main(enable_mouse_control=False, show_video=False):
 
 
 
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
     ret, frame = cap.read()
     if not ret:
@@ -1004,10 +1137,20 @@ def main(enable_mouse_control=False, show_video=False):
         x_pos = (screen_width - window_width) // 2
         y_pos = (screen_height - window_height) // 2
         cv2.moveWindow("Real Time Gaze Estimation", x_pos, y_pos)
+    
+    # Initialize variables for UI placeholders
+    eye_img_l_view = np.zeros((112, 128, 3), dtype=np.uint8)
+    eye_img_r_view = np.zeros((112, 128, 3), dtype=np.uint8)
+    gaze = "center"
+    accuracy = 0
+
+
+    while cap.isOpened() and (external_stop is None or not external_stop.is_set()):
         
-
-
-    while cap.isOpened():
+        success, frame = cap.read()
+        if not success:
+            break
+        
         with RUN_GAZE_LOCK:
             if not RUN_GAZE:
                 print("[INFO] Gaze loop stopped by user.")
@@ -1185,6 +1328,7 @@ def main(enable_mouse_control=False, show_video=False):
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord('q'), ord('Q')):
                     print("[INFO] Video window closed by user.")
+                    cap.release()
                     show_video = False  # ✅ disable further imshow calls
                     cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close only the video window
 
@@ -1236,6 +1380,7 @@ def main(enable_mouse_control=False, show_video=False):
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord('q'), ord('Q')):
                     print("[INFO] Video window closed by user.")
+                    cap.release()
                     show_video = False  # ✅ disable further imshow calls
                     cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close only the video window
 
@@ -1274,6 +1419,7 @@ def main(enable_mouse_control=False, show_video=False):
         if left_closed and (right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)):
             if _left_wink_start is None:
                 _left_wink_start = t
+                _suppress_until_ts = time.time() + WINK_SUPPRESS_SEC
         else:
             if _left_wink_start is not None and left_open and right_open:
                 dur = t - _left_wink_start
@@ -1281,6 +1427,7 @@ def main(enable_mouse_control=False, show_video=False):
                     # _click_debounced("left")
                     _double_click_debounced()
                     _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
+                    _last_wink_time = time.time()  # ✅ record wink timestamp
             _left_wink_start = None
 
 
@@ -1289,12 +1436,14 @@ def main(enable_mouse_control=False, show_video=False):
         if right_closed and (left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)):
             if _right_wink_start is None:
                 _right_wink_start = t
+                _suppress_until_ts = time.time() + WINK_SUPPRESS_SEC
         else:
             if _right_wink_start is not None and left_open and right_open:
                 dur = t - _right_wink_start
                 if WINK_MIN_SEC <= dur <= WINK_MAX_SEC:
                     _click_debounced("right")
                     _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
+                    _last_wink_time = time.time()  # ✅ record wink timestamp
             _right_wink_start = None
 
         # 3) BOTH EYES CLOSED LONG (≥ LONG_BLINK_SEC) → WARP TO NEXT EDGE MIDPOINT
@@ -1448,6 +1597,14 @@ def main(enable_mouse_control=False, show_video=False):
             eye_input_g = eye_img_l.copy().reshape((1, IMG_SIZE[1], IMG_SIZE[0], 1)).astype(np.float32) / 255.
             
             
+            # 🔹 Ignore gaze prediction right after a wink
+            # 🔹 Ignore gaze prediction right after a wink
+            if time.time() < _suppress_until_ts:
+                print("🕒 Gaze temporarily suppressed during wink/blink.")
+                gaze = "center"
+                accuracy = 100
+
+
             
             
             #=================PREDICTION PROCESS========================================
@@ -1560,11 +1717,16 @@ def main(enable_mouse_control=False, show_video=False):
         key = cv2.waitKey(1) & 0xFF
         if key in (ord('q'), ord('Q')):
             print("[INFO] Closing only video window (camera continues).")
+            RUN_GAZE = False
+            cap.release()
             cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close window only
             show_video = False  # ✅ turn off display but keep detection alive
             continue  # ✅ continue loop (don’t break)
     cap.release()
-    cv2.destroyAllWindows()    
+    cv2.destroyAllWindows()   
+    
+    UN_GAZE = False
+    SMOOTHER_STOP.set() 
 
 
 def run():
