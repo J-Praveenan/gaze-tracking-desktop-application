@@ -125,14 +125,14 @@ class HeadPoseEstimator:
         return image, direction
 
 
-# ==== Load thresholds from JSON ====
-threshold_path = r"E:\FinalYearProject\GazeTrackingModel\GazeTrackingSystem\Data\threshold.json"
+# # ==== Load thresholds from JSON ====
+# threshold_path = r"E:\FinalYearProject\GazeTrackingModel\GazeTrackingSystem\Data\threshold.json"
 
-if not os.path.exists(threshold_path):
-    raise FileNotFoundError("⚠️ Threshold file not found. Please run calibration first!")
+# if not os.path.exists(threshold_path):
+#     raise FileNotFoundError("⚠️ Threshold file not found. Please run calibration first!")
 
-with open(threshold_path, "r") as f:
-    thresholds = json.load(f)
+# with open(threshold_path, "r") as f:
+#     thresholds = json.load(f)
     
     
     
