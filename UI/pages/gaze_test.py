@@ -7,6 +7,7 @@ from UI.pages.sidebar import Sidebar
 from UI.pages.gaze_runner import main as run_gaze_test
 import subprocess, sys, os
 from UI.pages import gaze_runner
+import cv2 as cv
 
 def F(name, default):
     return getattr(Fonts, name, default)
@@ -42,21 +43,18 @@ class GazeTestPage(BasePage):
 
         start_btn = PillButton(
             card.body, text="START TEST", command=self._start_test
+            
         )
         start_btn.pack(pady=10)
+    
+        
+
 
     def _start_test(self):
-        # For the testing purpose make enable_mouse_control=False,
-        # threading.Thread(target=run_gaze_test, daemon=True).start()
-        
-        if gaze_runner.RUN_GAZE:
-            print("[INFO] Gaze test already running — ignoring new start.")
-            return
-    
-        threading.Thread(
-                target=lambda: gaze_runner.main(enable_mouse_control=False, show_video=True),
-                daemon=True
-            ).start()
+        from UI.pages import gaze_runner
+        print("[INFO] Starting test mode session...")
+        test_session = gaze_runner.GazeSession(enable_mouse_control=False, show_video=True)
+        test_session.start()
  
        
 
