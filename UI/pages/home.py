@@ -12,6 +12,8 @@ from PIL import Image, ImageTk
 import os
 from pathlib import Path
 import json
+from UI.pages.instruction_tray import InstructionTray
+
 
 
 # Global control thread state
@@ -126,6 +128,9 @@ class HomePage(BasePage):
         self.app_running = False
         self._build_home_content(self.main_col)
 
+
+        
+
     # -----------------------------------------------------------------
     def _build_home_content(self, parent):
         fr = tk.Frame(parent, bg=Colors.page_bg)
@@ -163,15 +168,8 @@ class HomePage(BasePage):
         scrollbar.pack(side="right", fill="y")
 
 
-        # ✅ Enable scroll from anywhere in the page
-        def _on_mousewheel(event):
-            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-        # Windows / macOS
-        self.overlay.bind_all("<MouseWheel>", _on_mousewheel)
-        # Linux (if applicable)
-        self.overlay.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
-        self.overlay.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+        # Enable smooth independent scrolling
+        self.enable_scroll(canvas, scroll_frame)
 
 
         # === CONTROL MODE + SYSTEM STATUS ===
@@ -578,17 +576,58 @@ class HomePage(BasePage):
 
     # -----------------------------------------------------------------
     def update_gaze_button(self, running: bool):
-        """Update START/STOP button state."""
+        """Update START/STOP button state and handle tray visibility."""
         self.app_running = running
+
+        # Load config to check if user wants Instruction Tray auto-opened
+        try:
+            base_dir = Path(__file__).resolve().parents[2]
+            data_dir = base_dir / "Data"
+            config_path = data_dir / "configuration.json"
+            auto_open_instruction = False
+
+            if config_path.exists():
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                    auto_open_instruction = config.get("tray", {}).get("auto_open_instruction", False)
+        except Exception as e:
+            print(f"[WARN] Could not read configuration for tray auto-open: {e}")
+            auto_open_instruction = False
+
         if running:
+            # --- Update button to STOP mode ---
             self.start_btn.bg = "#F65353"
             self.start_btn.activebg = "#F65353"
             self.start_btn.text = "STOP APPLICATION"
             self.start_btn.icon = self.power_off_icon
+
+            # ✅ Only show Instruction Tray if user enabled it in settings
+            if auto_open_instruction:
+                try:
+                    if not hasattr(self, "instruction_tray") or not self.instruction_tray.winfo_exists():
+                        self.instruction_tray = InstructionTray(self.controller)
+                        self.instruction_tray.after(200, lambda: self.instruction_tray.deiconify())
+                        print("[INFO] Instruction Tray opened (auto_open_instruction = True).")
+                except Exception as e:
+                    print(f"[WARN] Failed to show Instruction Tray automatically: {e}")
+            else:
+                print("[INFO] Instruction Tray auto-open disabled by user settings.")
+
         else:
+            # --- Update button to START mode ---
             self.start_btn.bg = "#31A0EB"
             self.start_btn.activebg = "#31A0EB"
             self.start_btn.text = "START APPLICATION"
             self.start_btn.icon = self.power_on_icon
+
+            # --- Close tray automatically when stopping gaze ---
+            if hasattr(self, "instruction_tray") and self.instruction_tray.winfo_exists():
+                try:
+                    self.instruction_tray.destroy()
+                    print("[INFO] Instruction Tray closed.")
+                except Exception:
+                    pass
+
+        # Redraw button
         self.start_btn.delete("all")
         self.start_btn._draw_button()

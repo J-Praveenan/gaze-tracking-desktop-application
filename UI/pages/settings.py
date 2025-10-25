@@ -69,38 +69,92 @@ class SettingsPage(BasePage):
     def __init__(self, parent, controller):
         super().__init__(parent, controller)
         self.overlay.configure(bg=Colors.page_bg)
-
-        # Load unified configuration
         self.config = self._load_config()
 
-        # Layout
+        # === Ensure full height expansion ===
+        root = self.winfo_toplevel()
+        root.grid_rowconfigure(0, weight=1)
+        root.grid_columnconfigure(0, weight=1)
+        self.grid(row=0, column=0, sticky="nsew")
+        self.grid_rowconfigure(0, weight=1)
+
+        # === Match InfoPage grid ===
         self.overlay.grid_rowconfigure(0, weight=1)
+        self.overlay.grid_columnconfigure(0, weight=0)
         self.overlay.grid_columnconfigure(1, weight=1)
 
-        # Main settings container
-        self.main_col = RoundedCard(
-            self.overlay,
-            radius=18,
-            pad=20,
-            bg=Colors.glass_bg,
-            border_color="#4b5563",
-            border_width=2
-        )
-        self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 20))
+        # === Main column ===
+        self.main_col = tk.Frame(self.overlay, bg=Colors.page_bg)
+        self.main_col.grid(row=0, column=1, sticky="nsew", padx=(0, 0))
+        self.main_col.grid_rowconfigure(0, weight=1)
+        self.main_col.grid_columnconfigure(0, weight=1)
 
+        # === Rounded scrollable container ===
+        container = RoundedCard(
+            self.main_col,
+            radius=18,
+            pad=0,
+            bg=Colors.page_bg,
+            border_color="#4b5563",
+            border_width=0,
+            tight=False
+        )
+        container.grid(row=0, column=0, sticky="nsew")
+        container.body.grid_rowconfigure(0, weight=1)
+        container.body.grid_columnconfigure(0, weight=1)
+
+        # === Scrollable canvas ===
+        self.canvas = tk.Canvas(container.body, bg=Colors.page_bg, highlightthickness=0, bd=0)
+        vscroll = ttk.Scrollbar(container.body, orient="vertical", command=self.canvas.yview)
+        self.canvas.configure(yscrollcommand=vscroll.set)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+        vscroll.grid(row=0, column=1, sticky="ns")
+
+        # === Frame inside canvas ===
+        self.scroll_frame = tk.Frame(self.canvas, bg=Colors.page_bg)
+        self.canvas_frame = self.canvas.create_window((0, 0), window=self.scroll_frame, anchor="nw")
+        self.scroll_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfig(self.canvas_frame, width=e.width))
+        self.enable_scroll(self.canvas, self.scroll_frame)
+
+
+        # === Inner content ===
+        content = tk.Frame(self.scroll_frame, bg=Colors.page_bg)
+        content.pack(fill="both", expand=True, padx=20, pady=10)
+
+        # Small invisible top spacer (prevents visual jump)
+        tk.Frame(content, height=5, bg=Colors.page_bg).pack(fill="x")
+
+        # === Page title ===
         tk.Label(
-            self.main_col.body,
+            content,
             text="Settings",
             fg=Colors.card_head,
-            bg=Colors.glass_bg,
+            bg=Colors.page_bg,
             font=F("h2b", ("Segoe UI", 16, "bold"))
-        ).pack(anchor="w", pady=(0, 8))
+        ).pack(anchor="w", pady=(0, 10))
 
-        # Build each section
-        self._build_reminder_settings(self.main_col.body)
-        self._build_voice_settings(self.main_col.body)
-        self._build_tray_settings(self.main_col.body)
-        self._build_camera_settings(self.main_col.body)
+        # === Sections ===
+        self._build_reminder_settings(content)
+        self._build_voice_settings(content)
+        self._build_tray_settings(content)
+        self._build_camera_settings(content)
+
+        # 🔹 Reset scroll to top once everything is rendered
+        self.after(200, lambda: self.canvas.yview_moveto(0))
+        
+        # --- Ensure tray mode is disabled on very first launch ---
+        if not self.config_path.exists():
+            self.config["tray"]["enabled"] = False
+            self._save_config()
+            if hasattr(self, "tray_toggle"):
+                self.tray_toggle.set(False)
+
+
+    # Mousewheel handler
+    def _on_mousewheel(self, event):
+        self.canvas.yview_scroll(-1 * (event.delta // 120), "units")
+
 
     # -----------------------------------------------------------------
     # Unified config load/save
@@ -112,20 +166,38 @@ class SettingsPage(BasePage):
         data_dir.mkdir(exist_ok=True)
         self.config_path = data_dir / "configuration.json"
 
-        if self.config_path.exists():
-            try:
-                with open(self.config_path, "r") as f:
-                    return json.load(f)
-            except Exception:
-                pass
-
-        # Default structure
         default = {
             "reminder": {"enabled": False, "duration": 10},
             "voice": {"tips_enabled": True, "action_confirmation": True},
             "tray": {"enabled": False},
             "camera": {"index": 0}
         }
+
+        # --- Load existing file ---
+        if self.config_path.exists():
+            try:
+                with open(self.config_path, "r+") as f:
+                    data = json.load(f)
+
+                    # Merge defaults if any key missing
+                    for key, value in default.items():
+                        if key not in data:
+                            data[key] = value
+
+                    # 🧠 Force disable tray every startup (safety)
+                    if data.get("tray", {}).get("enabled", False):
+                        print("[INFO] Tray mode reset to disabled on startup.")
+                        data["tray"]["enabled"] = False
+
+                    # Save back (in case we modified)
+                    f.seek(0)
+                    json.dump(data, f, indent=4)
+                    f.truncate()
+                    return data
+            except Exception as e:
+                print(f"[WARN] Failed to load config properly: {e}")
+
+        # --- If missing or invalid, recreate ---
         with open(self.config_path, "w") as f:
             json.dump(default, f, indent=4)
         return default
@@ -133,6 +205,13 @@ class SettingsPage(BasePage):
     def _save_config(self):
         with open(self.config_path, "w") as f:
             json.dump(self.config, f, indent=4)
+
+
+    def _save_auto_open(self, value: bool):
+        """Persist the auto-open instruction bar setting."""
+        self.config["tray"]["auto_open_instruction"] = value
+        self._save_config()
+        print(f"[INFO] Auto-open instruction tray: {'enabled' if value else 'disabled'}")
 
     # -----------------------------------------------------------------
     # Reminder Section
@@ -247,8 +326,10 @@ class SettingsPage(BasePage):
     # -----------------------------------------------------------------
     def _build_tray_settings(self, parent):
         from utils.common import speak, speak_action_confirmation
+        from UI.pages.instruction_tray import InstructionTray
 
-        data = self.config.get("tray", {"enabled": False})
+        # Load tray config
+        data = self.config.get("tray", {"enabled": False, "auto_open_instruction": True})
         card = RoundedCard(parent, radius=12, pad=12,
                         bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
         card.pack(fill="x", pady=8)
@@ -258,28 +339,39 @@ class SettingsPage(BasePage):
                 font=F("h2b", ("Segoe UI", 13, "bold"))
                 ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
-        # 🟢 Shared tray variable
-        tray_var = tk.BooleanVar(value=data["enabled"])
+        # Shared variables
+        tray_var = tk.BooleanVar(value=data.get("enabled", False))
+        auto_open_var = tk.BooleanVar(value=data.get("auto_open_instruction", True))
 
-        # 🟢 Keep a reference to the toggle (so we can change its state programmatically)
+        # Reference to toggle
         self.tray_toggle = None
 
         def toggle_tray():
             """Handles enabling/disabling tray mode."""
             root_window = self.winfo_toplevel()
             self.config["tray"]["enabled"] = tray_var.get()
+            self.config["tray"]["auto_open_instruction"] = auto_open_var.get()
             self._save_config()
 
             if tray_var.get():
                 # --- Minimize & create tray icon ---
                 root_window.withdraw()
 
+                # 🔹 Auto open instruction tray if setting enabled
+                if auto_open_var.get():
+                    try:
+                        tray = InstructionTray(root_window)
+                        tray.after(200, lambda: tray.deiconify())
+                        print("[INFO] Instruction Tray auto-opened when minimized.")
+                    except Exception as e:
+                        print(f"[WARN] Failed to auto-open InstructionTray: {e}")
+
                 def restore():
                     """Triggered when user clicks 'Restore' in tray menu."""
                     root_window.deiconify()
                     root_window.focus_force()
 
-                    # 🟢 Disable tray mode when restored
+                    # Disable tray mode when restored
                     tray_var.set(False)
                     self.config["tray"]["enabled"] = False
                     self._save_config()
@@ -293,25 +385,39 @@ class SettingsPage(BasePage):
                 def exit_app():
                     root_window.destroy()
 
-                tray = SystemTrayIcon(on_restore=restore, on_exit=exit_app)
-                tray.show()
+                tray_icon = SystemTrayIcon(on_restore=restore, on_exit=exit_app)
+                tray_icon.show()
                 speak_action_confirmation("Application minimized to tray.")
             else:
-                # --- Disable tray mode manually ---
                 root_window.deiconify()
                 speak("Application restored.")
 
+        # Enable tray mode toggle
         tk.Label(card.body, text="Enable tray mode:", bg=Colors.glass_bg,
                 fg=Colors.card_text, font=("Segoe UI", 12)
                 ).grid(row=1, column=0, sticky="w", padx=10, pady=6)
 
-        # 🟢 Store toggle reference
         self.tray_toggle = ModernToggle(
             card.body,
-            initial=data["enabled"],
+            initial=tray_var.get(),
             on_toggle=lambda val: (tray_var.set(val), toggle_tray())
         )
         self.tray_toggle.grid(row=1, column=1, sticky="w", padx=10, pady=6)
+
+        # ✅ New checkbox for auto-open instruction bar
+        tk.Checkbutton(
+            card.body,
+            text="Auto-open Instruction Bar when minimized / hided to tray",
+            variable=auto_open_var,
+            bg=Colors.glass_bg,
+            fg=Colors.card_text,
+            activebackground=Colors.glass_bg,
+            font=("Segoe UI", 11),
+            anchor="w",
+            onvalue=True,
+            offvalue=False,
+            command=lambda: self._save_auto_open(auto_open_var.get())
+        ).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(4, 2))
 
     # -----------------------------------------------------------------
     # Camera Section
