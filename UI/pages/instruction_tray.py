@@ -23,7 +23,7 @@ class InstructionTray(tk.Toplevel):
 
         # === Dynamically calculated width ===
         if sw >= 1920:
-            width = 1280
+            width = 1300
         elif sw >= 1600:
             width = 1150
         elif sw >= 1366:
@@ -101,7 +101,7 @@ class InstructionTray(tk.Toplevel):
                 text=title,
                 fg="white",
                 bg=Colors.dark_card,
-                font=F("body", ("Segoe UI", 9, "bold"))
+                font=("Segoe UI", 11, "bold")
             ).pack(side="left")
 
             if title == "Short Blink":
@@ -117,7 +117,7 @@ class InstructionTray(tk.Toplevel):
                 text=desc,
                 fg="#9ca3af",
                 bg=Colors.dark_card,
-                font=F("body", ("Segoe UI", 8))
+                font=("Segoe UI", 10)
             ).pack(anchor="center")
 
         # === Start/Stop Application Button ===
@@ -145,7 +145,7 @@ class InstructionTray(tk.Toplevel):
             text="Start Application",
             fg="white",
             bg=Colors.dark_card,
-            font=F("body", ("Segoe UI", 9, "bold"))
+            font=("Segoe UI", 11, "bold")
         ).pack(anchor="center")
 
         # === Close Button (Always Visible, Fixed to Right Corner) ===
