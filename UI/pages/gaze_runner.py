@@ -108,13 +108,13 @@ class HeadPoseEstimator:
                 x, y, z = [a * 360 for a in angles]
 
                 # classify direction
-                if y < -12:
+                if y < -6:
                     direction = "Left"
-                elif y > 12:
+                elif y > 6:
                     direction = "Right"
-                elif x < -12:
+                elif x < -10:
                     direction = "Down"
-                elif x > 14:
+                elif x > 10:
                     direction = "Up"
                 else:
                     direction = "Forward"
@@ -1196,8 +1196,13 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     accuracy = 0
 
 
+
+    fps = 0.0  # ✅ initialize fallback FPS for first frames
+    t_prev = time.perf_counter()  # ✅ setup initial timestamp
+    
     while cap.isOpened() and (external_stop is None or not external_stop.is_set()):
         
+
         success, frame = cap.read()
         if not success:
             break
