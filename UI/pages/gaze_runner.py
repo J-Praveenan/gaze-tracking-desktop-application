@@ -1,9 +1,19 @@
-# UI/pages/gaze_runner.py
+# UI/pages/gaze_runner.pyimport sys
+import sys
+from pathlib import Path
+
+# --- Ensure project root is in sys.path ---
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+
+
 import cv2, dlib, numpy as np, pyautogui, time, json, winsound, threading
 from imutils import face_utils
-from tensorflow.keras.models import load_model
 import mediapipe as mp
 from pathlib import Path
+
+
 from Voice_Model.voice_autodictation import start_voice_autodictation
 from voice.voice_typing import run_voice_typing_loop
 import winsound
@@ -26,6 +36,9 @@ from UI.theme import Colors, Fonts
 from UI.widgets import RoundedCard, PillButton
 from UI.pages.base import BasePage
 from UI.pages.sidebar import Sidebar
+
+from tensorflow.keras.models import load_model
+
 from utils.common import speak_action_confirmation, speak
 
 
@@ -744,6 +757,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
     font_letter = cv2.FONT_HERSHEY_PLAIN
+    
     model = load_model(model_path)
 
     mp_face_mesh = mp.solutions.face_mesh
@@ -1107,7 +1121,33 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     # Initialize head pose estimator once
     pose_estimator = HeadPoseEstimator()
 
-    cap = cv2.VideoCapture(0)
+    # ==========================
+    # Load saved camera index
+    # ==========================
+    # --- Load camera index from global config ---
+    
+
+    ROOT = Path(__file__).resolve().parents[2]  # 🟢 Go up two levels to project root
+    config_path = ROOT / "Data" / "configuration.json"
+
+    print(f"🔍 Loading config from: {config_path}")
+
+    camera_index = 0  # default fallback
+    try:
+        if config_path.exists():
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                camera_index = config.get("camera", {}).get("index", 0)
+        else:
+            print(f"⚠️ Config file not found at {config_path}, using default camera (0).")
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        print(f"⚠️ Failed to read configuration.json, using default camera (0): {e}")
+
+    print(f"[INFO] Using camera index {camera_index}")
+
+    cap = cv2.VideoCapture(camera_index)
+
 
     ret, frame = cap.read()
     if not ret:

@@ -23,3 +23,24 @@ class BasePage(tk.Frame):
 
     def on_show(self):
         pass
+
+
+    def enable_scroll(self, canvas, scroll_frame):
+        """Enable scroll only while mouse is over this page's canvas."""
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        def _bind_scroll(_):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        def _unbind_scroll(_):
+            canvas.unbind_all("<MouseWheel>")
+
+        # Bind when mouse enters/leaves the page
+        for widget in (canvas, scroll_frame, self):
+            widget.bind("<Enter>", _bind_scroll)
+            widget.bind("<Leave>", _unbind_scroll)
+
+        # Linux scroll events
+        canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+        canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
