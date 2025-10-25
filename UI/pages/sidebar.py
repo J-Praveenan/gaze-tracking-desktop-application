@@ -112,7 +112,7 @@ class Sidebar(RoundedCard):
                 bg=Colors.sidebar_bg,
                 bd=0,
                 relief="flat",
-                activebackground="#1d4ed8",
+                activebackground="#31A0EB",
                 activeforeground="white",
                 cursor="hand2",
                 command=on_click,

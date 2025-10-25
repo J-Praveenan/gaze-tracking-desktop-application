@@ -17,21 +17,36 @@ class InstructionTray(tk.Toplevel):
         self.attributes("-topmost", True)
         self.configure(bg=Colors.dark_card)
 
-        # === Tray size & position ===
-        width, height = 1280, 150
+        # === Base screen size ===
         sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
-        self.geometry(f"{width}x{height}+{(sw - width)//2}+{sh - height - 40}")
+        height = 110
 
-        tray = tk.Frame(self, bg=Colors.dark_card, padx=14, pady=10)
+        # === Dynamically calculated width ===
+        if sw >= 1920:
+            width = 1280
+        elif sw >= 1600:
+            width = 1150
+        elif sw >= 1366:
+            width = 1000
+        else:
+            width = int(sw * 0.9)
+
+        # === Center horizontally, position near bottom ===
+        x = (sw - width) // 2
+        y = sh - height - 40
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
+        tray = tk.Frame(self, bg=Colors.dark_card, padx=10, pady=6)
         tray.pack(fill="both", expand=True)
 
         content = tk.Frame(tray, bg=Colors.dark_card)
-        content.pack(side="left", fill="both", expand=True)
+        content.pack(fill="both", expand=True)
+        content.pack_propagate(False)
 
         # === Load icons ===
         assets = os.path.join(os.path.dirname(__file__), "../../assets")
 
-        def load_icon(name, size=(56, 56)):
+        def load_icon(name, size=(42, 42)):
             p = os.path.join(assets, name)
             try:
                 return ImageTk.PhotoImage(Image.open(p).resize(size, Image.LANCZOS))
@@ -48,13 +63,13 @@ class InstructionTray(tk.Toplevel):
             "right_blink": load_icon("right_eye_blink.png"),
             "closed_short": load_icon("closed_less_than_2mins.png"),
             "closed_long": load_icon("closed_greater_than_2mins.png"),
-            "cycle_blink": load_icon("cycle_blink.png", size=(350, 350)),
-            "info": load_icon("info.png", size=(18, 18)),
-            "start": load_icon("power_on.png", size=(40, 40)),
-            "stop": load_icon("power_off.png", size=(40, 40)),
+            "cycle_blink": load_icon("cycle_blink.png", size=(300, 300)),
+            "info": load_icon("info.png", size=(16, 16)),
+            "start": load_icon("power_on.png", size=(34, 34)),
+            "stop": load_icon("power_off.png", size=(34, 34)),
         }
 
-        # === Instruction Controls ===
+        # === Controls ===
         controls = [
             (icons["up"], "Look Up", "Move Pointer Up"),
             (icons["down"], "Look Down", "Move Pointer Down"),
@@ -67,15 +82,15 @@ class InstructionTray(tk.Toplevel):
         ]
 
         controls_frame = tk.Frame(content, bg=Colors.dark_card)
-        controls_frame.pack(fill="x", pady=(10, 0))
+        controls_frame.pack(anchor="center", expand=True)
 
         for icon, title, desc in controls:
-            block = tk.Frame(controls_frame, bg=Colors.dark_card, padx=14, pady=2)
-            block.pack(side="left", expand=True, anchor="n")
+            block = tk.Frame(controls_frame, bg=Colors.dark_card, padx=8, pady=0)
+            block.pack(side="left", expand=True, anchor="center")
 
             if icon:
                 lbl = tk.Label(block, image=icon, bg=Colors.dark_card)
-                lbl.pack(anchor="center", pady=(0, 5))
+                lbl.pack(anchor="center", pady=(0, 2))
                 block.icon_ref = icon
 
             title_frame = tk.Frame(block, bg=Colors.dark_card)
@@ -86,16 +101,15 @@ class InstructionTray(tk.Toplevel):
                 text=title,
                 fg="white",
                 bg=Colors.dark_card,
-                font=F("body", ("Segoe UI", 10, "bold"))
+                font=F("body", ("Segoe UI", 9, "bold"))
             ).pack(side="left")
 
-            # Info icon for Short Blink
             if title == "Short Blink":
                 info_icon = tk.Label(
                     title_frame, image=icons["info"], bg=Colors.dark_card, cursor="hand2"
                 )
                 info_icon.image_ref = icons["info"]
-                info_icon.pack(side="left", padx=(4, 0))
+                info_icon.pack(side="left", padx=(3, 0))
                 self.add_cycle_popup_behavior(info_icon, icons["cycle_blink"])
 
             tk.Label(
@@ -103,18 +117,17 @@ class InstructionTray(tk.Toplevel):
                 text=desc,
                 fg="#9ca3af",
                 bg=Colors.dark_card,
-                font=F("body", ("Segoe UI", 9))
+                font=F("body", ("Segoe UI", 8))
             ).pack(anchor="center")
 
-        # === START / STOP APPLICATION BUTTON ===
-        start_frame = tk.Frame(controls_frame, bg=Colors.dark_card, padx=14, pady=0)
-        start_frame.pack(side="left", expand=True, anchor="center", pady=(10, 0))
+        # === Start/Stop Application Button ===
+        start_frame = tk.Frame(controls_frame, bg=Colors.dark_card, padx=8, pady=0)
+        start_frame.pack(side="left", expand=True, anchor="center")
 
         self.app_running = False
         self.start_icon = icons["start"]
         self.stop_icon = icons["stop"]
 
-        # Center contents inside start_frame
         inner = tk.Frame(start_frame, bg=Colors.dark_card)
         inner.pack(expand=True)
 
@@ -132,28 +145,18 @@ class InstructionTray(tk.Toplevel):
             text="Start Application",
             fg="white",
             bg=Colors.dark_card,
-            font=F("body", ("Segoe UI", 10, "bold"))
-        ).pack(anchor="center", pady=(0, 0))
+            font=F("body", ("Segoe UI", 9, "bold"))
+        ).pack(anchor="center")
 
-
-        # === Close Tray Button (small, top-right corner) ===
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        close_icon_path = os.path.abspath(os.path.join(base_dir, "../../assets/close_icon.png"))
-
-        # fallback to new file name if not found
-        if not os.path.exists(close_icon_path):
-            alt_path = os.path.abspath(os.path.join(base_dir, "../../assets/6ba7585a-a971-4836-be42-811be238a80b.png"))
-            if os.path.exists(alt_path):
-                close_icon_path = alt_path
-            else:
-                print(f"[WARN] Close icon not found at: {close_icon_path}")
-                close_icon_path = None
+        # === Close Button (Always Visible, Fixed to Right Corner) ===
+        close_path = os.path.abspath(os.path.join(assets, "close_icon.png"))
+        if not os.path.exists(close_path):
+            close_path = os.path.abspath(os.path.join(assets, "6ba7585a-a971-4836-be42-811be238a80b.png"))
 
         close_img = None
-        if close_icon_path:
+        if os.path.exists(close_path):
             try:
-                close_img = ImageTk.PhotoImage(Image.open(close_icon_path).resize((24, 24), Image.LANCZOS))
-                print(f"[INFO] Loaded close icon from: {close_icon_path}")
+                close_img = ImageTk.PhotoImage(Image.open(close_path).resize((20, 20), Image.LANCZOS))
             except Exception as e:
                 print(f"[WARN] Could not load close icon: {e}")
 
@@ -176,13 +179,13 @@ class InstructionTray(tk.Toplevel):
                 cursor="hand2"
             ).place(relx=1.0, rely=0.0, x=-8, y=8, anchor="ne")
 
-        # === Enable tray drag ===
+        # === Make tray movable ===
         tray.bind("<ButtonPress-1>", self.start_move)
         tray.bind("<B1-Motion>", self.on_move)
 
         self.cycle_popup = None
 
-    # === Cycle Blink Popup ===
+    # === Popup, Click, Move Methods ===
     def add_cycle_popup_behavior(self, widget, image):
         def show_popup(event=None):
             if self.cycle_popup and self.cycle_popup.winfo_exists():
@@ -191,11 +194,11 @@ class InstructionTray(tk.Toplevel):
             popup = tk.Toplevel(self)
             popup.overrideredirect(True)
             popup.attributes("-topmost", True)
-            popup.configure(bg=Colors.dark_card, padx=8, pady=8, bd=2, relief="solid")
+            popup.configure(bg=Colors.dark_card, padx=6, pady=6, bd=1, relief="solid")
             tk.Label(popup, image=image, bg=Colors.dark_card).pack()
             popup.image_ref = image
-            x = widget.winfo_rootx() - 150
-            y = widget.winfo_rooty() - 370
+            x = widget.winfo_rootx() - 120
+            y = widget.winfo_rooty() - 320
             popup.geometry(f"+{x}+{y}")
             self.cycle_popup = popup
             self.bind_all("<Button-1>", self._handle_outside_click, add="+")
@@ -224,11 +227,9 @@ class InstructionTray(tk.Toplevel):
             self.cycle_popup = None
         self.unbind_all("<Button-1>")
 
-    # === Start/Stop Gaze App Toggle ===
     def toggle_app(self, event=None):
-        """Start or stop the gaze control dynamically (lazy import to avoid circular import)."""
         try:
-            from UI.pages.home import launch_gaze_app  # local import fixes circular import
+            from UI.pages.home import launch_gaze_app
         except ImportError:
             print("[WARN] Could not import launch_gaze_app dynamically.")
             return
@@ -242,8 +243,6 @@ class InstructionTray(tk.Toplevel):
             self.app_running = False
             self.start_button.configure(image=self.start_icon)
 
-
-    # === Moveable Tray ===
     def start_move(self, e):
         self.x, self.y = e.x, e.y
 
