@@ -1647,11 +1647,11 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                     frame=frame_with_pose,
                     eye_left_view=eye_img_r_view,
                     eye_right_view=eye_img_l_view,
-                    gaze=gaze,
-                    acc=accuracy,
-                    blink_total=blink_total,
-                    left_blinks=left_blink_count,
-                    right_blinks=right_blink_count,
+                    gaze="--",
+                    acc="--",
+                    blink_total="--",
+                    left_blinks="--",
+                    right_blinks="--",
                     fps=fps
                 )
 

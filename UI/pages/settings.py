@@ -250,7 +250,7 @@ class SettingsPage(BasePage):
         self.dropdown = ttk.Combobox(card.body, textvariable=self.duration_var, values=options, width=10)
         self.dropdown.grid(row=2, column=1, sticky="w", padx=8, pady=4)
 
-        tk.Button(card.body, text="Save", bg="#2563eb", fg="white",
+        tk.Button(card.body, text="Save", bg="#31A0EB", fg="white",
                   font=("Segoe UI", 12, "bold"),
                   command=self._save_reminder
                   ).grid(row=3, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 6))
