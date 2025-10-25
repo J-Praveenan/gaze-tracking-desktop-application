@@ -161,17 +161,17 @@ def calibrate_gaze():
 
             # Store results in JSON keys
             if direction == "LEFT":
-                thresholds["LEFT_EYE_LEFT_DIRECTION_THRESHOLD"] = float(left_avg)
-                thresholds["RIGHT_EYE_LEFT_DIRECTION_THRESHOLD"] = float(right_avg)
+                thresholds["LEFT_EYE_LEFT_DIRECTION_THRESHOLD"] = float(left_avg - 0.0005)
+                thresholds["RIGHT_EYE_LEFT_DIRECTION_THRESHOLD"] = float(right_avg - 0.0005)
             elif direction == "RIGHT":
-                thresholds["LEFT_EYE_RIGHT_DIRECTION_THRESHOLD"] = float(left_avg)
-                thresholds["RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD"] = float(right_avg)
+                thresholds["LEFT_EYE_RIGHT_DIRECTION_THRESHOLD"] = float(left_avg - 0.0005)
+                thresholds["RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD"] = float(right_avg - 0.0005)
             elif direction == "UP":
-                thresholds["LEFT_EYE_UP_DIRECTION_THRESHOLD"] = float(left_avg)
-                thresholds["RIGHT_EYE_UP_DIRECTION_THRESHOLD"] = float(right_avg)
+                thresholds["LEFT_EYE_UP_DIRECTION_THRESHOLD"] = float(left_avg - 0.0005)
+                thresholds["RIGHT_EYE_UP_DIRECTION_THRESHOLD"] = float(right_avg - 0.0005)
             elif direction == "DOWN":
-                thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(left_avg)
-                thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(right_avg)
+                thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(left_avg)   # - 0.005
+                thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(right_avg) # - 0.005
 
         out_file = save_thresholds(thresholds)
         cv2.destroyAllWindows()

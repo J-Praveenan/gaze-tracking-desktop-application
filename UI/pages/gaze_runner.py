@@ -14,7 +14,7 @@ import json
 import threading
 import speech_recognition as sr
 import pyttsx3
-import os
+import os, sys
 import webbrowser
 from json import JSONDecodeError
 from typing import Tuple
@@ -26,6 +26,90 @@ from UI.theme import Colors, Fonts
 from UI.widgets import RoundedCard, PillButton
 from UI.pages.base import BasePage
 from UI.pages.sidebar import Sidebar
+from utils.common import speak_action_confirmation, speak
+
+
+# Disable TensorFlow imports to prevent protobuf errors
+import os, sys
+
+# 🧠 Disable TensorFlow import *only* inside MediaPipe
+os.environ["MEDIAPIPE_DISABLE_TF_IMPORT"] = "1"
+
+import mediapipe as mp
+
+try:
+    import tensorflow as tf
+    from tensorflow.keras.models import load_model
+except ImportError:
+    print("⚠️ TensorFlow not found — please install it with `pip install tensorflow`")
+    raise
+
+
+class HeadPoseEstimator:
+    def __init__(self):
+        self.mp_face_mesh = mp.solutions.face_mesh
+        self.face_mesh = self.mp_face_mesh.FaceMesh(
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5
+        )
+        self.mp_drawing = mp.solutions.drawing_utils
+        self.drawing_spec = self.mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
+
+    def estimate(self, frame):
+        """Estimate head pose, draw overlay, and return (image, direction)."""
+        start = time.time()
+        image = cv2.cvtColor(cv2.flip(frame, 1), cv2.COLOR_BGR2RGB)
+        image.flags.writeable = False
+        results = self.face_mesh.process(image)
+        image.flags.writeable = True
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+        direction = "Forward"  # default if no detection
+
+        img_h, img_w, _ = image.shape
+        face_3d, face_2d = [], []
+
+        if results.multi_face_landmarks:
+            for face_landmarks in results.multi_face_landmarks:
+                for idx, lm in enumerate(face_landmarks.landmark):
+                    if idx in [33, 263, 1, 61, 291, 199]:
+                        if idx == 1:
+                            nose_2d = (lm.x * img_w, lm.y * img_h)
+                            nose_3d = (lm.x * img_w, lm.y * img_h, lm.z * 3000)
+                        x, y = int(lm.x * img_w), int(lm.y * img_h)
+                        face_2d.append([x, y])
+                        face_3d.append([x, y, lm.z])
+
+                face_2d = np.array(face_2d, dtype=np.float64)
+                face_3d = np.array(face_3d, dtype=np.float64)
+                focal_length = img_w
+                cam_matrix = np.array([
+                    [focal_length, 0, img_h / 2],
+                    [0, focal_length, img_w / 2],
+                    [0, 0, 1]
+                ])
+                dist_matrix = np.zeros((4, 1), dtype=np.float64)
+                success, rot_vec, trans_vec = cv2.solvePnP(face_3d, face_2d, cam_matrix, dist_matrix)
+                rmat, _ = cv2.Rodrigues(rot_vec)
+                angles, *_ = cv2.RQDecomp3x3(rmat)
+                x, y, z = [a * 360 for a in angles]
+
+                # classify direction
+                if y < -12:
+                    direction = "Left"
+                elif y > 12:
+                    direction = "Right"
+                elif x < -12:
+                    direction = "Down"
+                elif x > 14:
+                    direction = "Up"
+                else:
+                    direction = "Forward"
+
+                # draw annotations
+                # cv2.putText(image, direction, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+
+        return image, direction
 
 
 # ==== Load thresholds from JSON ====
@@ -117,6 +201,34 @@ class GazeSession:
         self.stop_event.set()
 
 
+def _right_click_debounced():
+    """Trigger a single right-click with debounce."""
+    global _last_click_ts, right_click_count, _last_click_flash_until, _last_click_side
+    now = time.time()
+    if now - _last_click_ts < CLICK_COOLDOWN_SEC:
+        return
+    _last_click_ts = now
+    pyautogui.click(button="right")
+
+    # record for UI
+    right_click_count += 1
+    _last_click_side = "right"
+    _last_click_flash_until = time.time() + 0.6  # flash for 0.6s
+
+
+
+def _double_click_debounced(interval=0.15):
+    global _last_click_ts, left_click_count, _last_click_flash_until, _last_click_side
+    now = time.time()
+    if now - _last_click_ts < CLICK_COOLDOWN_SEC:
+        return
+    _last_click_ts = now
+    pyautogui.click(clicks=2, interval=interval, button="left")  # double-click
+    pyautogui.press('enter')
+    left_click_count += 1
+    _last_click_side = "left_dbl"
+    _last_click_flash_until = time.time() + 0.6
+
 
 
 
@@ -174,14 +286,18 @@ def _start_cursor_smoother():
 
 
 def main(enable_mouse_control=False, show_video=False, external_stop=None):
+    global left_blink_count, right_blink_count, both_blink_count
+    left_blink_count = 0
+    right_blink_count = 0
+    both_blink_count = 0
+    
+    scroll_blink_start = None
+    scroll_blink_active = False
+
     global _last_wink_time  # ✅ add this line
     global RUN_GAZE, SMOOTHER_STOP
     
-    # if RUN_GAZE:
-    #     print("[INFO] Gaze already active.")
-    #     return
 
-    # RUN_GAZE = True
     SMOOTHER_STOP.clear()
     
     global stop_signal
@@ -292,10 +408,10 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     RIGHT_EYE_LEFT_DIRECTION_THRESHOLD = thresholds["RIGHT_EYE_LEFT_DIRECTION_THRESHOLD"]
     LEFT_EYE_RIGHT_DIRECTION_THRESHOLD = thresholds["LEFT_EYE_RIGHT_DIRECTION_THRESHOLD"]
     RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD = thresholds["RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD"]
-    LEFT_EYE_UP_DIRECTION_THRESHOLD = thresholds["LEFT_EYE_UP_DIRECTION_THRESHOLD"] + 0.0005
-    RIGHT_EYE_UP_DIRECTION_THRESHOLD = thresholds["RIGHT_EYE_UP_DIRECTION_THRESHOLD"] + 0.0005
-    LEFT_EYE_DOWN_DIRECTION_THRESHOLD = thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"] - 0.005
-    RIGHT_EYE_DOWN_DIRECTION_THRESHOLD = thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"] - 0.005
+    LEFT_EYE_UP_DIRECTION_THRESHOLD = thresholds["LEFT_EYE_UP_DIRECTION_THRESHOLD"]             # + 0.0005
+    RIGHT_EYE_UP_DIRECTION_THRESHOLD = thresholds["RIGHT_EYE_UP_DIRECTION_THRESHOLD"]           # + 0.0005
+    LEFT_EYE_DOWN_DIRECTION_THRESHOLD = thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"]         # - 0.005
+    RIGHT_EYE_DOWN_DIRECTION_THRESHOLD = thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"]       # - 0.005
 
     def click_on_blink():
         global _last_click_ts
@@ -564,7 +680,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     
     DEFAULT_LABELS = [
     "center", "left", "right", "up", "down", 
-    "blink", "left_blink", "right_blink", "closed"
+    "blink", "left_blink", "right_blink",
     ]
 
 
@@ -593,11 +709,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5)
 
     # EAR threshold to consider blink
-    EAR_THRESHOLD = 0.12  # 0.1
-    CONSEC_FRAMES = 3
-    blink_counter = 0
     blink_total = 0
-    blink_confirmed = False
 
 
     # Landmark indices for left and right eye
@@ -643,50 +755,15 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     )
 
 
-    def detect_gaze(eye_img, blink_confirmed, mesh_points, is_eye_closed, left_ear=None, right_ear=None):
+    def detect_gaze(eye_img, mesh_points, left_ear=None, right_ear=None):
         
         """
             Returns gaze direction with special cases:
             - "left_blink" → left eye closed only
             - "right_blink" → right eye closed only
-            - "closed" → both eyes closed
+            
         """
     
-    
-        # =========================================== this is also need to change ======================================
-        
-        
-        
-        # if is_eye_closed:
-        #     return "closed", 100
-        
-        
-        # if blink_confirmed:
-        #     return "blink", accuracy
-
-        # elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-        #     _click_debounced("left")
-        #     return "left_blink", 100
-
-        # elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-        #     _click_debounced("right") 
-        #     return "right_blink", 100
-
-
-
-
-        
-
-        #========================================================================================
-        
-        # --- Left blink (wink) ---
-        # if left_ear is not None and right_ear is not None:
-        #     if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-        #         return "left_blink", 100
-
-        # --- Right blink (wink) ---
-        # if right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-        #     return "right_blink", 100
         
         pred_l = model.predict(eye_img)
         accuracy = int(np.array(pred_l).max() * 100)
@@ -853,14 +930,14 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         # right_eye_vertical_for_down_direction = right_down_y2 - right_down_y1
         
         
-        if(left_eye_down_direction_threshold <= 0 and right_eye_down_direction_threshold <= 0):
-            print("=================Both EYE Closed====================")
+        if(left_eye_down_direction_threshold <= 0 or right_eye_down_direction_threshold <= 0):
+            print("=================Both EYE Blink====================")
             return "BOTH_BLINK", 100
-        elif(left_eye_down_direction_threshold < LEFT_EYE_DOWN_DIRECTION_THRESHOLD and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD):
-            print("=================LEFT EYE Closed====================")
+        elif(left_eye_down_direction_threshold < LEFT_EYE_DOWN_DIRECTION_THRESHOLD - 0.005 and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD):
+            print("=================LEFT EYE Blink====================")
             return "LEFT_BLINK", 100
-        elif(left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD and right_eye_down_direction_threshold < RIGHT_EYE_DOWN_DIRECTION_THRESHOLD):
-            print("=================RIGHT EYE Closed====================")  
+        elif(left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD and right_eye_down_direction_threshold < RIGHT_EYE_DOWN_DIRECTION_THRESHOLD - 0.005):
+            print("=================RIGHT EYE Blink====================")  
             return "RIGHT_BLINK", 100
 
        
@@ -1000,74 +1077,6 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         else:
             print("Looking CENTER (CNN model prediction)")
             
-        
-       
-       
-        # --- Unified Prediction Logic (Blink/Wink/Gaze mutually exclusive) ---
-
-        # 1️⃣  Handle eye closure and blinks first (highest priority)
-        # if is_eye_closed:
-        #     print("Final: BOTH EYES CLOSED")
-        #     return "closed", 100
-
-        # if blink_confirmed:
-        #     print("Final: NORMAL BLINK detected")
-        #     return "blink", accuracy
-
-
-        
-        # if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-        #     print("Final: LEFT WINK detected")
-        #     _click_debounced("left")
-        #     return "left_blink", 100
-
-        # elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-        #     print("Final: RIGHT WINK detected")
-        #     _click_debounced("right")
-        #     return "right_blink", 100
-         
-        
-        # Final Gaze Decision Logic
-        
-        # if gaze == "up" and landmark_up_boolean:
-        #     gaze = "up"
-        #     print("Final Gaze direction: ", gaze)  
-        # elif gaze == "down" or landmark_down_boolean:
-        #     gaze = "down"
-        #     print("Final Gaze direction: ", gaze)
-        # elif gaze == "center" or landmark_center_boolean:
-        #     gaze = "center"
-        #     print("Final Gaze direction: ", gaze)     
-        # elif gaze == "right" and landmark_right_boolean:
-        #     gaze = "right"
-        #     print("Final Gaze direction: ", gaze)      
-        # elif gaze == "left" and landmark_left_boolean:
-        #     gaze = "left"
-        #     print("Final Gaze direction: ", gaze)
-        # else:
-        #     gaze = "center"
-        #     print("Final Gaze direction: ", gaze)
-           
-           
-           
-            
-        # Blink/Wink Detection 
-
-        # if is_eye_closed:
-        #     return "closed", 100
-                
-        # elif blink_confirmed:
-        #     return "blink", accuracy
-
-        # elif left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-        #     _click_debounced("left")
-        #     return "left_blink", 100
-
-        # elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-        #     _click_debounced("right") 
-        #     return "right_blink", 100
-            
-        
 
         return gaze, accuracy
 
@@ -1095,6 +1104,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
 
 
 
+    # Initialize head pose estimator once
+    pose_estimator = HeadPoseEstimator()
 
     cap = cv2.VideoCapture(0)
 
@@ -1103,6 +1114,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         print("Failed to grab frame from webcam")
         exit()
         
+            
     # start smoother once at startup (after imports)
     if enable_mouse_control and not _smoother_started:
         _start_cursor_smoother()
@@ -1112,8 +1124,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     height, width = frame.shape[:2]
 
 
-    frames_to_blink = 6
-    blinking_frames = 0
+
     last_prediction_time = time.time()
     blink_start_time = None
 
@@ -1231,6 +1242,10 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             ry += 60
             draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent"])
             put_text(canvas, f"Right Blink Count   : {right_blinks}", (rx+12, ry+32), 0.8, (255,255,255), 2)
+            ry += 60
+            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent2"])
+            put_text(canvas, f"Head Pose Direction : {head_direction}", (rx+12, ry+32), 0.8, (255,255,255), 2)
+
 
             return canvas
         
@@ -1255,8 +1270,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                     gaze=gaze,
                     acc=accuracy,
                     blink_total=blink_total,
-                    left=left_click_count,
-                    right=right_click_count
+                    left=left_blink_count,
+                    right=right_blink_count 
                 )
             except Exception as e:
                 print("UI update failed:", e)
@@ -1300,8 +1315,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             gaze=gaze,
             acc=accuracy,
             blink_total=blink_total,
-            left_blinks=left_click_count,   # or your left blink variable
-            right_blinks=right_click_count, # or your right blink variable
+            left_blinks=left_blink_count,  # or your left blink variable
+            right_blinks=right_blink_count, # or your right blink variable
             fps=fps
             )
             
@@ -1312,8 +1327,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                         gaze=gaze,
                         acc=accuracy,
                         blink_total=blink_total,
-                        left=left_click_count,
-                        right=right_click_count
+                        left=left_blink_count,
+                        right=right_blink_count 
                     )
                 except Exception as e:
                     print("UI update failed:", e)
@@ -1351,8 +1366,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 gaze=gaze,
                 acc=accuracy,
                 blink_total=blink_total,
-                left_blinks=left_click_count,   # or your left blink variable
-                right_blinks=right_click_count, # or your right blink variable
+                left_blinks=left_blink_count,     # or your left blink variable
+                right_blinks=right_blink_count,# or your right blink variable
                 fps=fps
             )
             
@@ -1364,8 +1379,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                         gaze=gaze,
                         acc=accuracy,
                         blink_total=blink_total,
-                        left=left_click_count,
-                        right=right_click_count
+                        left=left_blink_count, 
+                        right=right_blink_count 
                     )
                 except Exception as e:
                     print("UI update failed:", e)
@@ -1391,7 +1406,6 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             continue
 
         avg_ear = (left_ear + right_ear) / 2
-        is_eye_closed = avg_ear < EAR_THRESHOLD
         
         wink_in_progress = (_left_wink_start is not None) or (_right_wink_start is not None)
         both_closed_now  = (left_ear < EAR_CLOSED) and (right_ear < EAR_CLOSED)
@@ -1400,9 +1414,52 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         now = time.time()
         time_quiet = (now < _suppress_until_ts)
 
-        # suppress_gaze = is_eye_closed and both_closed_now or wink_in_progress or time_quiet    
+        # suppress_gaze = is_eye_closed and both_closed_now or wink_in_progress or time_quiet  
+        frame_h, frame_w = frame.shape[:2]
+        landmarks = [
+            type("Point", (), {"x": p[0] / frame_w, "y": p[1] / frame_h}) for p in mesh_points
+        ]
+        
+         
+        left_eye_down_direction_threshold = landmarks[374].y- landmarks[386].y
+        right_eye_down_direction_threshold = landmarks[145].y- landmarks[159].y
+        
+        # both_closed_now = (left_eye_down_direction_threshold <= 0) and (right_eye_down_direction_threshold <= 0)
             
         
+    # --- Long both-eyes blink start ---
+        if both_closed_now:
+            if long_blink_start is None:
+                long_blink_start = t
+                long_blink_armed = True
+                print(f"🕒 Long blink started at {t:.2f}")
+        else:
+            # Blink ended — eyes reopened
+            if long_blink_start is not None:
+                
+                held = t - long_blink_start
+                print(f"Blink duration: {held:.2f}s")
+
+                if long_blink_armed and (t >= long_blink_cooldown_until):
+                    if held >= 3.0:
+                        toggle_scroll_mode()
+                        winsound.Beep(900, 150)
+                    elif held >= LONG_BLINK_SEC:
+                        _warp_to_next_anchor()
+                        winsound.Beep(1200, 120)
+
+                    long_blink_armed = False
+                    _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
+                    long_blink_cooldown_until = t + LONG_BLINK_COOLDOWN
+
+                long_blink_start = None  # reset timer
+
+        # Re-arm after cooldown
+        if not long_blink_armed and (t >= long_blink_cooldown_until):
+            long_blink_armed = True
+
+
+
 
 
         # --- Robust wink + long-blink handling ---
@@ -1414,70 +1471,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         left_open    = (left_ear  > EAR_OPEN_HYST)
         right_open   = (right_ear > EAR_OPEN_HYST)
 
-        # 1) LEFT-EYE WINK → LEFT CLICK
-        # left must be closed; right must be clearly open
-        if left_closed and (right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)):
-            if _left_wink_start is None:
-                _left_wink_start = t
-                _suppress_until_ts = time.time() + WINK_SUPPRESS_SEC
-        else:
-            if _left_wink_start is not None and left_open and right_open:
-                dur = t - _left_wink_start
-                if WINK_MIN_SEC <= dur <= WINK_MAX_SEC:
-                    # _click_debounced("left")
-                    _double_click_debounced()
-                    _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
-                    _last_wink_time = time.time()  # ✅ record wink timestamp
-            _left_wink_start = None
-
-
-        # 2) RIGHT-EYE WINK → RIGHT CLICK
-        # right must be closed; left must be clearly open
-        if right_closed and (left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)):
-            if _right_wink_start is None:
-                _right_wink_start = t
-                _suppress_until_ts = time.time() + WINK_SUPPRESS_SEC
-        else:
-            if _right_wink_start is not None and left_open and right_open:
-                dur = t - _right_wink_start
-                if WINK_MIN_SEC <= dur <= WINK_MAX_SEC:
-                    _click_debounced("right")
-                    _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
-                    _last_wink_time = time.time()  # ✅ record wink timestamp
-            _right_wink_start = None
-
-        # 3) BOTH EYES CLOSED LONG (≥ LONG_BLINK_SEC) → WARP TO NEXT EDGE MIDPOINT
-        both_closed = left_closed and right_closed
-        both_open   = left_open and right_open
-
-        if both_closed:
-            if long_blink_start is None:
-                long_blink_start = t  # mark the time when blink started
-        else:
-            # Blink ended — eyes reopened
-            if long_blink_start is not None:
-                held = t - long_blink_start
-                print(f"Blink duration: {held:.2f}s")
-
-                if long_blink_armed and (t >= long_blink_cooldown_until):
-                    if held >= 3.0:  # 2+ seconds
-                        toggle_scroll_mode()
-                        winsound.Beep(900, 150)
-                    elif held >= LONG_BLINK_SEC:  # 1–2 seconds
-                        _warp_to_next_anchor()
-                        winsound.Beep(1200, 120)
-                        blink_total += 1
-
-                    long_blink_armed = False
-                    _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
-                    long_blink_cooldown_until = t + LONG_BLINK_COOLDOWN
-
-                long_blink_start = None  # reset timer
-
-            # Re-arm after cooldown
-            if not long_blink_armed and (t >= long_blink_cooldown_until):
-                long_blink_armed = True
-
+        
 
         if not results.multi_face_landmarks:
 
@@ -1488,8 +1482,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                         gaze=gaze,
                         acc=accuracy,
                         blink_total=blink_total,
-                        left=left_click_count,
-                        right=right_click_count
+                        left=left_blink_count, 
+                        right=right_blink_count 
                     )
                 except Exception as e:
                     print("UI update failed:", e)
@@ -1500,12 +1494,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 continue
 
             
-            
-        if avg_ear < EAR_THRESHOLD:
-            # Eyes likely closed — treat only as potential blink, NOT gaze
-            is_eye_closed = True
-        else:
-            is_eye_closed = False
+        
             
             
     # --- Long both-eyes blink → anchor warp (robust) ---
@@ -1520,11 +1509,6 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             long_blink_armed = True
 
         t = time.monotonic()
-
-        # Use hysteresis: must be *firmly* closed to count, *firmly* open to reset
-        both_closed = (left_ear < EAR_CLOSED) and (right_ear < EAR_CLOSED)
-        both_open   = (left_ear > EAR_OPEN_HYST) and (right_ear > EAR_OPEN_HYST)
-
     
         # ---------------- Draw iris landmarks (for visualization) ----------------
 
@@ -1603,21 +1587,101 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 print("🕒 Gaze temporarily suppressed during wink/blink.")
                 gaze = "center"
                 accuracy = 100
+                
+            # --- Head Pose Estimation ---
+            frame_with_pose, head_direction = pose_estimator.estimate(frame)
+
+
+            # 🧠 Head direction control logic
+            # 🧠 Head direction control logic
+            if head_direction != "Forward":
+                # Speak only once every few seconds to avoid repetition
+                if not hasattr(main, "_last_head_warn") or (time.time() - main._last_head_warn > 4):
+                    speak(
+                        f"You are looking {head_direction.lower()}. Please look forward to control the application using gaze direction."
+                    )
+                    main._last_head_warn = time.time()
+
+                # ✅ Build the UI using this frame (keep the window active)
+                ui = compose_ui(
+                    frame=frame_with_pose,
+                    eye_left_view=eye_img_r_view,
+                    eye_right_view=eye_img_l_view,
+                    gaze=gaze,
+                    acc=accuracy,
+                    blink_total=blink_total,
+                    left_blinks=left_blink_count,
+                    right_blinks=right_blink_count,
+                    fps=fps
+                )
+
+                if show_video:
+                    cv2.imshow("Real Time Gaze Estimation", ui)
+                    key = cv2.waitKey(1) & 0xFF
+                    if key in (ord('q'), ord('Q')):
+                        print("[INFO] Video window closed by user.")
+                        cap.release()
+                        show_video = False
+                        cv2.destroyWindow("Real Time Gaze Estimation")
+                continue  # 🚫 Skip gaze control for this frame
+
+            # ✅ Smooth resume when forward
+            elif getattr(main, "_head_warning_active", False) and head_direction == "Forward":
+                from utils.common import stop_speech
+                stop_speech()
+                main._head_warning_active = False
 
 
             
             
             #=================PREDICTION PROCESS========================================
+            if head_direction == "Forward":
+                gaze, accuracy = detect_gaze(
+                    
+                    eye_input_g, 
+                    mesh_points,
+                    left_ear=left_ear,
+                    right_ear=right_ear
+                )
+            
+                # --- Count Blinks based on detection result ---
+                if gaze == "LEFT_BLINK":
+                    left_blink_count += 1
+                    _double_click_debounced()     # 👈 triggers double left-click
+                    print(f"👁️ Left blink count: {left_blink_count}")
 
-            gaze, accuracy = detect_gaze(
-                
-                eye_input_g, 
-                blink_confirmed, 
-                mesh_points, 
-                is_eye_closed,
-                left_ear=left_ear,
-                right_ear=right_ear
-            )
+                elif gaze == "RIGHT_BLINK":
+                    right_blink_count += 1
+                    _right_click_debounced()      # 👈 triggers single right-click
+                    print(f"👁️ Right blink count: {right_blink_count}")
+
+                elif gaze == "BOTH_BLINK":
+                    both_blink_count += 1
+                    blink_total += 1
+
+                    # Blink ended — eyes reopened
+                    if long_blink_start is not None:
+                        held = t - long_blink_start
+                        print(f"Blink duration: {held:.2f}s")
+
+                        if long_blink_armed and (t >= long_blink_cooldown_until):
+                            if held >= 3.0:  # 2+ seconds
+                                toggle_scroll_mode()
+                                winsound.Beep(900, 150)
+                            elif held >= LONG_BLINK_SEC:  # 1–2 seconds
+                                _warp_to_next_anchor()
+                                winsound.Beep(1200, 120)
+                                
+
+                            long_blink_armed = False
+                            _suppress_until_ts = time.time() + SUPPRESS_AFTER_BLINK_SEC
+                            long_blink_cooldown_until = t + LONG_BLINK_COOLDOWN
+
+                        long_blink_start = None  # reset timer
+                        
+                    # Re-arm after cooldown
+                    if not long_blink_armed and (t >= long_blink_cooldown_until):
+                        long_blink_armed = True
 
 
 
@@ -1628,21 +1692,9 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             
         
             # Move mouse (function has its own cooldown & accuracy gate)
-            if not is_eye_closed and gaze in ("left", "right", "up", "down"):
+            if gaze in ("left", "right", "up", "down"):
                 move_cursor_for_gaze(gaze, accuracy)
-            
-
-            if gaze == class_labels[1]:
-                blinking_frames += 1
-                if blinking_frames == frames_to_blink:
-                    winsound.Beep(1000,250)
-            elif gaze == class_labels[2]:
-                blinking_frames += 1
-                if blinking_frames == frames_to_blink:
-                    winsound.Beep(1000,250)
-            else:
-                blinking_frames = 0
-                
+                            
                 
                 
             #===========================FINAL_WINDOWS=========================================
@@ -1671,7 +1723,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             cv2.putText(output, f"Blinks: {blink_total}", (10, 30), font_letter, 2, (0, 255, 255), 2)
             
             output[235+100:715+100, 80:720] = img
-            blink_confirmed = False
+            
             
             
             # --- FPS calculation ---
@@ -1682,16 +1734,23 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             
             
             flipped_frame = cv2.flip(img, 1)  
+            
+            # Add head pose estimation on the same frame
+            # frame_with_pose = pose_estimator.estimate(frame)
+    
+            
+
+            
             # --- Compose polished UI ---
             ui = compose_ui(
-                frame=flipped_frame,
+                frame=frame_with_pose,
                 eye_left_view=eye_img_r_view,
                 eye_right_view=eye_img_l_view,
                 gaze=gaze,
                 acc=accuracy,
                 blink_total=blink_total,
-                left_blinks=left_click_count,   # or your left blink variable
-                right_blinks=right_click_count, # or your right blink variable
+                left_blinks=left_blink_count,     # or your left blink variable
+                right_blinks=right_blink_count,# or your right blink variable
                 fps=fps
             )
             
@@ -1702,8 +1761,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                         gaze=gaze,
                         acc=accuracy,
                         blink_total=blink_total,
-                        left=left_click_count,
-                        right=right_click_count
+                        left=left_blink_count, 
+                        right=right_blink_count 
                     )
                 except Exception as e:
                     print("UI update failed:", e)
