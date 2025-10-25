@@ -16,7 +16,7 @@ ctranslate2==4.3.1
 customtkinter==5.2.2
 cycler==0.12.1
 darkdetect==0.8.0
-dlib @ file:///E:/0001_FYP/GazeDesktop/Data/dlib-19.24.1-cp311-cp311-win_amd64.whl#sha256=6f1a5ee167975d7952b28e0ce4495f1d9a77644761cf5720fb66d7c6188ae496
+dlib @ file:///D:/Desktop_Application/gaze-tracking-desktop-application/dlib-19.24.1-cp311-cp311-win_amd64.whl#sha256=6f1a5ee167975d7952b28e0ce4495f1d9a77644761cf5720fb66d7c6188ae496
 faster-whisper==1.2.0
 filelock==3.19.1
 flatbuffers==25.2.10
