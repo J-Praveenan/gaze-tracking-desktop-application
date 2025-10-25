@@ -31,8 +31,8 @@ class Fonts:
 from tkinter import ttk
 
 class Colors:
-    bg          = "#0b2e3b"
-    bg_tint     = "#0b2e3b"   # changed, no alpha
+    bg          = "#1f2937"
+    bg_tint     = "#1f2937"   # changed, no alpha
     banner_bg   = "#98b6e6"
     banner_text = "#111827"
     sidebar_bg  = "#1f2a37"

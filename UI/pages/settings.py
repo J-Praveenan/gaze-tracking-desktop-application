@@ -31,7 +31,7 @@ class ModernToggle(tk.Canvas):
 
     def _draw_toggle(self):
         self.delete("all")
-        color_on = "#2563eb"
+        color_on = "#31A0EB"
         color_off = "#9ca3af"
 
         if self.state.get():
@@ -469,7 +469,7 @@ class SettingsPage(BasePage):
         dropdown.grid(row=1, column=1, sticky="w", padx=10, pady=6)
 
         # Save button
-        tk.Button(card.body, text="Save", bg="#2563eb", fg="white",
+        tk.Button(card.body, text="Save", bg="#31A0EB", fg="white",
                   font=("Segoe UI", 12, "bold"),
                   command=self._save_camera_config
                   ).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 6))
