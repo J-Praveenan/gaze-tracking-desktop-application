@@ -121,9 +121,9 @@ class HeadPoseEstimator:
                 x, y, z = [a * 360 for a in angles]
 
                 # classify direction
-                if y < -6:
+                if y < -10:
                     direction = "Left"
-                elif y > 6:
+                elif y > 10:
                     direction = "Right"
                 elif x < -10:
                     direction = "Down"

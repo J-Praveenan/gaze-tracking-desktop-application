@@ -8,10 +8,13 @@
         "action_confirmation": true
     },
     "tray": {
-        "enabled": true,
-        "auto_open_instruction": true
+        "enabled": false,
+        "auto_open_instruction": false
     },
     "camera": {
         "index": 1
+    },
+    "control": {
+        "mode": "manual"
     }
 }
