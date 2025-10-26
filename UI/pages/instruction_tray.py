@@ -132,21 +132,23 @@ class InstructionTray(tk.Toplevel):
         inner.pack(expand=True)
 
         self.start_button = tk.Label(
-            inner,
-            image=self.start_icon,
-            bg=Colors.dark_card,
-            cursor="hand2"
-        )
+    inner,
+    image=self.start_icon,
+    bg=Colors.dark_card,
+    cursor="hand2"
+)
         self.start_button.pack(anchor="center", pady=(0, 2))
         self.start_button.bind("<Button-1>", self.toggle_app)
 
-        tk.Label(
+        self.start_label = tk.Label(
             inner,
             text="Start Application",
             fg="white",
             bg=Colors.dark_card,
             font=("Segoe UI", 11, "bold")
-        ).pack(anchor="center")
+        )
+        self.start_label.pack(anchor="center")
+
 
         # === Close Button (Always Visible, Fixed to Right Corner) ===
         close_path = os.path.abspath(os.path.join(assets, "close_icon.png"))
@@ -228,20 +230,40 @@ class InstructionTray(tk.Toplevel):
         self.unbind_all("<Button-1>")
 
     def toggle_app(self, event=None):
+        """Toggle gaze control and sync with main HomePage button."""
         try:
             from UI.pages.home import launch_gaze_app
         except ImportError:
             print("[WARN] Could not import launch_gaze_app dynamically.")
             return
 
+        # Get main window (for syncing with HomePage)
+        main_window = self.controller
+        home_page = getattr(main_window, "home_page", None)
+        if not home_page and hasattr(main_window, "get_page"):
+            try:
+                home_page = main_window.get_page("HomePage")
+            except Exception:
+                home_page = None
+
         if not self.app_running:
+            print("[INFO] Tray Start clicked → Starting gaze control.")
             launch_gaze_app(enable_mouse_control=True)
             self.app_running = True
             self.start_button.configure(image=self.stop_icon)
+            self.start_label.configure(text="Stop Application")   # ✅ change text
+
+            if home_page:
+                home_page.update_gaze_button(True)
         else:
+            print("[INFO] Tray Stop clicked → Stopping gaze control.")
             launch_gaze_app(enable_mouse_control=False)
             self.app_running = False
             self.start_button.configure(image=self.start_icon)
+            self.start_label.configure(text="Start Application")  # ✅ change text back
+
+            if home_page:
+                home_page.update_gaze_button(False)
 
     def start_move(self, e):
         self.x, self.y = e.x, e.y

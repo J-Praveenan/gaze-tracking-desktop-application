@@ -380,7 +380,7 @@ class SettingsPage(BasePage):
                     if self.tray_toggle:
                         self.tray_toggle.set(False)
 
-                    speak("Application restored from tray.")
+                    speak_action_confirmation("Application restored from tray.")
 
                 def exit_app():
                     root_window.destroy()
@@ -390,7 +390,7 @@ class SettingsPage(BasePage):
                 speak_action_confirmation("Application minimized to tray.")
             else:
                 root_window.deiconify()
-                speak("Application restored.")
+                speak_action_confirmation("Application restored.")
 
         # Enable tray mode toggle
         tk.Label(card.body, text="Enable tray mode:", bg=Colors.glass_bg,

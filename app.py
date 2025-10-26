@@ -118,6 +118,9 @@ class App(tk.Tk):
 
         # keep this line if you want the splash first
         self.show("SplashPage")
+        # === Start background voice listener only in MANUAL mode ===
+        
+
 
     # ------------- shared assets -------------
     def get_logo(self, size: int):
@@ -129,20 +132,50 @@ class App(tk.Tk):
     def _handle_global_gaze_toggle(self, running: bool):
         """Called by TitleBar or HomePage — controls gaze and syncs both buttons."""
         from UI.pages.home import launch_gaze_app, speak
+        from pathlib import Path
+        import json
 
         self.gaze_running = running  # update global state
 
+        # === Read control mode from config ===
+        control_mode = "auto"
+        try:
+            base_dir = Path(__file__).resolve().parent
+            config_path = base_dir / "Data" / "configuration.json"
+            if config_path.exists():
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                    control_mode = config.get("control", {}).get("mode", "auto")
+        except Exception as e:
+            print(f"[WARN] Could not read configuration.json: {e}")
+
+        # === Handle gaze startup/shutdown ===
         if running:
-            launch_gaze_app(enable_mouse_control=True)
-            speak("Gaze control started.")
+            print(f"[APP] Starting Look Track Vision (mode: {control_mode})")
+
+            if control_mode == "auto":
+                # Auto Mode → Start gaze tracking directly
+                launch_gaze_app(enable_mouse_control=True)
+                speak("Gaze control started.")
+            else:
+                # Manual Mode → Load gaze system, but wait for voice command
+                print("[APP] Manual Control mode active — system in standby, waiting for 'Start gaze control' voice command.")
+                launch_gaze_app(enable_mouse_control=False)
+                speak("Manual mode enabled. Say 'Start gaze control' to begin gaze tracking.")
+
+                # ✅ Start background voice listener now
+                try:
+                    from voice.transcription import start_voice_listener_thread
+                    print("[APP] Voice listener started (manual mode).")
+                    start_voice_listener_thread()
+                except Exception as e:
+                    print(f"[WARN] Could not start voice listener: {e}")
         else:
+            # ✅ Stop gaze in all modes
+            print("[APP] Stopping Look Track Vision.")
             launch_gaze_app(enable_mouse_control=False)
             speak("Gaze control stopped.")
 
-        # ✅ Sync both buttons visually
-        self._sync_gaze_buttons()
-            
-            
     def _sync_gaze_buttons(self):
         """Sync the START/STOP button states across TitleBar and HomePage."""
         # Update TitleBar
