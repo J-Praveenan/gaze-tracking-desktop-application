@@ -57,6 +57,19 @@ except ImportError:
     print("⚠️ TensorFlow not found — please install it with `pip install tensorflow`")
     raise
 
+def flip_landmarks_x(face_landmarks, img_w):
+    """Return a horizontally flipped copy of MediaPipe landmarks."""
+    from mediapipe.framework.formats import landmark_pb2
+    flipped = landmark_pb2.NormalizedLandmarkList()
+    for lm in face_landmarks.landmark:
+        new_lm = landmark_pb2.NormalizedLandmark()
+        new_lm.x = 1.0 - lm.x  # flip horizontally
+        new_lm.y = lm.y
+        new_lm.z = lm.z
+        flipped.landmark.append(new_lm)
+    return flipped
+
+
 
 class HeadPoseEstimator:
     def __init__(self):
@@ -953,8 +966,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         elif(left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD and right_eye_down_direction_threshold < RIGHT_EYE_DOWN_DIRECTION_THRESHOLD - 0.005):
             print("=================RIGHT EYE Blink====================")  
             return "RIGHT_BLINK", 100
-
-       
+        
+               
             
         if((left_eye_left_direction_threshold > LEFT_EYE_LEFT_DIRECTION_THRESHOLD
             and right_eye_left_direction_threshold > RIGHT_EYE_LEFT_DIRECTION_THRESHOLD)and(left_eye_right_direction_threshold > LEFT_EYE_RIGHT_DIRECTION_THRESHOLD
@@ -1554,27 +1567,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             long_blink_armed = True
 
         t = time.monotonic()
-    
-        # ---------------- Draw iris landmarks (for visualization) ----------------
-
-        if results.multi_face_landmarks:
-            for face_landmarks in results.multi_face_landmarks:
-                # Convert normalized landmarks to pixel coordinates
-                mesh_points = np.array([
-                    np.multiply([p.x, p.y], [img_w, img_h]).astype(int)
-                    for p in face_landmarks.landmark
-                ])
-
-                # Draw enclosing circle for left iris
-                (l_cx, l_cy), l_radius = cv2.minEnclosingCircle(mesh_points[LEFT_IRIS])
-                center_left = np.array([l_cx, l_cy], dtype=np.int32)
-                cv2.circle(img, center_left, int(l_radius), (0, 255, 0), 1, cv2.LINE_AA)
-
-                # Draw enclosing circle for right iris
-                (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(mesh_points[RIGHT_IRIS])
-                center_right = np.array([r_cx, r_cy], dtype=np.int32)
-                cv2.circle(img, center_right, int(r_radius), (0, 255, 0), 1, cv2.LINE_AA)
-                
+        
 
         for face in faces:
             shapes = predictor(gray, face)
@@ -1635,9 +1628,76 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 
             # --- Head Pose Estimation ---
             frame_with_pose, head_direction = pose_estimator.estimate(frame)
+            
+            # ---------------- Draw iris landmarks (for visualization) ----------------
+            if results.multi_face_landmarks:
+                for face_landmarks in results.multi_face_landmarks:
+                    mesh_points = np.array([
+                        np.multiply([p.x, p.y], [img_w, img_h]).astype(int)
+                        for p in face_landmarks.landmark
+                    ])
+                    mesh_points[:, 0] = img_w - mesh_points[:, 0]
+
+                    # Compute enclosing circles for irises
+                    (l_cx, l_cy), l_radius = cv2.minEnclosingCircle(mesh_points[LEFT_IRIS])
+                    (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(mesh_points[RIGHT_IRIS])
+                    center_left = (int(l_cx), int(l_cy))
+                    center_right = (int(r_cx), int(r_cy))
+
+                    # ✅ Draw the circles directly on frame_with_pose
+                    cv2.circle(frame_with_pose, center_left, int(l_radius), (0, 255, 0), 1, cv2.LINE_AA)
+                    cv2.circle(frame_with_pose, center_right, int(r_radius), (0, 255, 0), 1, cv2.LINE_AA)
+
+                    # Optional: draw small filled dots at centers
+                    cv2.circle(frame_with_pose, center_left, 1, (0, 255, 0), -1, cv2.LINE_AA)
+                    cv2.circle(frame_with_pose, center_right, 1, (0, 255, 0), -1, cv2.LINE_AA)
+                    
 
 
-            # 🧠 Head direction control logic
+            # ---------------- Draw full face border landmarks ----------------
+            if results.multi_face_landmarks:
+                for face_landmarks in results.multi_face_landmarks:
+                    # Flip landmarks horizontally to match flipped frame
+                    flipped_landmarks = flip_landmarks_x(face_landmarks, img_w)
+
+                    # Use MediaPipe Drawing utilities for consistency
+                    mp_drawing = mp.solutions.drawing_utils
+                    mp_face_mesh = mp.solutions.face_mesh
+
+                    mp_drawing.draw_landmarks(
+                        image=frame_with_pose,
+                        landmark_list=flipped_landmarks,
+                        connections=mp_face_mesh.FACEMESH_CONTOURS,
+                        landmark_drawing_spec=mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=0),
+                        connection_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 255), thickness=1, circle_radius=0),
+                    )
+
+                    # Lips + eyes outlines
+                    mp_drawing.draw_landmarks(
+                        image=frame_with_pose,
+                        landmark_list=flipped_landmarks,
+                        connections=mp_face_mesh.FACEMESH_LIPS,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=mp_drawing.DrawingSpec(color=(255, 0, 255), thickness=1, circle_radius=0),
+                    )
+                    mp_drawing.draw_landmarks(
+                        image=frame_with_pose,
+                        landmark_list=flipped_landmarks,
+                        connections=mp_face_mesh.FACEMESH_LEFT_EYE,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=1, circle_radius=0),
+                    )
+                    mp_drawing.draw_landmarks(
+                        image=frame_with_pose,
+                        landmark_list=flipped_landmarks,
+                        connections=mp_face_mesh.FACEMESH_RIGHT_EYE,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=1, circle_radius=0),
+                    )
+
+
+
+
             # 🧠 Head direction control logic
             if head_direction != "Forward":
                 # Speak only once every few seconds to avoid repetition
@@ -1688,7 +1748,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                     left_ear=left_ear,
                     right_ear=right_ear
                 )
-            
+
                 # --- Count Blinks based on detection result ---
                 if gaze == "LEFT_BLINK":
                     left_blink_count += 1

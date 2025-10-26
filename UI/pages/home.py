@@ -59,6 +59,7 @@ def launch_gaze_app(enable_mouse_control=False):
                 pass
 
         if enable_mouse_control:
+            stop_reminder_event.clear() 
             if main_gaze_session and main_gaze_session.thread and main_gaze_session.thread.is_alive():
                 print("[INFO] Main gaze control already running.")
                 return
@@ -66,6 +67,10 @@ def launch_gaze_app(enable_mouse_control=False):
             main_gaze_session = gaze_runner.GazeSession(enable_mouse_control=True, show_video=False)
             main_gaze_session.start()
         else:
+            # 🛑 Stop gaze and reminder threads
+            stop_reminder_event.set()
+            print("[INFO] Stopping gaze control and reminder thread...")
+            
             if main_gaze_session:
                 main_gaze_session.stop()
                 main_gaze_session = None
