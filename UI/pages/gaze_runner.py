@@ -106,6 +106,9 @@ class HeadPoseEstimator:
 
         img_h, img_w, _ = image.shape
         face_3d, face_2d = [], []
+        
+        # ✅ Initialize default angles in case no face is detected
+        x = y = z = 0.0
 
         if results.multi_face_landmarks:
             for face_landmarks in results.multi_face_landmarks:
@@ -133,9 +136,9 @@ class HeadPoseEstimator:
                 x, y, z = [a * 360 for a in angles]
 
                 # classify direction
-                if y < -6:
+                if y < -10:
                     direction = "Left"
-                elif y > 6:
+                elif y > 10:
                     direction = "Right"
                 elif x < -10:
                     direction = "Down"
@@ -143,11 +146,27 @@ class HeadPoseEstimator:
                     direction = "Up"
                 else:
                     direction = "Forward"
+                    
+                    
+                # ✅ Draw nose direction line in GREEN
+                nose_3d_projection, _ = cv2.projectPoints(
+                    np.array([nose_3d]), rot_vec, trans_vec, cam_matrix, dist_matrix
+                )
+
+                p1 = (int(nose_2d[0]), int(nose_2d[1]))
+                p2 = (
+                    int(nose_2d[0] + y * 10),
+                    int(nose_2d[1] - x * 10)
+                )
+
+                # 🟢 Green line showing nose direction
+                cv2.line(image, p1, p2, (0, 255, 0), 3)
+
 
                 # draw annotations
                 # cv2.putText(image, direction, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
 
-        return image, direction
+        return image, direction, (x, y, z)
 
 
 # # ==== Load thresholds from JSON ====
@@ -373,13 +392,13 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
 
     COL = {
         # deep teal page background, light bluish cards, brand blue accent
-        "bg":      _hex("#103A43"),
+        "bg":      _hex("#cfe3f5"),
         "card":    _hex("#E8EFF8"),
         "card2":   _hex("#DFE7F3"),
         "text":    _hex("#0E1116"),
         "muted":   _hex("#6B7B8C"),
-        "accent":  _hex("#5D7BEA"),   # buttons/badges
-        "accent2": _hex("#E85D7B"),   # progress / secondary
+        "accent":  _hex("#31A0EB"),   # buttons/badges
+        "accent2": _hex("#1f2937"),   # progress / secondary
         "shadow":  (0, 0, 0),
     }
 
@@ -1279,7 +1298,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             
             ry += 30 
             # 🟩 Add section title here
-            put_text(canvas, "GAZE ESTIMATION RESULTS", (rx, ry - 15), 0.8, (255,255,255), 2)
+            put_text(canvas, "GAZE ESTIMATION RESULTS", (rx, ry - 15), 0.8, (31,41,55), 2)
             ry += 80 
             thumb_w, thumb_h = 120, 100
             gap = 160  # space between left and right eye
@@ -1297,31 +1316,53 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 canvas[ry:ry+thumb_h, rx:rx+2*thumb_w+gap] = combined
 
                 # Labels (adjusted for gap)
-                put_text(canvas, "LEFT EYE", (rx, ry-6), 0.6, (255,255,255))
-                put_text(canvas, "RIGHT EYE", (rx+thumb_w+gap+10, ry-6), 0.6, (255,255,255))
+                put_text(canvas, "LEFT EYE", (rx, ry-6), 0.6, (31,41,55),2)
+                put_text(canvas, "RIGHT EYE", (rx+thumb_w+gap+10, ry-6), 0.6, (31,41,55),2)
 
                 ry += thumb_h + 30
 
             # ---- Gaze + accuracy ----
-            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent2"])
+            draw_card(canvas, rx, ry, right_w-40, 50, radius=1, color=COL["accent2"])
             put_text(canvas, f"GAZE    : {gaze.upper()}  ({acc}%)", (rx+12, ry+32), 0.8, (255,255,255), 2)
             ry += 70
 
             # ---- Blink counters ----
-            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent"])
+            draw_card(canvas, rx, ry, right_w-40, 50, radius=1, color=COL["accent"])
             put_text(canvas, f"Normal Blinks Count  : {normal_blink_count}", (rx+12, ry+32), 0.8, (255,255,255), 2)
             ry += 60
-            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent"])
-            put_text(canvas, f"Deep Blink Count    : {deep_blink_count}", (rx+12, ry+32), 0.8, (255,255,255), 2)
+            draw_card(canvas, rx, ry, right_w-40, 50, radius=1, color=COL["accent"])
+            put_text(canvas, f"Deep Blink Count      : {deep_blink_count}", (rx+12, ry+32), 0.8, (255,255,255), 2)
             ry += 60
-            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent"])
-            put_text(canvas, f"Left Blink Count    : {left_blinks}", (rx+12, ry+32), 0.8, (255,255,255), 2)
+            draw_card(canvas, rx, ry, right_w-40, 50, radius=1, color=COL["accent"])
+            put_text(canvas, f"Left Blink Count       : {left_blinks}", (rx+12, ry+32), 0.8, (255,255,255), 2)
             ry += 60
-            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent"])
-            put_text(canvas, f"Right Blink Count   : {right_blinks}", (rx+12, ry+32), 0.8, (255,255,255), 2)
+            draw_card(canvas, rx, ry, right_w-40, 50, radius=1, color=COL["accent"])
+            put_text(canvas, f"Right Blink Count      : {right_blinks}", (rx+12, ry+32), 0.8, (255,255,255), 2)
+            ry += 140  # add spacing below last card
+
+
+            # 🟦 Head Pose card (smaller)
+            put_text(canvas, "HEAD POSE ESTIMATION", (rx, ry - 10), 0.8, (31, 41, 55), 2)
+            ry += 30
+
+            # 🟦 Main Head Pose Card
+            draw_card(canvas, rx, ry, right_w-40, 40, radius=1, color=COL["accent2"])
+            put_text(canvas, f"Head Pose : {head_direction}", (rx+10, ry+26), 0.8, (255, 255, 255), 2)
+            ry += 55
+
+            # 🟩 Combined X, Y, Z row in one card
+            card_w = right_w - 40
+            card_h = 40
+            draw_card(canvas, rx, ry, card_w, card_h, radius=1, color=COL["accent"])
+
+            # divide into 3 equal sections
+            section_w = card_w // 3
+            put_text(canvas, f"X : {x_angle}", (rx + 10, ry + 26), 0.7, (255,255,255), 2)
+            put_text(canvas, f"Y : {y_angle}", (rx + section_w + 10, ry + 26), 0.7, (255,255,255), 2)
+            put_text(canvas, f"Z : {z_angle}", (rx + 2*section_w + 10, ry + 26), 0.7, (255,255,255), 2)
+
             ry += 60
-            draw_card(canvas, rx, ry, right_w-40, 50, radius=14, color=COL["accent2"])
-            put_text(canvas, f"Head Pose Direction : {head_direction}", (rx+12, ry+32), 0.8, (255,255,255), 2)
+
 
 
             return canvas
@@ -1652,7 +1693,26 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 accuracy = 100
                 
             # --- Head Pose Estimation ---
-            frame_with_pose, head_direction = pose_estimator.estimate(frame)
+            frame_with_pose, head_direction, head_angles = pose_estimator.estimate(frame)
+            x_angle, y_angle, z_angle = [round(v, 2) for v in head_angles]
+            
+            mp_drawing = mp.solutions.drawing_utils
+            drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1, color=(255, 255, 255))
+
+            # === Draw full facial landmarks (468-point mesh) ===
+            if results.multi_face_landmarks:
+                img_h, img_w = frame_with_pose.shape[:2]  # ✅ needed for flipping
+                for face_landmarks in results.multi_face_landmarks:
+                     # ✅ Flip landmarks horizontally to fix mirrored mesh
+                    flipped_landmarks = flip_landmarks_x(face_landmarks, img_w)
+                    mp_drawing.draw_landmarks(
+                        image=frame_with_pose,
+                        landmark_list=flipped_landmarks,
+                        connections=mp.solutions.face_mesh.FACEMESH_TESSELATION,
+                        landmark_drawing_spec=drawing_spec,
+                        connection_drawing_spec=drawing_spec
+                    )
+
             
             # ---------------- Draw iris landmarks (for visualization) ----------------
             if results.multi_face_landmarks:
