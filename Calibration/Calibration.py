@@ -113,7 +113,7 @@ def calibrate_gaze():
     cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     thresholds = {}
-    directions = ["LEFT", "RIGHT", "UP", "DOWN"]
+    directions = ["LEFT", "RIGHT", "UP", "DOWN", "CLOSED"]
 
     try:
         for direction in directions:
@@ -121,7 +121,14 @@ def calibrate_gaze():
             start = time.time()
             while True:
                 secs_left = max(0, CALIBRATION_HOLD_SEC - int(time.time() - start))
-                canvas = draw_calibration_screen(direction, secs_left)
+                if direction == "CLOSED":
+                    canvas = np.ones((SCREEN_H, SCREEN_W, 3), dtype=np.uint8) * 255
+                    put_center_text(canvas, "Close both eyes for 3 seconds", SCREEN_H // 2, 1.5, 3)
+                    put_center_text(canvas, f"Hold steady… {secs_left}s", SCREEN_H - 120, 1.2, 2)
+                else:
+                    canvas = draw_calibration_screen(direction, secs_left)
+
+                # canvas = draw_calibration_screen(direction, secs_left)
                 cv2.imshow(WINDOW_NAME, canvas)
                 if cv2.waitKey(16) & 0xFF == 27:
                     raise KeyboardInterrupt
@@ -163,6 +170,9 @@ def calibrate_gaze():
                     elif direction == "DOWN":
                         left_val = landmarks[374][1] - landmarks[386][1]
                         right_val = landmarks[145][1] - landmarks[159][1]
+                    elif direction == "CLOSED":
+                        left_val = landmarks[374][1] - landmarks[386][1]
+                        right_val = landmarks[145][1] - landmarks[159][1]
                     else:
                         continue
 
@@ -187,8 +197,12 @@ def calibrate_gaze():
                 thresholds["LEFT_EYE_UP_DIRECTION_THRESHOLD"] = float(left_avg - 0.0005)
                 thresholds["RIGHT_EYE_UP_DIRECTION_THRESHOLD"] = float(right_avg - 0.0005)
             elif direction == "DOWN":
-                thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(left_avg)   # - 0.005
-                thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(right_avg) # - 0.005
+                thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(left_avg - 0.005)   # - 0.005
+                thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(right_avg - 0.005) # - 0.005
+            elif direction == "CLOSED":
+                thresholds["LEFT_EYE_CLOSED_THRESHOLD"] = float(left_avg)
+                thresholds["RIGHT_EYE_CLOSED_THRESHOLD"] = float(right_avg)
+
 
         out_file = save_thresholds(thresholds)
         cv2.destroyAllWindows()
