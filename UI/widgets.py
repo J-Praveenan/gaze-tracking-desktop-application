@@ -207,8 +207,8 @@ class RoundedButton(tk.Canvas):
         self._draw_button()
 
     def _set_color(self, color):
-        self.itemconfig("button", fill=color)
-        self.itemconfig("side", fill=color)
+        self.itemconfig("button_bg", fill=color)
+
 
     def _draw_button(self):
         fnt = tkfont.Font(font=self.font)
@@ -227,10 +227,11 @@ class RoundedButton(tk.Canvas):
         r = min(self.radius, height // 2)
 
         # --- shape ---
-        self.create_oval(0, 0, height, height, fill=self.bg, outline="", tags=("button", "side"))
-        self.create_oval(width - height, 0, width, height, fill=self.bg, outline="", tags=("button", "side"))
+        self.create_oval(0, 0, height, height, fill=self.bg, outline="", tags="button_bg")
+        self.create_oval(width - height, 0, width, height, fill=self.bg, outline="", tags="button_bg")
         self.create_rectangle(height / 2, 0, width - height / 2, height,
-                            fill=self.bg, outline="", tags=("button", "side"))
+                            fill=self.bg, outline="", tags="button_bg")
+
 
         # --- compute total centered content width ---
         icon_gap = height * 0.35 if self.icon else 0  # 👈 adjustable spacing between icon & text
@@ -254,3 +255,15 @@ class RoundedButton(tk.Canvas):
     def _on_click(self, event):
         if self.command:
             self.command()
+            
+    def refresh(self):
+        """Force redraw of the button when text, color, or icon changes."""
+        try:
+            self.delete("all")  # clear everything on the canvas
+            self._draw_button()
+            self._set_color(self.bg)
+            self.update_idletasks()
+            self.update()
+        except Exception as e:
+            print(f"[WARN] RoundedButton refresh failed: {e}")
+
