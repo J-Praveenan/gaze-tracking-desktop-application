@@ -35,57 +35,87 @@ def speak(message):
     engine.runAndWait()
 
 
+
+# =====================================================================
+# Launch / Stop Gaze Control + Reminder Timer
+# =====================================================================
 # =====================================================================
 # Launch / Stop Gaze Control + Reminder Timer
 # =====================================================================
 def launch_gaze_app(enable_mouse_control=False):
-    global gaze_thread, stop_reminder_event,main_gaze_session
+    global gaze_thread, stop_reminder_event, main_gaze_session
     try:
         base_dir = Path(__file__).resolve().parents[2]
         data_dir = base_dir / "Data"
         data_dir.mkdir(exist_ok=True)
         config_path = data_dir / "configuration.json"
 
-        # Load unified config
+        # Load unified configuration
         reminder_enabled = False
         reminder_minutes = 10
+        control_mode = "auto"
+
         if config_path.exists():
             try:
                 with open(config_path, "r") as f:
                     config = json.load(f)
                     reminder_enabled = config.get("reminder", {}).get("enabled", False)
                     reminder_minutes = config.get("reminder", {}).get("duration", 10)
-            except Exception:
-                pass
+                    control_mode = config.get("control", {}).get("mode", "auto")
+            except Exception as e:
+                print(f"[WARN] Could not parse configuration.json: {e}")
 
+        # ==============================================================
+        # ✅ FINAL SAFEGUARD — Prevent unwanted gaze start in manual mode
+        # ==============================================================
+        if control_mode == "manual":
+            if not enable_mouse_control:
+                print("[INFO] Manual Control Mode: standby — system loaded but gaze tracking is OFF until voice command.")
+                return
+            else:
+                print("[INFO] Manual Control Mode: 'Start gaze control' voice command received — enabling gaze tracking.")
+        else:
+            print("[INFO] Auto Control Mode: starting gaze control automatically.")
+
+        # ==============================================================
+        # === Main Gaze Logic ===
+        # ==============================================================
         if enable_mouse_control:
             stop_reminder_event.clear() 
             if main_gaze_session and main_gaze_session.thread and main_gaze_session.thread.is_alive():
                 print("[INFO] Main gaze control already running.")
                 return
 
+            print("[INFO] Starting main gaze tracking session...")
             main_gaze_session = gaze_runner.GazeSession(enable_mouse_control=True, show_video=False)
             main_gaze_session.start()
+            print("[INFO] Gaze session started successfully.")
+
         else:
             # 🛑 Stop gaze and reminder threads
             stop_reminder_event.set()
             print("[INFO] Stopping gaze control and reminder thread...")
             
             if main_gaze_session:
+                print("[INFO] Stopping active gaze session...")
                 main_gaze_session.stop()
                 main_gaze_session = None
+                print("[INFO] Gaze session stopped.")
 
-        # Start reminder if enabled
+        # ==============================================================
+        # === Rest Reminder Logic ===
+        # ==============================================================
         if enable_mouse_control and reminder_enabled:
             def rest_reminder_timer():
                 start_time = time.time()
                 while not stop_reminder_event.is_set():
                     elapsed = time.time() - start_time
                     if elapsed >= reminder_minutes * 60:
+                        print(f"[INFO] Eye rest reminder triggered after {reminder_minutes} minutes.")
                         winsound.Beep(800, 400)
-                        base_dir = Path(__file__).resolve().parents[2]
                         assets_dir = base_dir / "assets"
                         icon_path = assets_dir / "eyelogo.ico"
+
                         toast = Notification(
                             app_id="Look Track Vision",
                             title="Eye Care Reminder",
@@ -95,14 +125,19 @@ def launch_gaze_app(enable_mouse_control=False):
                         )
                         toast.set_audio(audio.Reminder, loop=False)
                         toast.show()
-                        speak(f"You have been using Look Track Vision for {reminder_minutes} minutes. Take a short rest!")
+
+                        speak(
+                            f"You have been using Look Track Vision for {reminder_minutes} minutes. "
+                            f"Please take a short rest."
+                        )
                         break
                     time.sleep(1)
+
             threading.Thread(target=rest_reminder_timer, daemon=True).start()
 
     except Exception as e:
         messagebox.showerror("Error", f"Failed to start gaze system:\n{e}")
-
+        print(f"[ERROR] Failed to start gaze system: {e}")
 
 # =====================================================================
 # Home Page UI
@@ -423,20 +458,25 @@ class HomePage(BasePage):
 
     # -----------------------------------------------------------------
     def _make_card(self, parent, title, desc, options, radio_var=None):
-        """Reusable card for control settings"""
-        card = RoundedCard(parent, radius=12, pad=12,
-                        bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
+        """Reusable card for control settings with persistent Auto/Manual Control mode."""
+        card = RoundedCard(
+            parent, radius=12, pad=12,
+            bg=Colors.glass_bg, border_color="#4b5563", border_width=2
+        )
 
-        tk.Label(card.body, text=title,
-                fg=Colors.card_head, bg=Colors.glass_bg,
-                font=F("h2b", ("Segoe UI", 12, "bold"))
-                ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
+        tk.Label(
+            card.body, text=title,
+            fg=Colors.card_head, bg=Colors.glass_bg,
+            font=F("h2b", ("Segoe UI", 12, "bold"))
+        ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
 
-        tk.Label(card.body, text=desc,
-                fg=Colors.card_text, bg=Colors.glass_bg,
-                font=F("body", ("Segoe UI", 10))
-                ).grid(row=1, column=0, columnspan=2, sticky="w", padx=6, pady=(0, 8))
+        tk.Label(
+            card.body, text=desc,
+            fg=Colors.card_text, bg=Colors.glass_bg,
+            font=F("body", ("Segoe UI", 10))
+        ).grid(row=1, column=0, columnspan=2, sticky="w", padx=6, pady=(0, 8))
 
+        # === Load info icon ===
         base_dir = Path(__file__).resolve().parents[2]
         assets_dir = base_dir / "assets"
         info_icon_path = assets_dir / "info_icon.ico"
@@ -446,6 +486,42 @@ class HomePage(BasePage):
             img = Image.open(info_icon_path).resize((14, 14), Image.LANCZOS)
             info_img = ImageTk.PhotoImage(img)
 
+        # === Persistent config handling ===
+        def _load_control_mode():
+            """Read saved control mode ('auto' or 'manual') from configuration.json."""
+            try:
+                config_path = base_dir / "Data" / "configuration.json"
+                if config_path.exists():
+                    with open(config_path, "r") as f:
+                        config = json.load(f)
+                        return config.get("control", {}).get("mode", "auto")
+            except Exception:
+                pass
+            return "auto"  # default fallback
+
+        def _save_control_mode(new_mode):
+            """Save selected control mode ('auto' or 'manual') to configuration.json."""
+            try:
+                data_dir = base_dir / "Data"
+                data_dir.mkdir(exist_ok=True)
+                config_path = data_dir / "configuration.json"
+
+                config = {}
+                if config_path.exists():
+                    with open(config_path, "r") as f:
+                        config = json.load(f)
+
+                config.setdefault("control", {})
+                config["control"]["mode"] = new_mode
+
+                with open(config_path, "w") as f:
+                    json.dump(config, f, indent=4)
+
+                print(f"[INFO] Saved control mode: {new_mode}")
+            except Exception as e:
+                print(f"[WARN] Failed to save control mode: {e}")
+
+        # === Tooltip helper ===
         def create_tooltip(widget, text):
             tooltip = tk.Toplevel(widget)
             tooltip.withdraw()
@@ -454,12 +530,7 @@ class HomePage(BasePage):
             tooltip.attributes("-alpha", 0.95)
 
             canvas = tk.Canvas(
-                tooltip,
-                bg="#1f2937",
-                highlightthickness=0,
-                bd=0,
-                width=300,
-                height=0
+                tooltip, bg="#1f2937", highlightthickness=0, bd=0, width=300, height=0
             )
             canvas.pack(fill="both", expand=True)
 
@@ -473,20 +544,14 @@ class HomePage(BasePage):
                 canvas.create_arc(x2 - 2*radius, y2 - 2*radius, x2, y2, start=270, extent=90, fill=color, outline=color)
 
             text_item = canvas.create_text(
-                20, 20,
-                text=text,
-                anchor="nw",
-                fill="white",
-                font=("Segoe UI", 9),
-                width=260
+                20, 20, text=text, anchor="nw", fill="white",
+                font=("Segoe UI", 9), width=260
             )
-
             bbox = canvas.bbox(text_item)
             padding = 20
             new_h = (bbox[3] - bbox[1]) + padding * 2
             new_w = 300
             canvas.config(height=new_h)
-
             draw_rounded_rect(5, 5, new_w - 5, new_h - 5, radius=12)
             canvas.tag_raise(text_item)
 
@@ -503,7 +568,12 @@ class HomePage(BasePage):
             widget.bind("<Enter>", on_enter)
             widget.bind("<Leave>", on_leave)
 
-        var = radio_var or tk.StringVar(value=options[0][1])
+        # === Build radio buttons ===
+        var = radio_var or tk.StringVar(value=_load_control_mode())
+
+        def on_mode_change():
+            _save_control_mode(var.get())
+
         for i, (label, value) in enumerate(options):
             option_frame = tk.Frame(card.body, bg=Colors.glass_bg)
             option_frame.grid(row=2, column=i, sticky="w", padx=20, pady=(5, 10))
@@ -513,6 +583,7 @@ class HomePage(BasePage):
                 text=label,
                 variable=var,
                 value=value,
+                command=on_mode_change,  # 💾 Save mode on select
                 bg=Colors.glass_bg,
                 anchor="w",
                 font=("Segoe UI", 11),
@@ -524,6 +595,7 @@ class HomePage(BasePage):
             )
             rb.pack(side="left")
 
+            # === Info Icon ===
             if info_img:
                 icon_label = tk.Label(option_frame, image=info_img, bg=Colors.glass_bg, cursor="hand2")
                 icon_label.image = info_img
@@ -532,6 +604,7 @@ class HomePage(BasePage):
                 icon_label = tk.Label(option_frame, text="ℹ️", bg=Colors.glass_bg, fg="#0078D7", cursor="hand2")
                 icon_label.pack(side="left", padx=(6, 0))
 
+            # Tooltip text for each mode
             tip_text = (
                 "Auto Control:\n"
                 "Automatically starts gaze tracking once the app launches.\n"
@@ -540,93 +613,251 @@ class HomePage(BasePage):
                 "Manual Control:\n"
                 "System is ready but waits for you to enable gaze tracking manually.\n"
                 "Useful to avoid accidental gaze actions.\n\n"
-                "🗣️Say 'Start gaze control' — the mouse pointer will follow your gaze movements.\n"
-                "🗣️Say 'Stop gaze control' — gaze tracking stops without closing the LOOK TRACK VISION application."
+                "🗣️ Say 'Start gaze control' — the mouse pointer will follow your gaze.\n"
+                "🗣️ Say 'Stop gaze control' — gaze tracking stops without closing the app."
             )
             create_tooltip(icon_label, tip_text)
 
-        # Let Tk handle natural height
         card.body.update_idletasks()
         return card
 
-
     # -----------------------------------------------------------------
-    def _make_instruction_section(self, parent, title, entries):
+    def _make_instruction_section(self, parent, title, entries=None):
+        """Builds Eye & Blink Controls section (aligned layout, stable popup, scroll-safe)."""
         card = RoundedCard(parent, radius=12, pad=12,
-                           bg=Colors.dark_card, border_color=Colors.dark_card, border_width=0)
+                        bg=Colors.dark_card, border_color=Colors.dark_card, border_width=0)
         card.pack(fill="x", pady=8, padx=8)
 
-        tk.Label(card.body, text=title,
-                 fg="white", bg=Colors.dark_card,
-                 font=F("h2b", ("Segoe UI", 12, "bold"))
-                 ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
+        tk.Label(
+            card.body,
+            text=title,
+            fg="white",
+            bg=Colors.dark_card,
+            font=F("h2b", ("Segoe UI", 12, "bold"))
+        ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=3)
 
-        for i, (icon, label, desc) in enumerate(entries, start=1):
-            label_text = f"{icon:<3} {label}"
-            tk.Label(card.body, text=label_text,
-                     fg="white", bg=Colors.dark_card,
-                     font=F("body", ("Segoe UI", 10, "bold")),
-                     anchor="w", justify="left", width=22
-                     ).grid(row=i, column=0, sticky="w", padx=(6, 0), pady=2)
-            tk.Label(card.body, text=desc,
-                     fg="#d1d5db", bg=Colors.dark_card,
-                     font=F("body", ("Segoe UI", 10))
-                     ).grid(row=i, column=1, sticky="w", padx=(6, 0), pady=2)
+        # === Load icons ===
+        base_dir = Path(__file__).resolve().parents[2]
+        assets = os.path.join(base_dir, "assets")
+
+        def load_icon(name, size=(28, 28)):
+            try:
+                return ImageTk.PhotoImage(Image.open(os.path.join(assets, name)).resize(size, Image.LANCZOS))
+            except Exception:
+                print(f"[WARN] Could not load {name}")
+                return None
+
+        icons = {
+            "up": load_icon("up.png"),
+            "down": load_icon("down.png"),
+            "left": load_icon("left.png"),
+            "right": load_icon("right.png"),
+            "left_blink": load_icon("left_eye_blink.png"),
+            "right_blink": load_icon("right_eye_blink.png"),
+            "closed_short": load_icon("closed_less_than_2mins.png"),
+            "closed_long": load_icon("closed_greater_than_2mins.png"),
+            "info": load_icon("info.png", size=(14, 14)),
+        }
+
+        controls = [
+            (icons["up"], "Look Up", "Move Pointer Up"),
+            (icons["down"], "Look Down", "Move Pointer Down"),
+            (icons["left"], "Look Left", "Move Pointer Left"),
+            (icons["right"], "Look Right", "Move Pointer Right"),
+            (icons["left_blink"], "Left Blink", "Left Click"),
+            (icons["right_blink"], "Right Blink", "Right Click"),
+            (icons["closed_long"], "Long Blink", "Scroll Mode Enable/Disable (Look Up/Down to scroll)"),
+            (icons["closed_short"], "Short Blink", "Cycle Pointer Position"),
+        ]
+
+        # === Track popup state ===
+        self.cycle_popup = None
+        self.popup_visible = False
+
+        def close_cycle_popup():
+            """Safely close the popup and restore normal scrolling."""
+            if self.cycle_popup and self.cycle_popup.winfo_exists():
+                try:
+                    self.cycle_popup.destroy()
+                except tk.TclError:
+                    pass
+            self.cycle_popup = None
+            self.popup_visible = False
+            # Unbind outside click detection — restores scroll usability
+            if hasattr(self, "_popup_click_binding"):
+                self.unbind_all("<Button-1>")
+                self._popup_click_binding = None
+
+        def show_cycle_popup(widget):
+            """Toggle popup visibility near info icon."""
+            if self.popup_visible:
+                close_cycle_popup()
+                return
+
+            popup = tk.Toplevel(card)
+            popup.overrideredirect(True)
+            popup.attributes("-topmost", True)
+            popup.configure(bg=Colors.dark_card, padx=6, pady=6, bd=1, relief="solid")
+
+            try:
+                cycle_img = ImageTk.PhotoImage(
+                    Image.open(os.path.join(assets, "cycle_blink.png")).resize((280, 280), Image.LANCZOS)
+                )
+                lbl = tk.Label(popup, image=cycle_img, bg=Colors.dark_card)
+                lbl.image = cycle_img
+                lbl.pack()
+            except Exception:
+                tk.Label(
+                    popup, text="Cycle Blink Pattern", fg="white", bg=Colors.dark_card
+                ).pack(padx=10, pady=10)
+
+            # Position popup near icon
+            x = widget.winfo_rootx() - 110
+            y = widget.winfo_rooty() - 300
+            popup.geometry(f"+{x}+{y}")
+
+            self.cycle_popup = popup
+            self.popup_visible = True
+
+            # --- Outside click detection (limited only to popup area) ---
+            def handle_outside_click(event):
+                if not self.cycle_popup or not self.cycle_popup.winfo_exists():
+                    return
+                px, py = popup.winfo_rootx(), popup.winfo_rooty()
+                pw, ph = popup.winfo_width(), popup.winfo_height()
+                # If click outside popup, close it
+                if not (px <= event.x_root <= px + pw and py <= event.y_root <= py + ph):
+                    close_cycle_popup()
+
+            # Store the binding ID so we can unbind precisely
+            self._popup_click_binding = self.bind_all("<Button-1>", handle_outside_click, add="+")
+
+            # Close when mouse leaves the popup
+            popup.bind("<Leave>", lambda e: close_cycle_popup())
+
+        # === Build aligned grid ===
+        for i, (icon, label, desc) in enumerate(controls, start=1):
+            if icon:
+                lbl_icon = tk.Label(card.body, image=icon, bg=Colors.dark_card)
+                lbl_icon.image = icon
+                lbl_icon.grid(row=i, column=0, sticky="w", padx=(6, 12), pady=3)
+
+            label_frame = tk.Frame(card.body, bg=Colors.dark_card)
+            label_frame.grid(row=i, column=1, sticky="w", padx=(0, 10), pady=3)
+
+            tk.Label(
+                label_frame,
+                text=label,
+                fg="white",
+                bg=Colors.dark_card,
+                font=("Segoe UI", 10, "bold")
+            ).pack(side="left")
+
+            if label == "Short Blink" and icons["info"]:
+                info_icon = tk.Label(label_frame, image=icons["info"], bg=Colors.dark_card, cursor="hand2")
+                info_icon.image = icons["info"]
+                info_icon.pack(side="left", padx=(4, 0))
+
+                # Hover or click both trigger popup
+                info_icon.bind("<Enter>", lambda e, w=info_icon: show_cycle_popup(w))
+                info_icon.bind("<Button-1>", lambda e, w=info_icon: show_cycle_popup(w))
+                info_icon.bind("<Leave>", lambda e: close_cycle_popup())
+
+            tk.Label(
+                card.body,
+                text=desc,
+                fg="#d1d5db",
+                bg=Colors.dark_card,
+                font=("Segoe UI", 10),
+                anchor="w",
+                justify="left",
+                wraplength=420
+            ).grid(row=i, column=2, sticky="w", padx=(0, 10), pady=3)
+
+        # Perfect alignment
+        card.body.grid_columnconfigure(0, minsize=40)
+        card.body.grid_columnconfigure(1, minsize=140)
+        card.body.grid_columnconfigure(2, weight=1)
 
     # -----------------------------------------------------------------
     def update_gaze_button(self, running: bool):
-        """Update START/STOP button state and handle tray visibility."""
+        """Update START/STOP button state, sync with InstructionTray, and handle tray visibility."""
         self.app_running = running
 
-        # Load config to check if user wants Instruction Tray auto-opened
         try:
             base_dir = Path(__file__).resolve().parents[2]
-            data_dir = base_dir / "Data"
-            config_path = data_dir / "configuration.json"
+            config_path = base_dir / "Data" / "configuration.json"
             auto_open_instruction = False
+            control_mode = "auto"
 
             if config_path.exists():
                 with open(config_path, "r") as f:
                     config = json.load(f)
                     auto_open_instruction = config.get("tray", {}).get("auto_open_instruction", False)
-        except Exception as e:
-            print(f"[WARN] Could not read configuration for tray auto-open: {e}")
-            auto_open_instruction = False
+                    control_mode = config.get("control", {}).get("mode", "auto")
 
+        except Exception as e:
+            print(f"[WARN] Could not read configuration: {e}")
+            auto_open_instruction = False
+            control_mode = "auto"
+
+        # === Update Main Button ===
         if running:
-            # --- Update button to STOP mode ---
             self.start_btn.bg = "#F65353"
             self.start_btn.activebg = "#F65353"
             self.start_btn.text = "STOP APPLICATION"
             self.start_btn.icon = self.power_off_icon
-
-            # ✅ Only show Instruction Tray if user enabled it in settings
-            if auto_open_instruction:
-                try:
-                    if not hasattr(self, "instruction_tray") or not self.instruction_tray.winfo_exists():
-                        self.instruction_tray = InstructionTray(self.controller)
-                        self.instruction_tray.after(200, lambda: self.instruction_tray.deiconify())
-                        print("[INFO] Instruction Tray opened (auto_open_instruction = True).")
-                except Exception as e:
-                    print(f"[WARN] Failed to show Instruction Tray automatically: {e}")
-            else:
-                print("[INFO] Instruction Tray auto-open disabled by user settings.")
-
         else:
-            # --- Update button to START mode ---
             self.start_btn.bg = "#31A0EB"
             self.start_btn.activebg = "#31A0EB"
             self.start_btn.text = "START APPLICATION"
             self.start_btn.icon = self.power_on_icon
 
-            # --- Close tray automatically when stopping gaze ---
-            if hasattr(self, "instruction_tray") and self.instruction_tray.winfo_exists():
-                try:
-                    self.instruction_tray.destroy()
-                    print("[INFO] Instruction Tray closed.")
-                except Exception:
-                    pass
-
         # Redraw button
         self.start_btn.delete("all")
         self.start_btn._draw_button()
+
+        # === Start or Stop Gaze System based on control mode ===
+        if running:
+            print(f"[INFO] Application started. Control mode = {control_mode}")
+            from UI.pages.home import launch_gaze_app
+
+            if control_mode == "auto":
+                # Auto mode → Start gaze + mouse immediately
+                launch_gaze_app(enable_mouse_control=True)
+            else:
+                # Manual mode → Do NOT start gaze at all, wait for voice command
+                print("[INFO] Manual Control Mode active — system loaded, awaiting 'Start gaze control' voice command.")
+                # Ensure any previous gaze session is stopped
+                launch_gaze_app(enable_mouse_control=False)
+
+        else:
+            # Stop the system
+            from UI.pages.home import launch_gaze_app
+            launch_gaze_app(enable_mouse_control=False)
+            print("[INFO] Application stopped.")
+
+        # === Sync Instruction Tray ===
+        try:
+            if not hasattr(self, "instruction_tray") or not self.instruction_tray.winfo_exists():
+                self.instruction_tray = InstructionTray(self.controller)
+                self.instruction_tray.withdraw()
+                print("[INFO] Instruction Tray created.")
+
+            tray = self.instruction_tray
+
+            if running:
+                tray.app_running = True
+                tray.start_button.configure(image=tray.stop_icon)
+                tray.start_label.configure(text="Stop Application")
+
+                if auto_open_instruction:
+                    tray.deiconify()
+            else:
+                tray.app_running = False
+                tray.start_button.configure(image=tray.start_icon)
+                tray.start_label.configure(text="Start Application")
+                tray.withdraw()
+
+        except Exception as e:
+            print(f"[WARN] Could not sync Instruction Tray: {e}")

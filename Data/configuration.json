@@ -9,9 +9,12 @@
     },
     "tray": {
         "enabled": false,
-        "auto_open_instruction": true
+        "auto_open_instruction": false
     },
     "camera": {
-        "index": 0
+        "index": 1
+    },
+    "control": {
+        "mode": "manual"
     }
 }
