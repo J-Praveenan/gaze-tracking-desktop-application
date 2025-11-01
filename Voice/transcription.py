@@ -27,11 +27,18 @@ asr_model = pipeline(
 )
 
 # === Helper Functions ===
+_speak_lock = threading.Lock()
+
 def speak(text):
-    """Voice feedback."""
-    engine = pyttsx3.init()
-    engine.say(text)
-    engine.runAndWait()
+    """Thread-safe TTS"""
+    with _speak_lock:
+        try:
+            engine = pyttsx3.init()
+            engine.say(text)
+            engine.runAndWait()
+        except Exception as e:
+            print(f"[TTS ERROR] {e}")
+
 
 def transcribe_from_mic(duration=5):
     fs = 16000

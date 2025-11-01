@@ -135,9 +135,15 @@ class App(tk.Tk):
         from pathlib import Path
         import json
 
-        self.gaze_running = running  # update global state
+        # 🧩 Always mirror global & local state
+        self.gaze_running = running
+        home_page = self.pages.get("HomePage")
 
-        # === Read control mode from config ===
+        # === Update HomePage button state immediately ===
+        if home_page:
+            home_page.update_gaze_button(running)
+
+        # === Read control mode ===
         control_mode = "auto"
         try:
             base_dir = Path(__file__).resolve().parent
@@ -152,18 +158,13 @@ class App(tk.Tk):
         # === Handle gaze startup/shutdown ===
         if running:
             print(f"[APP] Starting Look Track Vision (mode: {control_mode})")
-
             if control_mode == "auto":
-                # Auto Mode → Start gaze tracking directly
                 launch_gaze_app(enable_mouse_control=True)
                 speak("Gaze control started.")
             else:
-                # Manual Mode → Load gaze system, but wait for voice command
-                print("[APP] Manual Control mode active — system in standby, waiting for 'Start gaze control' voice command.")
+                print("[APP] Manual Control mode active — waiting for 'Start gaze control' voice command.")
                 launch_gaze_app(enable_mouse_control=False)
                 speak("Manual mode enabled. Say 'Start gaze control' to begin gaze tracking.")
-
-                # ✅ Start background voice listener now
                 try:
                     from voice.transcription import start_voice_listener_thread
                     print("[APP] Voice listener started (manual mode).")
@@ -171,11 +172,12 @@ class App(tk.Tk):
                 except Exception as e:
                     print(f"[WARN] Could not start voice listener: {e}")
         else:
-            # ✅ Stop gaze in all modes
             print("[APP] Stopping Look Track Vision.")
             launch_gaze_app(enable_mouse_control=False)
             speak("Gaze control stopped.")
 
+        # ✅ Sync TitleBar as well
+        self._sync_gaze_buttons()
     def _sync_gaze_buttons(self):
         """Sync the START/STOP button states across TitleBar and HomePage."""
         # Update TitleBar
@@ -184,8 +186,7 @@ class App(tk.Tk):
         # Update HomePage if it exists
         home_page = self.pages.get("HomePage")
         if home_page and hasattr(home_page, "update_gaze_button"):
-            home_page.update_gaze_button(self.gaze_running)
-            
+            home_page.update_gaze_button(self.gaze_running)           
 
     def get_bg_photo(self, w: int, h: int):
         """Return a PhotoImage that 'covers' the window."""
