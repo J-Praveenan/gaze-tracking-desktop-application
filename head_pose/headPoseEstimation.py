@@ -72,13 +72,13 @@ while cap.isOpened():
             x, y, z = [a * 360 for a in angles]
 
             # Determine direction
-            if y < -12:
+            if y < -10:
                 text = "Looking Left"
-            elif y > 12:
+            elif y > 10:
                 text = "Looking Right"
-            elif x < -12:
+            elif x < -10:
                 text = "Looking Down"
-            elif x > 12:
+            elif x > 10:
                 text = "Looking Up"
             else:
                 text = "Forward"

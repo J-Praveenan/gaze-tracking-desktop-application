@@ -17,13 +17,13 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 ASSETS_DIR = os.path.join(ROOT_DIR, "assets")
 
 # Build paths dynamically
-home_icon_path = os.path.join(ASSETS_DIR, "home.png")
-setting_icon_path = os.path.join(ASSETS_DIR, "setting.png")
-tips_icon_path = os.path.join(ASSETS_DIR, "tips.png")
-info_icon_path = os.path.join(ASSETS_DIR, "info.png")
-gaze_set_up_icon_path = os.path.join(ASSETS_DIR, "gaze_set_up.png")
-gaze_test_icon_path = os.path.join(ASSETS_DIR, "gaze_test.png")
-keyboard_icon_path = os.path.join(ASSETS_DIR, "keyboard.png")
+home_icon_path = os.path.join(ASSETS_DIR, "home.ico")
+setting_icon_path = os.path.join(ASSETS_DIR, "setting.ico")
+tips_icon_path = os.path.join(ASSETS_DIR, "tips.ico")
+info_icon_path = os.path.join(ASSETS_DIR, "info.ico")
+gaze_set_up_icon_path = os.path.join(ASSETS_DIR, "gaze_set_up.ico")
+gaze_test_icon_path = os.path.join(ASSETS_DIR, "gaze_test.ico")
+keyboard_icon_path = os.path.join(ASSETS_DIR, "keyboard.ico")
 
 def F(name, default):
     return getattr(Fonts, name, default)

@@ -312,8 +312,8 @@ class HomePage(BasePage):
 
         # === Start / Stop Button ===
         ASSETS_DIR = os.path.join(os.path.dirname(__file__), "../../assets")
-        power_on_path = os.path.join(ASSETS_DIR, "power_on.png")
-        power_off_path = os.path.join(ASSETS_DIR, "power_off.png")
+        power_on_path = os.path.join(ASSETS_DIR, "power_on.ico")
+        power_off_path = os.path.join(ASSETS_DIR, "power_off.ico")
 
         def load_icon(path, size=(22, 22)):
             try:
@@ -439,7 +439,7 @@ class HomePage(BasePage):
 
         base_dir = Path(__file__).resolve().parents[2]
         assets_dir = base_dir / "assets"
-        info_icon_path = assets_dir / "info_icon.png"
+        info_icon_path = assets_dir / "info_icon.ico"
 
         info_img = None
         if info_icon_path.exists():

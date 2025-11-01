@@ -105,8 +105,8 @@ class TitleBar(tk.Frame):
 
         # Load icons
         ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
-        self.power_on_icon = ImageTk.PhotoImage(Image.open(ASSETS_DIR / "power_on.png").resize((20, 20)))
-        self.power_off_icon = ImageTk.PhotoImage(Image.open(ASSETS_DIR / "power_off.png").resize((20, 20)))
+        self.power_on_icon = ImageTk.PhotoImage(Image.open(ASSETS_DIR / "power_on.ico").resize((20, 20)))
+        self.power_off_icon = ImageTk.PhotoImage(Image.open(ASSETS_DIR / "power_off.ico").resize((20, 20)))
 
         # Button
         self.square_btn = tk.Button(

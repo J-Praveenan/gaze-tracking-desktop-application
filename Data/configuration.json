@@ -8,10 +8,10 @@
         "action_confirmation": true
     },
     "tray": {
-        "enabled": true,
+        "enabled": false,
         "auto_open_instruction": true
     },
     "camera": {
-        "index": 1
+        "index": 0
     }
 }

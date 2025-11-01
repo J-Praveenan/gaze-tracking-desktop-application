@@ -16,15 +16,15 @@ class App(customtkinter.CTk):
 
         # load images with light and dark mode image
         image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test_images")
-        self.logo_image = customtkinter.CTkImage(Image.open(os.path.join(image_path, "CustomTkinter_logo_single.png")), size=(26, 26))
-        self.large_test_image = customtkinter.CTkImage(Image.open(os.path.join(image_path, "large_test_image.png")), size=(500, 150))
-        self.image_icon_image = customtkinter.CTkImage(Image.open(os.path.join(image_path, "image_icon_light.png")), size=(20, 20))
-        self.home_image = customtkinter.CTkImage(light_image=Image.open(os.path.join(image_path, "home_dark.png")),
-                                                 dark_image=Image.open(os.path.join(image_path, "home_light.png")), size=(20, 20))
-        self.chat_image = customtkinter.CTkImage(light_image=Image.open(os.path.join(image_path, "chat_dark.png")),
-                                                 dark_image=Image.open(os.path.join(image_path, "chat_light.png")), size=(20, 20))
-        self.add_user_image = customtkinter.CTkImage(light_image=Image.open(os.path.join(image_path, "add_user_dark.png")),
-                                                     dark_image=Image.open(os.path.join(image_path, "add_user_light.png")), size=(20, 20))
+        self.logo_image = customtkinter.CTkImage(Image.open(os.path.join(image_path, "CustomTkinter_logo_single.ico")), size=(26, 26))
+        self.large_test_image = customtkinter.CTkImage(Image.open(os.path.join(image_path, "large_test_image.ico")), size=(500, 150))
+        self.image_icon_image = customtkinter.CTkImage(Image.open(os.path.join(image_path, "image_icon_light.ico")), size=(20, 20))
+        self.home_image = customtkinter.CTkImage(light_image=Image.open(os.path.join(image_path, "home_dark.ico")),
+                                                 dark_image=Image.open(os.path.join(image_path, "home_light.ico")), size=(20, 20))
+        self.chat_image = customtkinter.CTkImage(light_image=Image.open(os.path.join(image_path, "chat_dark.ico")),
+                                                 dark_image=Image.open(os.path.join(image_path, "chat_light.ico")), size=(20, 20))
+        self.add_user_image = customtkinter.CTkImage(light_image=Image.open(os.path.join(image_path, "add_user_dark.ico")),
+                                                     dark_image=Image.open(os.path.join(image_path, "add_user_light.ico")), size=(20, 20))
 
         # create navigation frame
         self.navigation_frame = customtkinter.CTkFrame(self, corner_radius=0)

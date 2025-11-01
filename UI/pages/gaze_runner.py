@@ -136,13 +136,13 @@ class HeadPoseEstimator:
                 x, y, z = [a * 360 for a in angles]
 
                 # classify direction
-                if y < -10:
+                if y < -12:
                     direction = "Left"
-                elif y > 10:
+                elif y > 12:
                     direction = "Right"
-                elif x < -10:
+                elif x < -12:
                     direction = "Down"
-                elif x > 10:
+                elif x > 12:
                     direction = "Up"
                 else:
                     direction = "Forward"
@@ -523,7 +523,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     # --- Long-blink tuning ---
 
     # --- Wink & long-blink tuning (adjust to taste) ---
-    EAR_CLOSED = 0.18           # eye considered closed below this
+    EAR_CLOSED = 0.2         # 0.18  # eye considered closed below this
     EAR_OPEN_HYST = 0.16        # must be clearly open above this
     WINK_OPEN_MARGIN = 0.02     # the OTHER eye must be this much more open
     WINK_MIN_SEC = 0.08        # ignore micro twitches
@@ -578,7 +578,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     MARGIN_Y = 40      # top/bottom margin around content
 
     # Optional: app icon in the title bar (PNG supported, with alpha)
-    ICON_PATH = (ROOT / "Assets" / "logo.png")  # <-- put your icon here
+    ICON_PATH = (ROOT / "Assets" / "logo.ico")  # <-- put your icon here
     _icon_rgba = None
     if ICON_PATH.exists():
         _icon_rgba = cv2.imread(str(ICON_PATH), cv2.IMREAD_UNCHANGED)
@@ -981,61 +981,17 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         #     return "BOTH_BLINK", 100
         
         
-        # --- Both eyes blink detection (duration-based) ---
+            
+        # if((left_eye_left_direction_threshold > LEFT_EYE_LEFT_DIRECTION_THRESHOLD
+        #     and right_eye_left_direction_threshold > RIGHT_EYE_LEFT_DIRECTION_THRESHOLD)and(left_eye_right_direction_threshold > LEFT_EYE_RIGHT_DIRECTION_THRESHOLD
+        #     and right_eye_right_direction_threshold > RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD)and(left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD
+        #     and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD)and(left_eye_up_direction_threshold < LEFT_EYE_UP_DIRECTION_THRESHOLD
+        #     and right_eye_up_direction_threshold < RIGHT_EYE_UP_DIRECTION_THRESHOLD)):
+        #     # landmark_center_boolean = True
+        #     gaze = "center"
+            
+        
         if (
-            left_eye_down_direction_threshold <= LEFT_EYE_CLOSED_THRESHOLD or
-            right_eye_down_direction_threshold <= RIGHT_EYE_CLOSED_THRESHOLD
-        ):
-            
-            # Eyes currently closed
-            if not hasattr(detect_gaze, "_blink_start") or detect_gaze._blink_start is None:
-                detect_gaze._blink_start = time.time()
-                
-            return "EYE_CLOSE", 100
-            
-        else:
-            # Eyes are open again — check if a blink was in progress
-            if hasattr(detect_gaze, "_blink_start") and detect_gaze._blink_start is not None:
-                held = time.time() - detect_gaze._blink_start
-
-                if 1.0 <= held < 2.0:
-                    print("=================NORMAL BLINK====================")
-                    detect_gaze._blink_start = None
-                    return "NORMAL_BLINK", 100
-
-                elif held >= 2.0:
-                    print("=================DEEP BLINK====================")
-                    detect_gaze._blink_start = None
-                    return "DEEP_BLINK", 100
-
-                # Reset regardless
-                detect_gaze._blink_start = None
-
-
-            
-            
-            
-        
-        if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            print("Final: LEFT WINK detected")
-            return "LEFT_BLINK", 100
-
-        elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            print("Final: RIGHT WINK detected")
-            return "RIGHT_BLINK", 100
-        
-               
-            
-        if((left_eye_left_direction_threshold > LEFT_EYE_LEFT_DIRECTION_THRESHOLD
-            and right_eye_left_direction_threshold > RIGHT_EYE_LEFT_DIRECTION_THRESHOLD)and(left_eye_right_direction_threshold > LEFT_EYE_RIGHT_DIRECTION_THRESHOLD
-            and right_eye_right_direction_threshold > RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD)and(left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD
-            and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD)and(left_eye_up_direction_threshold < LEFT_EYE_UP_DIRECTION_THRESHOLD
-            and right_eye_up_direction_threshold < RIGHT_EYE_UP_DIRECTION_THRESHOLD)):
-            # landmark_center_boolean = True
-            gaze = "center"
-            
-        
-        elif (
             ((LEFT_EYE_CLOSED_THRESHOLD < left_eye_down_direction_threshold < LEFT_EYE_DOWN_DIRECTION_THRESHOLD) and
             (RIGHT_EYE_CLOSED_THRESHOLD < right_eye_down_direction_threshold < RIGHT_EYE_DOWN_DIRECTION_THRESHOLD)) or gaze == "down"
         ):
@@ -1066,6 +1022,46 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         else:
             gaze = "center"
             print("Final Gaze direction: ", gaze) 
+            
+            
+        # --- Both eyes blink detection (duration-based) ---
+        if (
+             left_eye_down_direction_threshold <= LEFT_EYE_CLOSED_THRESHOLD and
+             right_eye_down_direction_threshold <= RIGHT_EYE_CLOSED_THRESHOLD
+        ):
+            
+            # Eyes currently closed
+            if not hasattr(detect_gaze, "_blink_start") or detect_gaze._blink_start is None:
+                detect_gaze._blink_start = time.time()
+                
+            return "EYE_CLOSE", 100
+            
+        else:
+            # Eyes are open again — check if a blink was in progress
+            if hasattr(detect_gaze, "_blink_start") and detect_gaze._blink_start is not None:
+                held = time.time() - detect_gaze._blink_start
+
+                if 1.0 <= held < 2.0:
+                    print("=================NORMAL BLINK====================")
+                    detect_gaze._blink_start = None
+                    return "NORMAL_BLINK", 100
+
+                elif held >= 2.0:
+                    print("=================DEEP BLINK====================")
+                    detect_gaze._blink_start = None
+                    return "DEEP_BLINK", 100
+
+                # Reset regardless
+                detect_gaze._blink_start = None
+                
+                
+        if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+            print("Final: LEFT WINK detected")
+            return "LEFT_BLINK", 100
+
+        elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+            print("Final: RIGHT WINK detected")
+            return "RIGHT_BLINK", 100
             
             
         
@@ -1832,11 +1828,13 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
 
                 elif gaze == "NORMAL_BLINK":
                     normal_blink_count += 1
-                    _warp_to_next_anchor()
+                    if enable_mouse_control:
+                        _warp_to_next_anchor()
                     
                 elif gaze == "DEEP_BLINK":
                     deep_blink_count += 1
-                    toggle_scroll_mode()
+                    if enable_mouse_control:
+                        toggle_scroll_mode()
                     
 
 
