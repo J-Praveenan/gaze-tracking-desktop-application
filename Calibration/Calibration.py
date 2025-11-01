@@ -5,6 +5,7 @@ import numpy as np
 import mediapipe as mp
 from pathlib import Path
 import ctypes
+from utils.common import speak
 
 # ==============================
 # Config
@@ -119,8 +120,18 @@ def calibrate_gaze():
         for direction in directions:
             # --- Countdown phase ---
             start = time.time()
+    
+            if direction == "CLOSED":
+                speak(f"Close both eyes for {CALIBRATION_HOLD_SEC} seconds")
+            else:
+                speak(f"Look at the {direction} point and hold steady for {CALIBRATION_HOLD_SEC} seconds")
+
+                
+            
             while True:
                 secs_left = max(0, CALIBRATION_HOLD_SEC - int(time.time() - start))
+                
+            
                 if direction == "CLOSED":
                     canvas = np.ones((SCREEN_H, SCREEN_W, 3), dtype=np.uint8) * 255
                     put_center_text(canvas, "Close both eyes for 3 seconds", SCREEN_H // 2, 1.5, 3)
@@ -207,7 +218,8 @@ def calibrate_gaze():
         out_file = save_thresholds(thresholds)
         cv2.destroyAllWindows()
         print("\n✅ Calibration complete. Thresholds saved to:", out_file)
-        print(json.dumps(thresholds, indent=4))
+        
+        speak("The calibration process successfully completed.")
         return thresholds
 
     except KeyboardInterrupt:

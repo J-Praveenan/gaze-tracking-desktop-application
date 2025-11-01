@@ -265,7 +265,7 @@ def main():
     MARGIN_Y = 40      # top/bottom margin around content
 
     # Optional: app icon in the title bar (PNG supported, with alpha)
-    ICON_PATH = (ROOT / "Assets" / "logo.png")  # <-- put your icon here
+    ICON_PATH = (ROOT / "Assets" / "logo.ico")  # <-- put your icon here
     _icon_rgba = None
     if ICON_PATH.exists():
         _icon_rgba = cv2.imread(str(ICON_PATH), cv2.IMREAD_UNCHANGED)

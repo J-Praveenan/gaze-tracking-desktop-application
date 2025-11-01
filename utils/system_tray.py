@@ -10,7 +10,7 @@ class SystemTrayIcon:
 
     def show(self):
         def run_tray():
-            image = Image.open("assets/eyelogo.jpg")  # use your app icon
+            image = Image.open("assets/eyelogo.ico")  # use your app icon
 
             menu = pystray.Menu(
                 pystray.MenuItem("Restore", lambda: self._restore()),

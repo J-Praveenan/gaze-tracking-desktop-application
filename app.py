@@ -60,7 +60,7 @@ BASE_DIR = Path(__file__).resolve().parent
 ASSETS = BASE_DIR / "assets"
 
 BG_IMG_PATH   = ASSETS / "bg.jpg"
-LOGO_IMG_PATH = ASSETS / "eyelogo.jpg"
+LOGO_IMG_PATH = ASSETS / "eyelogo.ico"
 GUIDE_MP4 = data_path("assets", "guide.mp4")
 
 
