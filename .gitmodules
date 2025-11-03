@@ -1,3 +1,8 @@
 [submodule "backend"]
 	path = backend
 	url = https://github.com/J-Praveenan/Gaze_Tracking_System
+
+
+[submodule "productPage"]
+	path = productPage
+	url = https://github.com/MoraisMNS/gaze-tracking-webapp-frontend
