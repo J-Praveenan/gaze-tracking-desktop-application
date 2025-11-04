@@ -1,14 +1,14 @@
 from pathlib import Path
 import traceback
 import os, platform
-from UI.pages.setup import SetupPage
-from UI.pages.tips import TipsPage
-from UI.pages.info import InfoPage
-from UI.pages.settings import SettingsPage
+from frontend.pages.setup import SetupPage
+from frontend.pages.tips import TipsPage
+from frontend.pages.info import InfoPage
+from frontend.pages.settings import SettingsPage
 from threading import Thread
 from voice.voice_typing import run_voice_typing_loop
 import gaze_estimation 
-from UI.pages.sidebar import Sidebar
+from frontend.pages.sidebar import Sidebar
 import threading
 # ...
 
@@ -41,19 +41,19 @@ if platform.system() == "Windows":
 # in app.py, right after the VLC bootstrap block
 print("VLC dir (app.py):", BUNDLED_VLC, (BUNDLED_VLC / "libvlc.dll").exists())
 
-# in UI/pages/guide.py, after you set the directory but before `import vlc`
+# in frontend/pages/guide.py, after you set the directory but before `import vlc`
 
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 
-from UI.theme import Colors, apply_base_style
-from UI.widgets import TitleBar
-from UI.pages.splash import SplashPage
-from UI.pages.home import HomePage, launch_gaze_app, speak
+from frontend.theme import Colors, apply_base_style
+from frontend.widgets import TitleBar
+from frontend.pages.splash import SplashPage
+from frontend.pages.home import HomePage, launch_gaze_app, speak
 from utils.paths import data_path
-from UI.pages.guide import GuideVideoPage
-from UI.pages.gaze_test import GazeTestPage
+from frontend.pages.guide import GuideVideoPage
+from frontend.pages.gaze_test import GazeTestPage
 
 APP_TITLE = "LOOK TRACK VISION"
 BASE_DIR = Path(__file__).resolve().parent
@@ -131,7 +131,7 @@ class App(tk.Tk):
     
     def _handle_global_gaze_toggle(self, running: bool):
         """Called by TitleBar or HomePage — controls gaze and syncs both buttons."""
-        from UI.pages.home import launch_gaze_app, speak
+        from frontend.pages.home import launch_gaze_app, speak
         from pathlib import Path
         import json
 

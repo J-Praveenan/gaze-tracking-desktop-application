@@ -1,5 +1,5 @@
 import tkinter as tk
-from UI.theme import Colors, Fonts
+from frontend.theme import Colors, Fonts
 from PIL import Image, ImageTk
 import os
 
@@ -101,7 +101,7 @@ class InstructionTray(tk.Toplevel):
                 text=title,
                 fg="white",
                 bg=Colors.dark_card,
-                font=("Segoe UI", 11, "bold")
+                font=("Segoe frontend", 11, "bold")
             ).pack(side="left")
 
             if title == "Short Blink":
@@ -117,7 +117,7 @@ class InstructionTray(tk.Toplevel):
                 text=desc,
                 fg="#9ca3af",
                 bg=Colors.dark_card,
-                font=("Segoe UI", 10)
+                font=("Segoe frontend", 10)
             ).pack(anchor="center")
 
         # === Start/Stop Application Button ===
@@ -145,7 +145,7 @@ class InstructionTray(tk.Toplevel):
             text="Start Application",
             fg="white",
             bg=Colors.dark_card,
-            font=("Segoe UI", 11, "bold")
+            font=("Segoe frontend", 11, "bold")
         )
         self.start_label.pack(anchor="center")
 
@@ -174,7 +174,7 @@ class InstructionTray(tk.Toplevel):
                 command=self.destroy,
                 bg="#ef4444",
                 fg="white",
-                font=("Segoe UI", 10, "bold"),
+                font=("Segoe frontend", 10, "bold"),
                 relief="flat",
                 width=2,
                 height=1,
@@ -232,7 +232,7 @@ class InstructionTray(tk.Toplevel):
     def toggle_app(self, event=None):
         """Toggle gaze control and sync with main HomePage button."""
         try:
-            from UI.pages.home import launch_gaze_app
+            from frontend.pages.home import launch_gaze_app
         except ImportError:
             print("[WARN] Could not import launch_gaze_app dynamically.")
             return

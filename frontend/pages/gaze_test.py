@@ -1,12 +1,12 @@
 import tkinter as tk
 import threading
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard, PillButton
-from UI.pages.base import BasePage
-from UI.pages.sidebar import Sidebar
-from UI.pages.gaze_runner import main as run_gaze_test
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard, PillButton
+from frontend.pages.base import BasePage
+from frontend.pages.sidebar import Sidebar
+from frontend.pages.gaze_runner import main as run_gaze_test
 import subprocess, sys, os
-from UI.pages import gaze_runner
+from frontend.pages import gaze_runner
 import cv2 as cv
 
 def F(name, default):
@@ -30,14 +30,14 @@ class GazeTestPage(BasePage):
 
         tk.Label(card.body, text="Real-Time Gaze Test",
                  fg=Colors.card_head, bg=Colors.glass_bg,
-                 font=F("h1b", ("Segoe UI", 18, "bold"))).pack(pady=(10, 20))
+                 font=F("h1b", ("Segoe frontend", 18, "bold"))).pack(pady=(10, 20))
 
         desc = tk.Label(
             card.body,
             text="Click below to start the gaze detection test.\n"
                  "This will open a live video window. Press 'Q' to stop.",
             fg=Colors.card_text, bg=Colors.glass_bg,
-            font=F("body", ("Segoe UI", 11)), wraplength=420, justify="center"
+            font=F("body", ("Segoe frontend", 11)), wraplength=420, justify="center"
         )
         desc.pack(pady=(0, 20))
 
@@ -51,14 +51,14 @@ class GazeTestPage(BasePage):
 
 
     # def _start_test(self):
-    #     from UI.pages import gaze_runner
+    #     from frontend.pages import gaze_runner
     #     print("[INFO] Starting test mode session...")
     #     test_session = gaze_runner.GazeSession(enable_mouse_control=False, show_video=True)
     #     test_session.start()
         
     def _start_test(self):
         import cv2
-        from UI.pages import gaze_runner
+        from frontend.pages import gaze_runner
 
         print("[INFO] Starting test mode session...")
 
@@ -94,7 +94,7 @@ class GazeTestPage(BasePage):
                 popup,
                 text="Camera Not Available!",
                 fg="white", bg=Colors.dark_card,
-                font=F("h2b", ("Segoe UI", 14, "bold"))
+                font=F("h2b", ("Segoe frontend", 14, "bold"))
             ).pack(pady=(20, 10))
 
             tk.Label(
@@ -102,7 +102,7 @@ class GazeTestPage(BasePage):
                 text="You are selecting the wrong camera option.\n"
                     "Go to the Settings option and select the correct camera.",
                 fg="#e5e7eb", bg=Colors.dark_card,
-                font=F("body", ("Segoe UI", 10)),
+                font=F("body", ("Segoe frontend", 10)),
                 justify="center"
             ).pack(pady=(0, 20))
 
@@ -112,7 +112,7 @@ class GazeTestPage(BasePage):
                 command=popup.destroy,
                 bg="#ef4444",
                 fg="white",
-                font=("Segoe UI", 10, "bold"),
+                font=("Segoe frontend", 10, "bold"),
                 relief="flat",
                 width=6,
                 height=18,

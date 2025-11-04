@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from PIL import Image, ImageTk
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard
 from .base import BasePage
 
 
@@ -15,7 +15,7 @@ class SplashPage(BasePage):
         self.BANNER_HEIGHT = 120     # px strip height (try 50–70)
         self.BANNER_RADIUS = 8
         self.BANNER_PAD    = 2
-        self.BANNER_FONT   = getattr(Fonts, "banner", ("Segoe UI", 18, "bold"))
+        self.BANNER_FONT   = getattr(Fonts, "banner", ("Segoe frontend", 18, "bold"))
         # ----------------------
 
         overlay_bg = self.overlay.cget("bg")
@@ -103,7 +103,7 @@ class SplashPage(BasePage):
         raw = self.controller._logo_raw
         if raw is None:
             self.big_logo_lbl.config(image="", text="LOGO",
-                                     font=("Segoe UI", 34, "bold"),
+                                     font=("Segoe frontend", 34, "bold"),
                                      fg="white", bg=self.overlay.cget("bg"))
             return
         size = int(self.winfo_width() * 0.15)

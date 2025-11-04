@@ -1,5 +1,5 @@
 import tkinter as tk
-from UI.theme import Colors
+from frontend.theme import Colors
 
 class BasePage(tk.Frame):
     def __init__(self, parent, controller):

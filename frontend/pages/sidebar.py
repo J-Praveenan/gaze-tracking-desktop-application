@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard
 from PIL import Image, ImageTk
 import os
 import subprocess
@@ -107,7 +107,7 @@ class Sidebar(RoundedCard):
                 image=icon,
                 compound="left",
                 anchor="w",
-                font=F("h3", ("Segoe UI", 12, "bold")),
+                font=F("h3", ("Segoe frontend", 12, "bold")),
                 fg="white",
                 bg=Colors.sidebar_bg,
                 bd=0,

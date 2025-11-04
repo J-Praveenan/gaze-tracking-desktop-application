@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard, RoundedButton
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard, RoundedButton
 from .base import BasePage
 import threading
 import winsound
@@ -12,9 +12,9 @@ from PIL import Image, ImageTk
 import os
 from pathlib import Path
 import json
-from UI.pages.instruction_tray import InstructionTray
+from frontend.pages.instruction_tray import InstructionTray
 
-from UI.pages import gaze_runner
+from frontend.pages import gaze_runner
 
 main_gaze_session = None  # global session variable
 
@@ -140,7 +140,7 @@ def launch_gaze_app(enable_mouse_control=False):
         print(f"[ERROR] Failed to start gaze system: {e}")
 
 # =====================================================================
-# Home Page UI
+# Home Page frontend
 # =====================================================================
 class HomePage(BasePage):
     def __init__(self, parent, controller):
@@ -175,14 +175,14 @@ class HomePage(BasePage):
         hero.pack(fill="x", padx=8, pady=(8, 4))
         tk.Label(hero.body, text="Welcome to LOOK TRACK VISION",
                  fg="white", bg=Colors.dark_card,
-                 font=F("h1b", ("Segoe UI", 20, "bold"))).pack(pady=(2, 0))
+                 font=F("h1b", ("Segoe frontend", 20, "bold"))).pack(pady=(2, 0))
 
         subtitle = tk.Label(
             hero.body,
             text=("A smart assistant that lets you control your computer with just your eyes and voice.\n"
                   "Whether you're browsing, chatting, or presenting, it's all hands-free, intuitive, and empowering."),
             fg="#e8eef6", bg=Colors.dark_card, justify="center",
-            font=F("body", ("Segoe UI", 10))
+            font=F("body", ("Segoe frontend", 10))
         )
         subtitle.pack(pady=(0, 4))
         subtitle.configure(wraplength=400)
@@ -247,7 +247,7 @@ class HomePage(BasePage):
             text="System Status",
             fg=Colors.card_head,
             bg=Colors.glass_bg,
-            font=F("h2b", ("Segoe UI", 12, "bold"))
+            font=F("h2b", ("Segoe frontend", 12, "bold"))
         ).grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
 
         # --- Helper to make neat aligned rows ---
@@ -258,7 +258,7 @@ class HomePage(BasePage):
                 text=icon,
                 fg=color_icon,
                 bg=Colors.glass_bg,
-                font=("Segoe UI Emoji", 11)
+                font=("Segoe frontend Emoji", 11)
             ).grid(row=row, column=0, sticky="w", padx=(6, 2), pady=2)
 
             tk.Label(
@@ -266,7 +266,7 @@ class HomePage(BasePage):
                 text=f"{label}:",
                 fg=Colors.card_text,
                 bg=Colors.glass_bg,
-                font=("Segoe UI", 10, "bold"),
+                font=("Segoe frontend", 10, "bold"),
                 anchor="w"
             ).grid(row=row, column=1, sticky="w", padx=(0, 6), pady=2)
 
@@ -275,7 +275,7 @@ class HomePage(BasePage):
                 text=value,
                 fg=color_value,
                 bg=Colors.glass_bg,
-                font=("Segoe UI", 10),
+                font=("Segoe frontend", 10),
                 anchor="w"
             ).grid(row=row, column=2, sticky="w", padx=(0, 6), pady=2)
 
@@ -410,7 +410,7 @@ class HomePage(BasePage):
             text="System Status",
             fg=Colors.card_head,
             bg=Colors.glass_bg,
-            font=F("h2b", ("Segoe UI", 12, "bold"))
+            font=F("h2b", ("Segoe frontend", 12, "bold"))
         ).grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
 
         # Helper for neat alignment
@@ -420,7 +420,7 @@ class HomePage(BasePage):
                 text=icon,
                 fg=color_icon,
                 bg=Colors.glass_bg,
-                font=("Segoe UI Emoji", 11)
+                font=("Segoe frontend Emoji", 11)
             ).grid(row=row, column=0, sticky="w", padx=(6, 2), pady=2)
 
             tk.Label(
@@ -428,7 +428,7 @@ class HomePage(BasePage):
                 text=f"{label}:",
                 fg=Colors.card_text,
                 bg=Colors.glass_bg,
-                font=("Segoe UI", 10, "bold"),
+                font=("Segoe frontend", 10, "bold"),
                 anchor="w"
             ).grid(row=row, column=1, sticky="w", padx=(0, 6), pady=2)
 
@@ -437,7 +437,7 @@ class HomePage(BasePage):
                 text=value,
                 fg=color_value,
                 bg=Colors.glass_bg,
-                font=("Segoe UI", 10),
+                font=("Segoe frontend", 10),
                 anchor="w"
             ).grid(row=row, column=2, sticky="w", padx=(0, 6), pady=2)
 
@@ -467,13 +467,13 @@ class HomePage(BasePage):
         tk.Label(
             card.body, text=title,
             fg=Colors.card_head, bg=Colors.glass_bg,
-            font=F("h2b", ("Segoe UI", 12, "bold"))
+            font=F("h2b", ("Segoe frontend", 12, "bold"))
         ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 6))
 
         tk.Label(
             card.body, text=desc,
             fg=Colors.card_text, bg=Colors.glass_bg,
-            font=F("body", ("Segoe UI", 10))
+            font=F("body", ("Segoe frontend", 10))
         ).grid(row=1, column=0, columnspan=2, sticky="w", padx=6, pady=(0, 8))
 
         # === Load info icon ===
@@ -545,7 +545,7 @@ class HomePage(BasePage):
 
             text_item = canvas.create_text(
                 20, 20, text=text, anchor="nw", fill="white",
-                font=("Segoe UI", 9), width=260
+                font=("Segoe frontend", 9), width=260
             )
             bbox = canvas.bbox(text_item)
             padding = 20
@@ -586,7 +586,7 @@ class HomePage(BasePage):
                 command=on_mode_change,  # 💾 Save mode on select
                 bg=Colors.glass_bg,
                 anchor="w",
-                font=("Segoe UI", 11),
+                font=("Segoe frontend", 11),
                 padx=6,
                 pady=5,
                 indicatoron=True,
@@ -633,7 +633,7 @@ class HomePage(BasePage):
             text=title,
             fg="white",
             bg=Colors.dark_card,
-            font=F("h2b", ("Segoe UI", 12, "bold"))
+            font=F("h2b", ("Segoe frontend", 12, "bold"))
         ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=3)
 
         # === Load icons ===
@@ -750,7 +750,7 @@ class HomePage(BasePage):
                 text=label,
                 fg="white",
                 bg=Colors.dark_card,
-                font=("Segoe UI", 10, "bold")
+                font=("Segoe frontend", 10, "bold")
             ).pack(side="left")
 
             if label == "Short Blink" and icons["info"]:
@@ -768,7 +768,7 @@ class HomePage(BasePage):
                 text=desc,
                 fg="#d1d5db",
                 bg=Colors.dark_card,
-                font=("Segoe UI", 10),
+                font=("Segoe frontend", 10),
                 anchor="w",
                 justify="left",
                 wraplength=420
@@ -820,7 +820,7 @@ class HomePage(BasePage):
         # === Start or Stop Gaze System based on control mode ===
         if running:
             print(f"[INFO] Application started. Control mode = {control_mode}")
-            from UI.pages.home import launch_gaze_app
+            from frontend.pages.home import launch_gaze_app
 
             if control_mode == "auto":
                 # Auto mode → Start gaze + mouse immediately
@@ -833,7 +833,7 @@ class HomePage(BasePage):
 
         else:
             # Stop the system
-            from UI.pages.home import launch_gaze_app
+            from frontend.pages.home import launch_gaze_app
             launch_gaze_app(enable_mouse_control=False)
             print("[INFO] Application stopped.")
 
