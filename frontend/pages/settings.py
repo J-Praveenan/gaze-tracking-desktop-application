@@ -130,7 +130,7 @@ class SettingsPage(BasePage):
             text="Settings",
             fg=Colors.card_head,
             bg=Colors.page_bg,
-            font=F("h2b", ("Segoe frontend", 16, "bold"))
+            font=F("h2b", ("Segoe UI", 16, "bold"))
         ).pack(anchor="w", pady=(0, 10))
 
         # === Sections ===
@@ -224,12 +224,12 @@ class SettingsPage(BasePage):
 
         tk.Label(card.body, text="Rest Reminder Notification",
                  fg=Colors.card_head, bg=Colors.glass_bg,
-                 font=F("h2b", ("Segoe frontend", 13, "bold"))
+                 font=F("h2b", ("Segoe UI", 13, "bold"))
                  ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
         # Toggle
         tk.Label(card.body, text="Enable reminder notifications:",
-                 bg=Colors.glass_bg, fg=Colors.card_text, font=("Segoe frontend", 12)
+                 bg=Colors.glass_bg, fg=Colors.card_text, font=("Segoe UI", 12)
                  ).grid(row=1, column=0, sticky="w", padx=10, pady=6)
 
         self.toggle = ModernToggle(
@@ -241,7 +241,7 @@ class SettingsPage(BasePage):
         # Duration
         tk.Label(card.body, text="Duration (minutes):",
                  bg=Colors.glass_bg, fg=Colors.card_text,
-                 font=("Segoe frontend", 12)
+                 font=("Segoe UI", 12)
                  ).grid(row=2, column=0, sticky="w", padx=8, pady=4)
 
         self.duration_var = tk.StringVar(value=str(data["duration"]))
@@ -250,7 +250,7 @@ class SettingsPage(BasePage):
         self.dropdown.grid(row=2, column=1, sticky="w", padx=8, pady=4)
 
         tk.Button(card.body, text="Save", bg="#31A0EB", fg="white",
-                  font=("Segoe frontend", 12, "bold"),
+                  font=("Segoe UI", 12, "bold"),
                   command=self._save_reminder
                   ).grid(row=3, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 6))
 
@@ -287,11 +287,11 @@ class SettingsPage(BasePage):
 
         tk.Label(card.body, text="Voice Preferences",
                  fg=Colors.card_head, bg=Colors.glass_bg,
-                 font=F("h2b", ("Segoe frontend", 13, "bold"))
+                 font=F("h2b", ("Segoe UI", 13, "bold"))
                  ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
         tk.Label(card.body, text="Voice Tips:", bg=Colors.glass_bg,
-                 fg=Colors.card_text, font=("Segoe frontend", 12)
+                 fg=Colors.card_text, font=("Segoe UI", 12)
                  ).grid(row=1, column=0, sticky="w", padx=10, pady=6)
 
         ModernToggle(card.body, initial=data["tips_enabled"],
@@ -299,7 +299,7 @@ class SettingsPage(BasePage):
                      ).grid(row=1, column=1, sticky="w", padx=10, pady=6)
 
         tk.Label(card.body, text="Voice Action Confirmation:", bg=Colors.glass_bg,
-                 fg=Colors.card_text, font=("Segoe frontend", 12)
+                 fg=Colors.card_text, font=("Segoe UI", 12)
                  ).grid(row=2, column=0, sticky="w", padx=10, pady=6)
 
         ModernToggle(card.body, initial=data["action_confirmation"],
@@ -335,7 +335,7 @@ class SettingsPage(BasePage):
 
         tk.Label(card.body, text="Hide to Tray",
                 fg=Colors.card_head, bg=Colors.glass_bg,
-                font=F("h2b", ("Segoe frontend", 13, "bold"))
+                font=F("h2b", ("Segoe UI", 13, "bold"))
                 ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
         # Shared variables
@@ -393,7 +393,7 @@ class SettingsPage(BasePage):
 
         # Enable tray mode toggle
         tk.Label(card.body, text="Enable tray mode:", bg=Colors.glass_bg,
-                fg=Colors.card_text, font=("Segoe frontend", 12)
+                fg=Colors.card_text, font=("Segoe UI", 12)
                 ).grid(row=1, column=0, sticky="w", padx=10, pady=6)
 
         self.tray_toggle = ModernToggle(
@@ -411,7 +411,7 @@ class SettingsPage(BasePage):
             bg=Colors.glass_bg,
             fg=Colors.card_text,
             activebackground=Colors.glass_bg,
-            font=("Segoe frontend", 11),
+            font=("Segoe UI", 11),
             anchor="w",
             onvalue=True,
             offvalue=False,
@@ -434,12 +434,12 @@ class SettingsPage(BasePage):
 
         tk.Label(card.body, text="Camera Configuration",
                  fg=Colors.card_head, bg=Colors.glass_bg,
-                 font=F("h2b", ("Segoe frontend", 13, "bold"))
+                 font=F("h2b", ("Segoe UI", 13, "bold"))
                  ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
         tk.Label(card.body, text="Select active camera:",
                  bg=Colors.glass_bg, fg=Colors.card_text,
-                 font=("Segoe frontend", 12)
+                 font=("Segoe UI", 12)
                  ).grid(row=1, column=0, sticky="w", padx=10, pady=6)
 
         # User-friendly options
@@ -469,7 +469,7 @@ class SettingsPage(BasePage):
 
         # Save button
         tk.Button(card.body, text="Save", bg="#31A0EB", fg="white",
-                  font=("Segoe frontend", 12, "bold"),
+                  font=("Segoe UI", 12, "bold"),
                   command=self._save_camera_config
                   ).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 6))
 
