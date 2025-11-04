@@ -1,5 +1,11 @@
 import sys
 from pathlib import Path
+import numpy as np
+import cv2
+import time
+import matplotlib.pyplot as plt
+from collections import Counter
+
 
 # --- Ensure project root is in sys.path ---
 ROOT = Path(__file__).resolve().parents[2]
@@ -1240,7 +1246,10 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
 
     fps = 0.0  # ✅ initialize fallback FPS for first frames
     t_prev = time.perf_counter()  # ✅ setup initial timestamp
-    
+    gaze_points = []
+    direction_log = []
+
+
     while cap.isOpened() and (external_stop is None or not external_stop.is_set()):
         
 
@@ -1847,8 +1856,20 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             # Move mouse (function has its own cooldown & accuracy gate)
             if stable_gaze  in ("left", "right", "up", "down"):
                 move_cursor_for_gaze(gaze, accuracy)
+                direction_log.append(stable_gaze)
+
                             
-                
+            # ✅ Log gaze coordinate for heatmap (center point)
+            if results.multi_face_landmarks:
+                face_landmarks = results.multi_face_landmarks[0]
+                ih, iw = frame.shape[:2]
+                # Take the iris center (right eye for consistency)
+                (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(
+                    np.array([np.multiply([p.x, p.y], [iw, ih]).astype(int)
+                            for p in face_landmarks.landmark[469:473]])  # right iris landmarks
+                )
+                gaze_points.append((int(r_cx), int(r_cy)))
+
                 
             #===========================FINAL_WINDOWS=========================================
             output = cv2.line(output,(400,200), (400,0),(0,255,0),thickness=2)
@@ -1935,9 +1956,39 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             print("[INFO] Closing only video window (camera continues).")
             RUN_GAZE = False
             cap.release()
-            cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close window only
-            show_video = False  # ✅ turn off display but keep detection alive
-            continue  # ✅ continue loop (don’t break)
+            cv2.destroyWindow("Real Time Gaze Estimation")
+            show_video = False
+
+            # ✅ Generate gaze heatmap only once here
+            # ✅ Show Direction Frequency Chart at the end
+            if direction_log:
+                print(f"[INFO] Generating direction frequency chart from {len(direction_log)} samples...")
+
+                counts = Counter(direction_log)
+                directions = ["left", "right", "up", "down", "center"]
+                values = [counts.get(d, 0) for d in directions]
+
+                plt.figure(figsize=(6, 4))
+                bars = plt.bar(directions, values, color=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"])
+                plt.title("Gaze Direction Frequency", fontsize=14)
+                plt.xlabel("Direction")
+                plt.ylabel("Count")
+                plt.grid(axis="y", linestyle="--", alpha=0.6)
+
+                # Add count labels on top of each bar
+                for bar in bars:
+                    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                            f"{int(bar.get_height())}", ha='center', va='bottom', fontsize=10)
+
+                # Save and display
+                save_path = ROOT / "Data" / "direction_frequency_chart.png"
+                plt.tight_layout()
+                plt.savefig(save_path)
+                plt.show()
+                print(f"[SAVED] Direction frequency chart saved to {save_path}")
+
+            continue
+
     cap.release()
     cv2.destroyAllWindows()   
     

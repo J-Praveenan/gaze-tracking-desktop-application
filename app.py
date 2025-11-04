@@ -5,6 +5,7 @@ from frontend.pages.setup import SetupPage
 from frontend.pages.tips import TipsPage
 from frontend.pages.info import InfoPage
 from frontend.pages.settings import SettingsPage
+from frontend.pages.communicator import CommunicatorPage
 from threading import Thread
 from voice.voice_typing import run_voice_typing_loop
 import gaze_estimation 
@@ -113,6 +114,7 @@ class App(tk.Tk):
         self._add_page(SetupPage, "SetupPage")
         self._add_page(GazeTestPage, "GazeTestPage")
         self._add_page(TipsPage, "TipsPage")
+        self._add_page(CommunicatorPage, "CommunicatorPage")
         self._add_page(InfoPage, "InfoPage")
         self._add_page(SettingsPage, "SettingsPage")
 
