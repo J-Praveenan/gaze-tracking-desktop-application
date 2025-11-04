@@ -49,7 +49,7 @@ class VirtualKeyboard:
 
         # prevent from crash if photo isn't found
         try:
-            vkblogo = PhotoImage(file="vkblogo.png")
+            vkblogo = PhotoImage(file="vkblogo.ico")
             self.master.iconphoto(True, vkblogo)
         except TclError:
             # logo not found locally

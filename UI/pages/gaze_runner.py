@@ -283,6 +283,19 @@ def _double_click_debounced(interval=0.15):
 
     app = get_active_app()
     print(f"🎯 Active app detected: {app}")
+    
+    # 🧠 Detect the active window and process
+    app = get_active_app()
+    hwnd = win32gui.GetForegroundWindow()
+    window_title = win32gui.GetWindowText(hwnd)
+    print(f"🎯 Active app: {app}, Window title: {window_title}")
+
+    # 🎯 If active window is the On-Screen Keyboard or your custom keyboard
+    if "On-Screen Keyboard" in window_title or "Virtual Keyboard" in window_title:
+        x, y = pyautogui.position()
+        pyautogui.click(x, y)
+        print("⌨️ Keyboard detected — Single click triggered instead of double-click")
+
 
     if any(browser in app for browser in ["chrome", "msedge", "firefox", "brave"]):
         # 🔹 YouTube / web video context — send Space for play/pause
