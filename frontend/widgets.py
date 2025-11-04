@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from UI.theme import Colors, Fonts
+from frontend.theme import Colors, Fonts
 from PIL import Image, ImageTk
 from pathlib import Path
 import os

@@ -1,10 +1,9 @@
-# UI/pages/settings.py
 import tkinter as tk
 from tkinter import ttk, messagebox
 from pathlib import Path
 import json
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard
 from .base import BasePage
 from .sidebar import Sidebar
 from utils.system_tray import SystemTrayIcon
@@ -326,7 +325,7 @@ class SettingsPage(BasePage):
     # -----------------------------------------------------------------
     def _build_tray_settings(self, parent):
         from utils.common import speak, speak_action_confirmation
-        from UI.pages.instruction_tray import InstructionTray
+        from frontend.pages.instruction_tray import InstructionTray
 
         # Load tray config
         data = self.config.get("tray", {"enabled": False, "auto_open_instruction": True})

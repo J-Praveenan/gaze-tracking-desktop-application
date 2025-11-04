@@ -1,12 +1,11 @@
-# UI/pages/setup.py
 import tkinter as tk
 from pathlib import Path
 import threading
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard, PillButton
-from UI.pages.base import BasePage
-from UI.pages.sidebar import Sidebar
-from UI.pages.guide import GuideVideoPage
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard, PillButton
+from frontend.pages.base import BasePage
+from frontend.pages.sidebar import Sidebar
+from frontend.pages.guide import GuideVideoPage
 from Calibration.Calibration import calibrate_gaze  # import your calibration function
 
 

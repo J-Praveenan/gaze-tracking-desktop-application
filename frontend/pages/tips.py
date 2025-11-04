@@ -1,10 +1,10 @@
 import tkinter as tk
 from pathlib import Path
-from UI.theme import Colors
-from UI.widgets import RoundedCard
-from UI.pages.base import BasePage
-from UI.pages.sidebar import Sidebar
-from UI.pages.guide import GuideVideoPage
+from frontend.theme import Colors
+from frontend.widgets import RoundedCard
+from frontend.pages.base import BasePage
+from frontend.pages.sidebar import Sidebar
+from frontend.pages.guide import GuideVideoPage
 from utils.common import video_playing
 
 

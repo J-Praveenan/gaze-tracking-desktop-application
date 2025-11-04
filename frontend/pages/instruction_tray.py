@@ -1,5 +1,5 @@
 import tkinter as tk
-from UI.theme import Colors, Fonts
+from frontend.theme import Colors, Fonts
 from PIL import Image, ImageTk
 import os
 
@@ -232,7 +232,7 @@ class InstructionTray(tk.Toplevel):
     def toggle_app(self, event=None):
         """Toggle gaze control and sync with main HomePage button."""
         try:
-            from UI.pages.home import launch_gaze_app
+            from frontend.pages.home import launch_gaze_app
         except ImportError:
             print("[WARN] Could not import launch_gaze_app dynamically.")
             return

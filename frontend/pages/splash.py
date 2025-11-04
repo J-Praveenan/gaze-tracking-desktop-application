@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from PIL import Image, ImageTk
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard
 from .base import BasePage
 
 

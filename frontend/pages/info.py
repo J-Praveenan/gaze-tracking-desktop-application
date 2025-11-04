@@ -1,6 +1,6 @@
 import tkinter as tk
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard
 from .base import BasePage
 from .sidebar import Sidebar
 

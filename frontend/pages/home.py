@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard, RoundedButton
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard, RoundedButton
 from .base import BasePage
 import threading
 import winsound
@@ -12,9 +12,9 @@ from PIL import Image, ImageTk
 import os
 from pathlib import Path
 import json
-from UI.pages.instruction_tray import InstructionTray
+from frontend.pages.instruction_tray import InstructionTray
 
-from UI.pages import gaze_runner
+from frontend.pages import gaze_runner
 
 main_gaze_session = None  # global session variable
 
@@ -140,7 +140,7 @@ def launch_gaze_app(enable_mouse_control=False):
         print(f"[ERROR] Failed to start gaze system: {e}")
 
 # =====================================================================
-# Home Page UI
+# Home Page frontend
 # =====================================================================
 class HomePage(BasePage):
     def __init__(self, parent, controller):
@@ -648,15 +648,15 @@ class HomePage(BasePage):
                 return None
 
         icons = {
-            "up": load_icon("up.png"),
-            "down": load_icon("down.png"),
-            "left": load_icon("left.png"),
-            "right": load_icon("right.png"),
-            "left_blink": load_icon("left_eye_blink.png"),
-            "right_blink": load_icon("right_eye_blink.png"),
-            "closed_short": load_icon("closed_less_than_2mins.png"),
-            "closed_long": load_icon("closed_greater_than_2mins.png"),
-            "info": load_icon("info.png", size=(14, 14)),
+            "up": load_icon("up.ico"),
+            "down": load_icon("down.ico"),
+            "left": load_icon("left.ico"),
+            "right": load_icon("right.ico"),
+            "left_blink": load_icon("left_eye_blink.ico"),
+            "right_blink": load_icon("right_eye_blink.ico"),
+            "closed_short": load_icon("closed_less_than_2mins.ico"),
+            "closed_long": load_icon("closed_greater_than_2mins.ico"),
+            "info": load_icon("info.ico", size=(14, 14)),
         }
 
         controls = [
@@ -701,7 +701,7 @@ class HomePage(BasePage):
 
             try:
                 cycle_img = ImageTk.PhotoImage(
-                    Image.open(os.path.join(assets, "cycle_blink.png")).resize((280, 280), Image.LANCZOS)
+                    Image.open(os.path.join(assets, "cycle_blink.ico")).resize((280, 280), Image.LANCZOS)
                 )
                 lbl = tk.Label(popup, image=cycle_img, bg=Colors.dark_card)
                 lbl.image = cycle_img
@@ -820,7 +820,7 @@ class HomePage(BasePage):
         # === Start or Stop Gaze System based on control mode ===
         if running:
             print(f"[INFO] Application started. Control mode = {control_mode}")
-            from UI.pages.home import launch_gaze_app
+            from frontend.pages.home import launch_gaze_app
 
             if control_mode == "auto":
                 # Auto mode → Start gaze + mouse immediately
@@ -833,7 +833,7 @@ class HomePage(BasePage):
 
         else:
             # Stop the system
-            from UI.pages.home import launch_gaze_app
+            from frontend.pages.home import launch_gaze_app
             launch_gaze_app(enable_mouse_control=False)
             print("[INFO] Application stopped.")
 
