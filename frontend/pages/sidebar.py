@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard
 from PIL import Image, ImageTk
 import os
 import subprocess

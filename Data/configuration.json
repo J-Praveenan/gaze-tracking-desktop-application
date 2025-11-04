@@ -9,7 +9,7 @@
     },
     "tray": {
         "enabled": false,
-        "auto_open_instruction": false
+        "auto_open_instruction": true
     },
     "camera": {
         "index": 0

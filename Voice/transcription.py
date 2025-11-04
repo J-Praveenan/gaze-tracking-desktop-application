@@ -63,7 +63,7 @@ def transcribe_from_mic(duration=5):
 # === Voice Command Handler ===
 def handle_voice_command(command: str):
     """Parse spoken commands like 'start gaze control' or 'stop gaze control'."""
-    from UI.pages.home import launch_gaze_app  # ✅ moved here to avoid circular import
+    from frontend.pages.home import launch_gaze_app  # ✅ moved here to avoid circular import
 
     if "start gaze control" in command:
         print("[VOICE] Triggered: Start gaze control")

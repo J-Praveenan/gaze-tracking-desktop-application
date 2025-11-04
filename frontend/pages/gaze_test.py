@@ -1,12 +1,12 @@
 import tkinter as tk
 import threading
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard, PillButton
-from UI.pages.base import BasePage
-from UI.pages.sidebar import Sidebar
-from UI.pages.gaze_runner import main as run_gaze_test
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard, PillButton
+from frontend.pages.base import BasePage
+from frontend.pages.sidebar import Sidebar
+from frontend.pages.gaze_runner import main as run_gaze_test
 import subprocess, sys, os
-from UI.pages import gaze_runner
+from frontend.pages import gaze_runner
 import cv2 as cv
 
 def F(name, default):
@@ -51,14 +51,14 @@ class GazeTestPage(BasePage):
 
 
     # def _start_test(self):
-    #     from UI.pages import gaze_runner
+    #     from frontend.pages import gaze_runner
     #     print("[INFO] Starting test mode session...")
     #     test_session = gaze_runner.GazeSession(enable_mouse_control=False, show_video=True)
     #     test_session.start()
         
     def _start_test(self):
         import cv2
-        from UI.pages import gaze_runner
+        from frontend.pages import gaze_runner
 
         print("[INFO] Starting test mode session...")
 

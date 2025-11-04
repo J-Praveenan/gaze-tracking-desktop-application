@@ -1,4 +1,3 @@
-# UI/pages/gaze_runner.pyimport sys
 import sys
 from pathlib import Path
 
@@ -32,10 +31,10 @@ import threading
 from utils.common import speak_action_confirmation
 import tkinter as tk
 import threading
-from UI.theme import Colors, Fonts
-from UI.widgets import RoundedCard, PillButton
-from UI.pages.base import BasePage
-from UI.pages.sidebar import Sidebar
+from frontend.theme import Colors, Fonts
+from frontend.widgets import RoundedCard, PillButton
+from frontend.pages.base import BasePage
+from frontend.pages.sidebar import Sidebar
 import win32gui
 import win32process
 import psutil
@@ -267,7 +266,7 @@ def _right_click_debounced():
     _last_click_ts = now
     pyautogui.click(button="right")
 
-    # record for UI
+    # record for frontend
     right_click_count += 1
     _last_click_side = "right"
     _last_click_flash_until = time.time() + 0.6  # flash for 0.6s
@@ -581,7 +580,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
 
     _anchor_points = _compute_anchors()
 
-    # ===== UI sizing =====
+    # ===== frontend sizing =====
     UI_W = 1600        # overall canvas width  (↑ this to make everything wider)
     UI_H = 950         # overall canvas height
     TITLE_BAR_H = 68   # height of the top title bar
@@ -658,7 +657,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         _last_click_ts = now
         pyautogui.click(button=button)
 
-        # record for UI
+        # record for frontend
         if button == "left":
             left_click_count += 1
             _last_click_side = "left"
@@ -1244,7 +1243,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         y_pos = (screen_height - window_height) // 2
         cv2.moveWindow("Real Time Gaze Estimation", x_pos, y_pos)
     
-    # Initialize variables for UI placeholders
+    # Initialize variables for frontend placeholders
     eye_img_l_view = np.zeros((112, 128, 3), dtype=np.uint8)
     eye_img_r_view = np.zeros((112, 128, 3), dtype=np.uint8)
     gaze = "center"
@@ -1386,7 +1385,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         if not ret:
             break
         
-        # UI-only mirror
+        # frontend-only mirror
         display = cv2.flip(img, 1)
         
         
@@ -1403,7 +1402,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                     deep_blink_count = deep_blink_count
                 )
             except Exception as e:
-                print("UI update failed:", e)
+                print("frontend update failed:", e)
 
         # img = cv2.flip(img, 1)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -1430,7 +1429,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 mesh_points = pts
 
         flipped_frame = cv2.flip(img, 1)  # horizontally flip the video feed
-        # If no usable landmarks, render UI and continue
+        # If no usable landmarks, render frontend and continue
         if mesh_points is None:
             if 't_prev' not in globals():
                 t_prev = time.perf_counter()
@@ -1464,7 +1463,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                         deep_blink_count=deep_blink_count
                     )
                 except Exception as e:
-                    print("UI update failed:", e)
+                    print("frontend update failed:", e)
 
             # if show_video:
             #     cv2.imshow("Real Time Gaze Estimation", ui)
@@ -1518,7 +1517,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                         right=right_blink_count 
                     )
                 except Exception as e:
-                    print("UI update failed:", e)
+                    print("frontend update failed:", e)
                     
             # if show_video:
             #     cv2.imshow("Real Time Gaze Estimation", ui)
@@ -1621,7 +1620,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                         right=right_blink_count 
                     )
                 except Exception as e:
-                    print("UI update failed:", e)
+                    print("frontend update failed:", e)
                     
             if show_video:       
                 cv2.imshow("Real Time Gaze Estimation", output)  # or whatever you draw
@@ -1760,7 +1759,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                     )
                     main._last_head_warn = time.time()
 
-                # ✅ Build the UI using this frame (keep the window active)
+                # ✅ Build the frontend using this frame (keep the window active)
                 ui = compose_ui(
                     frame=frame_with_pose,
                     eye_left_view=eye_img_r_view,
@@ -1908,7 +1907,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             
 
             
-            # --- Compose polished UI ---
+            # --- Compose polished frontend ---
             ui = compose_ui(
                 frame=frame_with_pose,
                 eye_left_view=eye_img_r_view,
@@ -1936,7 +1935,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                         deep_blink_count=deep_blink_count 
                     )
                 except Exception as e:
-                    print("UI update failed:", e)
+                    print("frontend update failed:", e)
 
             if show_video:
                 cv2.imshow("Real Time Gaze Estimation", ui)

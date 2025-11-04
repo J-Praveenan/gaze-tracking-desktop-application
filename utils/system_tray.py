@@ -33,6 +33,6 @@ class SystemTrayIcon:
 
     def _show_instructions(self):
         
-        from UI.pages.instruction_tray import InstructionTray
+        from frontend.pages.instruction_tray import InstructionTray
         tray = InstructionTray()
         tray.focus_force()

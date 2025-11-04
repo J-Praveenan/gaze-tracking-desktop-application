@@ -1,10 +1,9 @@
-# UI/pages/guide.py
 import os, platform, ctypes
 from pathlib import Path
 import tkinter as tk
 
-from UI.widgets import RoundedCard, PillButton
-from UI.theme import Colors, Fonts
+from frontend.widgets import RoundedCard, PillButton
+from frontend.theme import Colors, Fonts
 from .base import BasePage
 import utils.common as common
 
