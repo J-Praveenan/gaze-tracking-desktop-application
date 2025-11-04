@@ -648,15 +648,15 @@ class HomePage(BasePage):
                 return None
 
         icons = {
-            "up": load_icon("up.png"),
-            "down": load_icon("down.png"),
-            "left": load_icon("left.png"),
-            "right": load_icon("right.png"),
-            "left_blink": load_icon("left_eye_blink.png"),
-            "right_blink": load_icon("right_eye_blink.png"),
-            "closed_short": load_icon("closed_less_than_2mins.png"),
-            "closed_long": load_icon("closed_greater_than_2mins.png"),
-            "info": load_icon("info.png", size=(14, 14)),
+            "up": load_icon("up.ico"),
+            "down": load_icon("down.ico"),
+            "left": load_icon("left.ico"),
+            "right": load_icon("right.ico"),
+            "left_blink": load_icon("left_eye_blink.ico"),
+            "right_blink": load_icon("right_eye_blink.ico"),
+            "closed_short": load_icon("closed_less_than_2mins.ico"),
+            "closed_long": load_icon("closed_greater_than_2mins.ico"),
+            "info": load_icon("info.ico", size=(14, 14)),
         }
 
         controls = [
@@ -701,7 +701,7 @@ class HomePage(BasePage):
 
             try:
                 cycle_img = ImageTk.PhotoImage(
-                    Image.open(os.path.join(assets, "cycle_blink.png")).resize((280, 280), Image.LANCZOS)
+                    Image.open(os.path.join(assets, "cycle_blink.ico")).resize((280, 280), Image.LANCZOS)
                 )
                 lbl = tk.Label(popup, image=cycle_img, bg=Colors.dark_card)
                 lbl.image = cycle_img
