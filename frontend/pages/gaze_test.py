@@ -30,14 +30,14 @@ class GazeTestPage(BasePage):
 
         tk.Label(card.body, text="Real-Time Gaze Test",
                  fg=Colors.card_head, bg=Colors.glass_bg,
-                 font=F("h1b", ("Segoe frontend", 18, "bold"))).pack(pady=(10, 20))
+                 font=F("h1b", ("Segoe UI", 18, "bold"))).pack(pady=(10, 20))
 
         desc = tk.Label(
             card.body,
             text="Click below to start the gaze detection test.\n"
                  "This will open a live video window. Press 'Q' to stop.",
             fg=Colors.card_text, bg=Colors.glass_bg,
-            font=F("body", ("Segoe frontend", 11)), wraplength=420, justify="center"
+            font=F("body", ("Segoe UI", 11)), wraplength=420, justify="center"
         )
         desc.pack(pady=(0, 20))
 
@@ -94,7 +94,7 @@ class GazeTestPage(BasePage):
                 popup,
                 text="Camera Not Available!",
                 fg="white", bg=Colors.dark_card,
-                font=F("h2b", ("Segoe frontend", 14, "bold"))
+                font=F("h2b", ("Segoe UI", 14, "bold"))
             ).pack(pady=(20, 10))
 
             tk.Label(
@@ -102,7 +102,7 @@ class GazeTestPage(BasePage):
                 text="You are selecting the wrong camera option.\n"
                     "Go to the Settings option and select the correct camera.",
                 fg="#e5e7eb", bg=Colors.dark_card,
-                font=F("body", ("Segoe frontend", 10)),
+                font=F("body", ("Segoe UI", 10)),
                 justify="center"
             ).pack(pady=(0, 20))
 
@@ -112,7 +112,7 @@ class GazeTestPage(BasePage):
                 command=popup.destroy,
                 bg="#ef4444",
                 fg="white",
-                font=("Segoe frontend", 10, "bold"),
+                font=("Segoe UI", 10, "bold"),
                 relief="flat",
                 width=6,
                 height=18,

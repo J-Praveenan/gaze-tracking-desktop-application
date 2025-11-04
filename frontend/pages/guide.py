@@ -82,15 +82,15 @@ class GuideVideoPage(BasePage):
         left = tk.Frame(self.controls, bg=ctrl_bg)
         left.pack(side="left")
         self.btn_back = tk.Button(left, text="⏪", command=lambda: self._seek_rel(-5),
-                                  font=("Segoe frontend Symbol", 11), fg="#ffffff",
+                                  font=("Segoe UI Symbol", 11), fg="#ffffff",
                                   bg=ctrl_bg, bd=0, cursor="hand2")
         self.btn_back.pack(side="left", padx=4)
         self.btn_play = tk.Button(left, text="▶", command=self._toggle_play,
-                                  font=("Segoe frontend Symbol", 12, "bold"), fg="#ffffff",
+                                  font=("Segoe UI Symbol", 12, "bold"), fg="#ffffff",
                                   bg=ctrl_bg, bd=0, cursor="hand2")
         self.btn_play.pack(side="left", padx=6)
         self.btn_fwd = tk.Button(left, text="⏩", command=lambda: self._seek_rel(5),
-                                 font=("Segoe frontend Symbol", 11), fg="#ffffff",
+                                 font=("Segoe UI Symbol", 11), fg="#ffffff",
                                  bg=ctrl_bg, bd=0, cursor="hand2")
         self.btn_fwd.pack(side="left", padx=4)
 
@@ -109,12 +109,12 @@ class GuideVideoPage(BasePage):
         right.pack(side="right", padx=0)
 
         self.btn_vol = tk.Button(right, text="🔊", command=self._toggle_mute,
-                                 font=("Segoe frontend Symbol", 11), fg="#ffffff",
+                                 font=("Segoe UI Symbol", 11), fg="#ffffff",
                                  bg=ctrl_bg, bd=0, cursor="hand2")
         self.btn_vol.pack(side="left", padx=(6, 2))
 
         self.btn_full = tk.Button(right, text="⤢", command=self._toggle_full,
-                                  font=("Segoe frontend Symbol", 12), fg="#ffffff",
+                                  font=("Segoe UI Symbol", 12), fg="#ffffff",
                                   bg=ctrl_bg, bd=0, cursor="hand2")
         self.btn_full.pack(side="left", padx=(6, 2))
 

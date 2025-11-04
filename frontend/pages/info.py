@@ -48,7 +48,7 @@ class InfoPage(BasePage):
             text="Information & Features",
             fg=Colors.card_head,
             bg=Colors.glass_bg,
-            font=F("h2b", ("Segoe frontend", 16, "bold"))
+            font=F("h2b", ("Segoe UI", 16, "bold"))
         ).grid(row=0, column=0, sticky="w", pady=(0, 12))
 
         # === Scrollable Area ===
@@ -135,7 +135,7 @@ class InfoPage(BasePage):
             text=title,
             fg="white",
             bg=Colors.dark_card,
-            font=F("h2b", ("Segoe frontend", 12, "bold"))
+            font=F("h2b", ("Segoe UI", 12, "bold"))
         ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
         for i, (icon, label, desc) in enumerate(entries, start=1):
@@ -144,12 +144,12 @@ class InfoPage(BasePage):
                 text=f"{icon} {label}",
                 fg="white",
                 bg=Colors.dark_card,
-                font=F("body", ("Segoe frontend", 10, "bold"))
+                font=F("body", ("Segoe UI", 10, "bold"))
             ).grid(row=i, column=0, sticky="w", padx=6, pady=2)
             tk.Label(
                 card.body,
                 text=desc,
                 fg="#d1d5db",
                 bg=Colors.dark_card,
-                font=F("body", ("Segoe frontend", 10))
+                font=F("body", ("Segoe UI", 10))
             ).grid(row=i, column=1, sticky="w", padx=(6, 0), pady=2)

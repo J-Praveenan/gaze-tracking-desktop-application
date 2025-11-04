@@ -107,7 +107,7 @@ class Sidebar(RoundedCard):
                 image=icon,
                 compound="left",
                 anchor="w",
-                font=F("h3", ("Segoe frontend", 12, "bold")),
+                font=F("h3", ("Segoe UI", 12, "bold")),
                 fg="white",
                 bg=Colors.sidebar_bg,
                 bd=0,
