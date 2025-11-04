@@ -24,6 +24,7 @@ info_icon_path = os.path.join(ASSETS_DIR, "info.ico")
 gaze_set_up_icon_path = os.path.join(ASSETS_DIR, "gaze_set_up.ico")
 gaze_test_icon_path = os.path.join(ASSETS_DIR, "gaze_test.ico")
 keyboard_icon_path = os.path.join(ASSETS_DIR, "keyboard.ico")
+communicator_icon_path = os.path.join(ASSETS_DIR, "communicator.ico")
 
 def F(name, default):
     return getattr(Fonts, name, default)
@@ -51,7 +52,7 @@ class Sidebar(RoundedCard):
         parent.configure(bg=Colors.sidebar_bg)
         wrap = tk.Frame(parent, bg=Colors.sidebar_bg)
         wrap.pack(fill="both", expand=True, padx=16, pady=16)
-        wrap.grid_rowconfigure(8, weight=1)
+        wrap.grid_rowconfigure(9, weight=1)
 
         def _nav_row(row_index, key, text, target_page, icon_path=None):
             cont = tk.Frame(wrap, bg=Colors.sidebar_bg)
@@ -92,6 +93,7 @@ class Sidebar(RoundedCard):
                     "SetupPage": "This is the calibration setup page. Follow the dots with your eyes to complete calibration.",
                     "GazeTestPage": "This is the gaze test page. You can test and verify your gaze tracking.",
                     "TipsPage": "This page provides tips and guidance for better accuracy.",
+                    "CommunicatorPage": "This is the communication aid page. You can select and speak messages using your gaze and blinks.",
                     "InfoPage": "This page shows detailed system information and controls.",
                     "SettingsPage": "You can configure reminders and accessibility settings here."
                 }
@@ -131,11 +133,14 @@ class Sidebar(RoundedCard):
         _nav_row(r, "setup", "Calibration", "SetupPage", icon_path=gaze_set_up_icon_path); r += 1
         _nav_row(r, "gaze_test", "Gaze Test", "GazeTestPage", icon_path=gaze_test_icon_path); r += 1
         _nav_row(r, "tips", "Tips", "TipsPage", icon_path=tips_icon_path); r += 1
-        tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=r, column=0, sticky="nsew"); r += 1
-        _nav_row(r, "info", "Information", "InfoPage", icon_path=info_icon_path); r += 1
+        _nav_row(r, "communicator", "Communicator", "CommunicatorPage", icon_path=communicator_icon_path); r += 1
         _nav_row(r, "keyboard", "Virtual Keyboard", "KeyboardPage", icon_path=keyboard_icon_path); r += 1
-        tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=99, column=0, sticky="nsew")
+        # Spacer before bottom buttons
+        tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=98, column=0, sticky="nsew");
+        _nav_row(99, "info", "Information", "InfoPage", icon_path=info_icon_path); 
         _nav_row(100, "settings", "Settings", "SettingsPage", icon_path=setting_icon_path)
+
+
 
     # 🔹 Highlight selected sidebar item
     def highlight_selected(self, key):
