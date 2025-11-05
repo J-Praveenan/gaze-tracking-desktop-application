@@ -24,6 +24,7 @@ info_icon_path = os.path.join(ASSETS_DIR, "info.ico")
 gaze_set_up_icon_path = os.path.join(ASSETS_DIR, "gaze_set_up.ico")
 gaze_test_icon_path = os.path.join(ASSETS_DIR, "gaze_test.ico")
 keyboard_icon_path = os.path.join(ASSETS_DIR, "keyboard.ico")
+game_icon_path = os.path.join(ASSETS_DIR, "game.ico")
 
 def F(name, default):
     return getattr(Fonts, name, default)
@@ -93,7 +94,8 @@ class Sidebar(RoundedCard):
                     "GazeTestPage": "This is the gaze test page. You can test and verify your gaze tracking.",
                     "TipsPage": "This page provides tips and guidance for better accuracy.",
                     "InfoPage": "This page shows detailed system information and controls.",
-                    "SettingsPage": "You can configure reminders and accessibility settings here."
+                    "SettingsPage": "You can configure reminders and accessibility settings here.",
+                    "SokobanGamePage": "Welcome to the Sokoban game! Use your gaze to move the character and push boxes to their targets."
                 }
                 if target_page in instructions:
                     common.stop_speech()  # 🛑 stop previous speech first
@@ -133,6 +135,7 @@ class Sidebar(RoundedCard):
         _nav_row(r, "tips", "Tips", "TipsPage", icon_path=tips_icon_path); r += 1
         tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=r, column=0, sticky="nsew"); r += 1
         _nav_row(r, "info", "Information", "InfoPage", icon_path=info_icon_path); r += 1
+        _nav_row(r, "sokoban", "Sokoban Game", "SokobanGamePage", icon_path=game_icon_path); r += 1
         _nav_row(r, "keyboard", "Virtual Keyboard", "KeyboardPage", icon_path=keyboard_icon_path); r += 1
         tk.Frame(wrap, bg=Colors.sidebar_bg).grid(row=99, column=0, sticky="nsew")
         _nav_row(100, "settings", "Settings", "SettingsPage", icon_path=setting_icon_path)

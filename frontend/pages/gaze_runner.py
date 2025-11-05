@@ -44,6 +44,7 @@ from tensorflow.keras.models import load_model
 from utils.common import speak_action_confirmation, speak
 
 
+
 # Disable TensorFlow imports to prevent protobuf errors
 import os, sys
 
@@ -290,7 +291,7 @@ def _double_click_debounced(interval=0.15):
     print(f"🎯 Active app: {app}, Window title: {window_title}")
 
     # 🎯 If active window is the On-Screen Keyboard or your custom keyboard
-    if "On-Screen Keyboard" in window_title or "Virtual Keyboard" in window_title:
+    if "On-Screen Keyboard".lower() in window_title or "Virtual Keyboard" in window_title:
         x, y = pyautogui.position()
         pyautogui.click(x, y)
         print("⌨️ Keyboard detected — Single click triggered instead of double-click")
@@ -681,6 +682,27 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         if now - _last_cursor_move_ts < MOVE_COOLDOWN_SEC:
             return
         _last_cursor_move_ts = now
+        
+        
+        # 🎯 Detect the active window
+        hwnd = win32gui.GetForegroundWindow()
+        window_title = win32gui.GetWindowText(hwnd).lower()
+        print("Active window title:======", window_title)
+
+        # 🎮 If the current active window is Sokoban (pygame window)
+        if "pygame" in window_title or "sokoban" in window_title:
+            print(f"🎮 Sokoban active — sending keyboard input for {gaze.upper()}")
+
+            if gaze == "left":
+                pyautogui.press("left")
+            elif gaze == "right":
+                pyautogui.press("right")
+            elif gaze == "up":
+                pyautogui.press("up")
+            elif gaze == "down":
+                pyautogui.press("down")
+
+            return  # skip cursor movement
         
         
         if SCROLL_MODE:
@@ -1802,6 +1824,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                     left_ear=left_ear,
                     right_ear=right_ear
                 )
+                
                 
                 
                 # --- Smooth/Stable "down" detection over multiple frames ---

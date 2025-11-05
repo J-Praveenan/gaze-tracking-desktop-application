@@ -54,6 +54,8 @@ from frontend.pages.home import HomePage, launch_gaze_app, speak
 from utils.paths import data_path
 from frontend.pages.guide import GuideVideoPage
 from frontend.pages.gaze_test import GazeTestPage
+from frontend.pages.sokoban_game_page import SokobanGamePage
+
 
 APP_TITLE = "LOOK TRACK VISION"
 BASE_DIR = Path(__file__).resolve().parent
@@ -115,7 +117,7 @@ class App(tk.Tk):
         self._add_page(TipsPage, "TipsPage")
         self._add_page(InfoPage, "InfoPage")
         self._add_page(SettingsPage, "SettingsPage")
-
+        self._add_page(SokobanGamePage, "SokobanGamePage")
         # keep this line if you want the splash first
         self.show("SplashPage")
         # === Start background voice listener only in MANUAL mode ===
