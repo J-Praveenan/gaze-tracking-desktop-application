@@ -111,7 +111,6 @@ class InfoPage(BasePage):
         self._make_instruction_section(scroll_frame, "Interface", [
             ("➡️", "Sidebar Navigation", "Switch between pages using the left sidebar"),
             ("🪟", "Hide to Tray", "Minimize the app while keeping it running in background"),
-            ("💡", "Dark / Light Mode", "Adaptive theme based on system settings"),
             ("📘", "Help & Tips", "Access quick guidance and troubleshooting info"),
         ])
 

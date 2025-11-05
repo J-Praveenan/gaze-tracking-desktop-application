@@ -60,6 +60,70 @@ class ModernToggle(tk.Canvas):
         self.state.set(value)
         self._draw_toggle()
 
+class LargeDropdown(tk.Frame):
+    """Custom dropdown with larger options for accessibility or gaze control."""
+    def __init__(self, parent, options, initial=None, on_select=None, width=18, font_size=16):
+        super().__init__(parent, bg=Colors.glass_bg)
+        self.options = options
+        self.var = tk.StringVar(value=initial or options[0])
+        self.on_select = on_select
+        self.font = ("Segoe UI", font_size)
+
+        # Display button
+        self.btn = tk.Button(
+            self, textvariable=self.var, width=width,
+            font=self.font, bg="white", fg="black", relief="groove",
+            command=self._open_dropdown
+        )
+        self.btn.pack(fill="x")
+        
+    def set_state(self, state: str):
+        """Enable or disable dropdown visually."""
+        if state == "disabled":
+            self.btn.configure(state="disabled", bg="#d1d5db")  # greyed out look
+        else:
+            self.btn.configure(state="normal", bg="white")
+
+
+    def _open_dropdown(self):
+        """Open popup listbox for selection."""
+        popup = tk.Toplevel(self)
+        popup.wm_overrideredirect(True)
+        popup.configure(bg="white")
+
+        # Position below button
+        x = self.winfo_rootx()
+        y = self.winfo_rooty() + self.winfo_height()
+        popup.geometry(f"+{x}+{y}")
+
+        listbox = tk.Listbox(
+            popup, font=self.font, activestyle="none",
+            selectbackground="#31A0EB", selectforeground="white",
+            height=len(self.options), bg="white", fg="black",
+            relief="flat", borderwidth=2
+        )
+        listbox.pack(fill="both", expand=True)
+
+        for item in self.options:
+            listbox.insert(tk.END, item)
+
+        # ✅ Fix: select using curselection (works with mouse click)
+        def select_item(_=None):
+            selection = listbox.curselection()
+            if not selection:
+                return
+            value = listbox.get(selection[0])
+            self.var.set(value)
+            popup.destroy()
+            if self.on_select:
+                self.on_select(value)
+
+        listbox.bind("<ButtonRelease-1>", select_item)
+        popup.focus_force()
+        popup.bind("<FocusOut>", lambda e: popup.destroy())
+
+        def get(self):
+            return self.var.get()
 
 # ---------------------------------------------------------------------
 # ⚙️ Settings Page
@@ -246,8 +310,16 @@ class SettingsPage(BasePage):
 
         self.duration_var = tk.StringVar(value=str(data["duration"]))
         options = ["10", "20", "30", "40", "50", "60"]
-        self.dropdown = ttk.Combobox(card.body, textvariable=self.duration_var, values=options, width=10)
+
+        self.dropdown = LargeDropdown(
+            card.body,
+            options=options,
+            initial=str(data["duration"]),
+            on_select=lambda val: self.duration_var.set(val),
+            font_size=12  # 👈 taller, easier for eye control
+        )
         self.dropdown.grid(row=2, column=1, sticky="w", padx=8, pady=4)
+
 
         tk.Button(card.body, text="Save", bg="#31A0EB", fg="white",
                   font=("Segoe UI", 12, "bold"),
@@ -258,7 +330,8 @@ class SettingsPage(BasePage):
 
     def _toggle_enable(self):
         state = "normal" if self.toggle.get() else "disabled"
-        self.dropdown.configure(state=state)
+        self.dropdown.set_state(state)
+
 
     def _save_reminder(self):
         try:
@@ -421,26 +494,24 @@ class SettingsPage(BasePage):
     # -----------------------------------------------------------------
     # Camera Section
     # -----------------------------------------------------------------
-    # -----------------------------------------------------------------
-    # Camera Section (User-Friendly)
-    # -----------------------------------------------------------------
+    # --------------------------------------------------------
     def _build_camera_settings(self, parent):
         """Display camera options in human-friendly terms instead of numeric indexes."""
         data = self.config.get("camera", {"index": 0})
 
         card = RoundedCard(parent, radius=12, pad=12,
-                           bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
+                        bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
         card.pack(fill="x", pady=8)
 
         tk.Label(card.body, text="Camera Configuration",
-                 fg=Colors.card_head, bg=Colors.glass_bg,
-                 font=F("h2b", ("Segoe UI", 13, "bold"))
-                 ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
+                fg=Colors.card_head, bg=Colors.glass_bg,
+                font=F("h2b", ("Segoe UI", 13, "bold"))
+                ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8), columnspan=2)
 
         tk.Label(card.body, text="Select active camera:",
-                 bg=Colors.glass_bg, fg=Colors.card_text,
-                 font=("Segoe UI", 12)
-                 ).grid(row=1, column=0, sticky="w", padx=10, pady=6)
+                bg=Colors.glass_bg, fg=Colors.card_text,
+                font=("Segoe UI", 12)
+                ).grid(row=1, column=0, sticky="w", padx=10, pady=6)
 
         # User-friendly options
         self.camera_options = {
@@ -450,28 +521,29 @@ class SettingsPage(BasePage):
             "Other (Advanced User)": 3
         }
 
-        # Find text label that matches current index
+        # Current camera label based on saved index
         current_text = next(
             (name for name, idx in self.camera_options.items() if idx == data.get("index", 0)),
             "Default / Built-in Camera"
         )
 
-        # Dropdown with readable text
+        # ✅ Use LargeDropdown instead of ttk.Combobox
         self.camera_var = tk.StringVar(value=current_text)
-        dropdown = ttk.Combobox(
+        self.camera_dropdown = LargeDropdown(
             card.body,
-            textvariable=self.camera_var,
-            values=list(self.camera_options.keys()),
-            width=30,
-            state="readonly"
+            options=list(self.camera_options.keys()),
+            initial=current_text,
+            on_select=lambda val: self.camera_var.set(val),
+            font_size=12,
+            width=20
         )
-        dropdown.grid(row=1, column=1, sticky="w", padx=10, pady=6)
+        self.camera_dropdown.grid(row=1, column=1, sticky="w", padx=10, pady=6)
 
         # Save button
         tk.Button(card.body, text="Save", bg="#31A0EB", fg="white",
-                  font=("Segoe UI", 12, "bold"),
-                  command=self._save_camera_config
-                  ).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 6))
+                font=("Segoe UI", 12, "bold"),
+                command=self._save_camera_config
+                ).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 6))
 
     def _save_camera_config(self):
         """Save selected camera in numeric format, based on user-friendly name."""
