@@ -71,8 +71,20 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(APP_TITLE)
-        self.geometry("1180x760")
-        self.minsize(1000, 680)
+        # self.geometry("1180x760")
+        # self.minsize(1000, 900) # (1000, 680)
+        # ✅ Default window size
+        width, height = 1280, 800  # or keep 1180x760 if you prefer
+        self.minsize(1000, 900)
+
+        # ✅ Calculate center coordinates
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        # ✅ Apply centered geometry
+        self.geometry(f"{width}x{height}+{x}+{y}")
         self.configure(bg=Colors.page_bg)
         self.gaze_running = False  # ✅ Add this line here
         apply_base_style(self)

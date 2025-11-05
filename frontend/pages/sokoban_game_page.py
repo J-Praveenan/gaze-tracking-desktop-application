@@ -2,7 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 from frontend.theme import Colors
 import os, sys, subprocess
-
+from itertools import count
+from PIL import Image, ImageTk
 
 class SokobanGamePage(tk.Frame):
     def __init__(self, parent, controller):
@@ -31,6 +32,34 @@ class SokobanGamePage(tk.Frame):
         grid_frame.pack(pady=20)
 
         self.create_level_grid(grid_frame)
+        
+        # --- Add Sokoban animated GIF below levels ---
+        gif_path = os.path.join(os.path.dirname(__file__), "../../assets/sokoban.gif")
+
+        if os.path.exists(gif_path):
+            try:
+                frames = []
+                with Image.open(gif_path) as im:
+                    for frame in range(im.n_frames):
+                        im.seek(frame)
+                        frame_image = ImageTk.PhotoImage(im.copy().resize((500, 250)))  # Resize if needed
+                        frames.append(frame_image)
+
+                gif_label = tk.Label(self, bg=Colors.bg)
+                gif_label.pack(pady=15)
+
+                def update_gif(index=0):
+                    frame = frames[index]
+                    gif_label.configure(image=frame)
+                    gif_label.image = frame
+                    self.after(300, update_gif, (index + 1) % len(frames))  # 100 ms per frame
+
+                update_gif()  # Start animation
+            except Exception as e:
+                print("⚠️ Could not load Sokoban GIF:", e)
+        else:
+            print("⚠️ Sokoban GIF not found at:", gif_path)
+
 
     def create_level_grid(self, frame):
         """Creates a clickable grid of level buttons (1–52)."""
