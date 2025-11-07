@@ -311,14 +311,74 @@ class SettingsPage(BasePage):
         self.duration_var = tk.StringVar(value=str(data["duration"]))
         options = ["10", "20", "30", "40", "50", "60"]
 
-        self.dropdown = LargeDropdown(
-            card.body,
-            options=options,
-            initial=str(data["duration"]),
-            on_select=lambda val: self.duration_var.set(val),
-            font_size=12  # 👈 taller, easier for eye control
+        # --- Hybrid Dropdown + Manual Entry ---
+        dropdown_frame = tk.Frame(card.body, bg=Colors.glass_bg)
+        dropdown_frame.grid(row=2, column=1, sticky="w", padx=8, pady=4)
+
+        self.duration_entry = tk.Entry(
+            dropdown_frame,
+            textvariable=self.duration_var,
+            font=("Segoe UI", 12),
+            width=8,
+            justify="center",
+            relief="solid",
+            bd=1
         )
-        self.dropdown.grid(row=2, column=1, sticky="w", padx=8, pady=4)
+        self.duration_entry.pack(side="left", padx=(0, 5))
+
+        # Dropdown button beside entry
+        def show_quick_options():
+            popup = tk.Toplevel(dropdown_frame)
+            popup.wm_overrideredirect(True)
+            popup.configure(bg="white")
+
+            x = dropdown_frame.winfo_rootx()
+            y = dropdown_frame.winfo_rooty() + dropdown_frame.winfo_height()
+            popup.geometry(f"+{x}+{y}")
+
+            listbox = tk.Listbox(
+                popup,
+                font=("Segoe UI", 12),
+                activestyle="none",
+                selectbackground="#31A0EB",
+                selectforeground="white",
+                height=len(options),
+                bg="white",
+                fg="black",
+                relief="flat",
+                borderwidth=2
+            )
+            listbox.pack(fill="both", expand=True)
+
+            for item in options:
+                listbox.insert(tk.END, item)
+
+            def select_item(_=None):
+                selection = listbox.curselection()
+                if selection:
+                    value = listbox.get(selection[0])
+                    self.duration_var.set(value)
+                popup.destroy()
+
+            listbox.bind("<ButtonRelease-1>", select_item)
+            popup.bind("<FocusOut>", lambda e: popup.destroy())
+            popup.focus_force()
+
+        
+        self.duration_dropdown_btn = tk.Button(
+            dropdown_frame,
+            text="▼",
+            command=show_quick_options,
+            bg="#31A0EB",
+            fg="white",
+            font=("Segoe UI", 8, "bold"),
+            width=2,
+            height=1,
+            relief="flat"
+        )
+        self.duration_dropdown_btn.pack(side="left")
+
+
 
 
         tk.Button(card.body, text="Save", bg="#31A0EB", fg="white",
@@ -330,7 +390,11 @@ class SettingsPage(BasePage):
 
     def _toggle_enable(self):
         state = "normal" if self.toggle.get() else "disabled"
-        self.dropdown.set_state(state)
+        self.duration_entry.configure(state=state)
+        # Disable or enable the dropdown button as well
+        if hasattr(self, "duration_dropdown_btn"):
+            self.duration_dropdown_btn.configure(state=state)
+
 
 
     def _save_reminder(self):
