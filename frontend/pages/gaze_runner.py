@@ -208,13 +208,13 @@ SCROLL_MODE = False
 
 # ---- Cursor smoother globals ----
 SMOOTH_HZ = 120                # how often to update the cursor
-SMOOTH_ALPHA = 0.22            # 0..1, higher = snappier, lower = smoother
+SMOOTH_ALPHA = 0.02           # 0..1, higher = snappier, lower = smoother  0.22 
 _target_pos = None             # (x, y)
 _smoother_started = False
 
 
 # ---- Cursor move gating ----
-MOVE_COOLDOWN_SEC = 0.08
+MOVE_COOLDOWN_SEC = 0.02
 _last_cursor_move_ts = 0.0   # initialize globally
 
 
@@ -332,9 +332,9 @@ def toggle_scroll_mode():
     SCROLL_MODE = not SCROLL_MODE
     mode = "🧾 Scroll Mode" if SCROLL_MODE else "🖱️ Cursor Mode"
     if mode == "🖱️ Cursor Mode":
-        speak_action_confirmation("Cursor mode is activated now")
+        speak("Cursor mode is activated now")
     else:
-        speak_action_confirmation("Scroll mode is activated now")
+        speak("Scroll mode is activated now")
     print(f"[MODE SWITCHED] {mode}")
     winsound.Beep(1000 if SCROLL_MODE else 700, 150)
 
@@ -548,7 +548,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     # --- Long-blink tuning ---
 
     # --- Wink & long-blink tuning (adjust to taste) ---
-    EAR_CLOSED = 0.18         # 0.18  # eye considered closed below this
+    EAR_CLOSED = 0.2         # 0.18  # eye considered closed below this
     EAR_OPEN_HYST = 0.16        # must be clearly open above this
     WINK_OPEN_MARGIN = 0.02     # the OTHER eye must be this much more open
     WINK_MIN_SEC = 0.08        # ignore micro twitches
@@ -731,27 +731,25 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 print("⏩ Left/right gaze ignored in scroll mode")
                 return
         else:
-        # step vector from gaze
-            dx = dy = 0
+            # step vector from gaze
+            # --- Continuous smooth motion ---
+            sw, sh = pyautogui.size()
+            cx, cy = pyautogui.position()
+
+            speed = 50  # 🔹 adjust this for faster/slower motion (pixels per frame)
             if gaze == "left":
-                dx = -CURSOR_STEP_PX
+                tx, ty = _clamp(cx - speed, 0, sw - 1), cy
             elif gaze == "right":
-                dx = CURSOR_STEP_PX
+                tx, ty = _clamp(cx + speed, 0, sw - 1), cy
             elif gaze == "up":
-                dy = -CURSOR_STEP_PX
+                tx, ty = cx, _clamp(cy - speed, 0, sh - 1)
             elif gaze == "down":
-                dy = CURSOR_STEP_PX
+                tx, ty = cx, _clamp(cy + speed, 0, sh - 1)
             else:
                 return
 
-            # update target (clamped)
-            sw, sh = pyautogui.size()
-            cx, cy = pyautogui.position()  # current as base
-            tx, ty = _target_pos if _target_pos is not None else (cx, cy)
-            # nudge the target rather than the current cursor to avoid fighting the smoother
-            ntx = _clamp(tx + dx, 0, sw - 1)
-            nty = _clamp(ty + dy, 0, sh - 1)
-            _target_pos = (ntx, nty)
+            _target_pos = (tx, ty)
+
         
         
     

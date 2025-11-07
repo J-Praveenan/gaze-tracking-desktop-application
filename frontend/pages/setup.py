@@ -86,10 +86,16 @@ class SetupPage(BasePage):
 
 
         # --- Controls row ---
+        # --- Controls row (responsive layout) ---
         ctrl_frame = tk.Frame(card.body, bg=Colors.dark_card)
         ctrl_frame.pack(fill="x", pady=(5, 0))
 
-        # ▶ Playback buttons
+        # Configure adaptive grid
+        ctrl_frame.columnconfigure(0, weight=0)  # play button
+        ctrl_frame.columnconfigure(1, weight=1)  # progress bar expands
+        ctrl_frame.columnconfigure(2, weight=0)  # right control buttons
+
+        # ▶ Playback button
         self.btn_play = tk.Button(
             ctrl_frame,
             text="▶",
@@ -100,19 +106,25 @@ class SetupPage(BasePage):
             cursor="hand2",
             command=self._toggle_play,
         )
-        self.btn_play.pack(side="left", padx=8)
+        self.btn_play.grid(row=0, column=0, sticky="w", padx=8, pady=4)
 
-        # Progress bar
-        self.progress = tk.Canvas(ctrl_frame, height=10, bg=Colors.dark_card, highlightthickness=0)
-        self.progress.pack(side="left", fill="x", expand=True, padx=(8, 0))
+        # Progress bar expands dynamically
+        self.progress = tk.Canvas(
+            ctrl_frame, height=10, bg=Colors.dark_card, highlightthickness=0
+        )
+        self.progress.grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=4)
         self.progress.bind("<Button-1>", self._progress_click)
         self.progress.bind("<B1-Motion>", self._progress_click)
         self.progress.bind("<Configure>", lambda e: self._draw_progress())
 
-        # 🔇 Volume + Fullscreen + Start Calibration
+        # Right control section (also grid-based)
         right_ctrl = tk.Frame(ctrl_frame, bg=Colors.dark_card)
-        right_ctrl.pack(side="right", padx=8)
+        right_ctrl.grid(row=0, column=2, sticky="e", padx=8, pady=4)
+        right_ctrl.columnconfigure(0, weight=0)
+        right_ctrl.columnconfigure(1, weight=0)
+        right_ctrl.columnconfigure(2, weight=1)
 
+        # 🔇 Volume + Fullscreen + Start Calibration buttons
         self.btn_vol = tk.Button(
             right_ctrl,
             text="🔊",
@@ -123,7 +135,7 @@ class SetupPage(BasePage):
             cursor="hand2",
             command=self._toggle_mute,
         )
-        self.btn_vol.pack(side="left", padx=4)
+        self.btn_vol.grid(row=0, column=0, padx=4)
 
         self.btn_full = tk.Button(
             right_ctrl,
@@ -135,12 +147,16 @@ class SetupPage(BasePage):
             cursor="hand2",
             command=self._toggle_fullscreen,
         )
-        self.btn_full.pack(side="left", padx=4)
+        self.btn_full.grid(row=0, column=1, padx=4)
 
         self.start_btn = PillButton(
             right_ctrl, text="START CALIBRATION", command=self._start_calibration
         )
-        self.start_btn.pack(side="left", padx=(10, 0))
+        self.start_btn.grid(row=0, column=2, sticky="e", padx=(10, 0))
+
+
+        # Progress bar
+
 
         # --- VLC Setup ---
         guide_path = PROJECT_ROOT / "assets" / "guide.mp4"
@@ -169,8 +185,91 @@ class SetupPage(BasePage):
             ph.pack(expand=True)
 
     # ---------- Calibration ----------
+        # ---------- Calibration ----------
     def _start_calibration(self):
+        import cv2
+        import json
+        from pathlib import Path
+
+        print("[INFO] Starting calibration mode...")
+
+        # 📁 Load selected camera index from configuration.json
+        ROOT = Path(__file__).resolve().parents[2]
+        config_path = ROOT / "Data" / "configuration.json"
+        camera_index = 0  # default camera
+
+        try:
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    camera_index = config.get("camera", {}).get("index", 0)
+        except Exception as e:
+            print("⚠️ Failed to read config:", e)
+
+        # 🎥 Try to open the selected camera
+        cap = cv2.VideoCapture(camera_index)
+        ret, frame = cap.read()
+        cap.release()
+
+        if not ret or frame is None:
+            # 🚫 Camera not working → show popup
+            self._show_camera_error()
+            print("[ERROR] Wrong camera selected.")
+            return  # stop execution here
+
+        # ✅ Camera works → Start calibration thread
+        print("[OK] Camera working, starting calibration...")
         threading.Thread(target=calibrate_gaze, daemon=True).start()
+        
+        
+    def _show_camera_error(self):
+        """Show popup when the selected camera is not available."""
+        popup = tk.Toplevel(self)
+        popup.title("Camera Error")
+        popup.configure(bg=Colors.dark_card)
+
+        # Center popup dynamically on screen
+        popup_width, popup_height = 480, 180
+        screen_w = popup.winfo_screenwidth()
+        screen_h = popup.winfo_screenheight()
+        x = int((screen_w / 2) - (popup_width / 2))
+        y = int((screen_h / 2) - (popup_height / 2))
+        popup.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
+
+        popup.resizable(False, False)
+
+        # Heading
+        tk.Label(
+            popup,
+            text="Camera Not Available!",
+            fg="white", bg=Colors.dark_card,
+            font=("Segoe UI", 14, "bold")
+        ).pack(pady=(20, 10))
+
+        # Instruction text
+        tk.Label(
+            popup,
+            text="You are selecting the wrong camera option.\n"
+                 "Go to the Settings option and select the correct camera.",
+            fg="#e5e7eb", bg=Colors.dark_card,
+            font=("Segoe UI", 10),
+            justify="center"
+        ).pack(pady=(0, 20))
+
+        # OK button
+        tk.Button(
+            popup,
+            text="OK",
+            command=popup.destroy,
+            bg="#ef4444",
+            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            relief="flat",
+            width=6,
+            cursor="hand2"
+        ).pack(pady=(0, 12))
+
+
 
     # ---------- VLC Controls ----------
     def _attach_handle(self):
