@@ -251,43 +251,30 @@ class HomePage(BasePage):
         ).grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
 
         # --- Helper to make neat aligned rows ---
-        def add_status_row(row, icon, label, value, color_icon="#1e293b", color_value="#111827"):
-            """Creates one aligned row inside the status card."""
-            tk.Label(
-                self.status_card.body,
-                text=icon,
-                fg=color_icon,
-                bg=Colors.glass_bg,
-                font=("Segoe UI Emoji", 11)
-            ).grid(row=row, column=0, sticky="w", padx=(6, 2), pady=2)
+        def add_status_row(r, c, icon, label, value, color_icon="#1e293b", color_value="#111827"):
+            frame = tk.Frame(self.status_card.body, bg=Colors.glass_bg)
+            frame.grid(row=r, column=c, sticky="nsew", padx=10, pady=5)
 
-            tk.Label(
-                self.status_card.body,
-                text=f"{label}:",
-                fg=Colors.card_text,
-                bg=Colors.glass_bg,
-                font=("Segoe UI", 10, "bold"),
-                anchor="w"
-            ).grid(row=row, column=1, sticky="w", padx=(0, 6), pady=2)
+            tk.Label(frame, text=icon, fg=color_icon, bg=Colors.glass_bg, font=("Segoe UI Emoji", 11)).pack(side="left", padx=(0, 4))
+            tk.Label(frame, text=f"{label}:", fg=Colors.card_text, bg=Colors.glass_bg,
+                    font=("Segoe UI", 10, "bold")).pack(side="left", padx=(0, 4))
+            tk.Label(frame, text=value, fg=color_value, bg=Colors.glass_bg,
+                    font=("Segoe UI", 10)).pack(side="left")
 
-            tk.Label(
-                self.status_card.body,
-                text=value,
-                fg=color_value,
-                bg=Colors.glass_bg,
-                font=("Segoe UI", 10),
-                anchor="w"
-            ).grid(row=row, column=2, sticky="w", padx=(0, 6), pady=2)
 
         # --- Add neatly aligned rows ---
-        add_status_row(1, "🎯", "Gaze Control", "Enabled" if self.app_running else "Disabled")
-        add_status_row(2, "🔊", "Voice Tips", "Enabled" if common.voice_tips_enabled else "Disabled")
-        add_status_row(3, "🔔", "Voice Confirmation", "Enabled" if common.voice_action_confirmation else "Disabled")
-        add_status_row(4, "⏰", "Rest Reminder", f"ON ({reminder_duration} min)" if reminder_enabled else "OFF")
+        # Row 1
+        add_status_row(1, 0, "🎯", "Gaze Control", "Enabled" if self.app_running else "Disabled")
+        add_status_row(1, 1, "🔊", "Voice Tips", "Enabled" if common.voice_tips_enabled else "Disabled")
 
-        # --- Column alignment ---
-        for i in range(3):
-            self.status_card.body.grid_columnconfigure(i, weight=0)
+        # Row 2
+        add_status_row(2, 0, "🔔", "Voice Confirmation", "Enabled" if common.voice_action_confirmation else "Disabled")
+        add_status_row(2, 1, "⏰", "Rest Reminder", f"ON ({reminder_duration} min)" if reminder_enabled else "OFF")
+
+        for i in range(2):
+            self.status_card.body.grid_columnconfigure(i, weight=1)
+
+
         self.status_card.body.grid_columnconfigure(2, weight=1)
 
         # --- Place both cards ---
@@ -384,7 +371,7 @@ class HomePage(BasePage):
 
     # -----------------------------------------------------------------
     def refresh_status(self):
-        """Rebuilds the aligned System Status section dynamically."""
+        """Rebuilds the aligned System Status section dynamically in 2×2 grid layout."""
         from utils import common
         base_dir = Path(__file__).resolve().parents[2]
         data_dir = base_dir / "Data"
@@ -411,46 +398,29 @@ class HomePage(BasePage):
             fg=Colors.card_head,
             bg=Colors.glass_bg,
             font=F("h2b", ("Segoe UI", 12, "bold"))
-        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(0, 6))
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=6, pady=(0, 6))
 
-        # Helper for neat alignment
-        def add_status_row(row, icon, label, value, color_icon="#1e293b", color_value="#111827"):
-            tk.Label(
-                self.status_card.body,
-                text=icon,
-                fg=color_icon,
-                bg=Colors.glass_bg,
-                font=("Segoe UI Emoji", 11)
-            ).grid(row=row, column=0, sticky="w", padx=(6, 2), pady=2)
+        # Helper for neat grid layout
+        def add_status_row(r, c, icon, label, value, color_icon="#1e293b", color_value="#111827"):
+            frame = tk.Frame(self.status_card.body, bg=Colors.glass_bg)
+            frame.grid(row=r, column=c, sticky="nsew", padx=10, pady=9)
+            tk.Label(frame, text=icon, fg=color_icon, bg=Colors.glass_bg, font=("Segoe UI Emoji", 11)).pack(side="left", padx=(0, 4))
+            tk.Label(frame, text=f"{label}:", fg=Colors.card_text, bg=Colors.glass_bg,
+                    font=("Segoe UI", 10, "bold")).pack(side="left", padx=(0, 4))
+            tk.Label(frame, text=value, fg=color_value, bg=Colors.glass_bg,
+                    font=("Segoe UI", 10)).pack(side="left")
 
-            tk.Label(
-                self.status_card.body,
-                text=f"{label}:",
-                fg=Colors.card_text,
-                bg=Colors.glass_bg,
-                font=("Segoe UI", 10, "bold"),
-                anchor="w"
-            ).grid(row=row, column=1, sticky="w", padx=(0, 6), pady=2)
+        # Row 1
+        add_status_row(1, 0, "🎯", "Gaze Control", "Enabled" if self.app_running else "Disabled")
+        add_status_row(1, 1, "🔊", "Voice Tips", "Enabled" if common.voice_tips_enabled else "Disabled")
 
-            tk.Label(
-                self.status_card.body,
-                text=value,
-                fg=color_value,
-                bg=Colors.glass_bg,
-                font=("Segoe UI", 10),
-                anchor="w"
-            ).grid(row=row, column=2, sticky="w", padx=(0, 6), pady=2)
+        # Row 2
+        add_status_row(2, 0, "🔔", "Voice Confirmation", "Enabled" if common.voice_action_confirmation else "Disabled")
+        add_status_row(2, 1, "⏰", "Rest Reminder", f"ON ({reminder_duration} min)" if reminder_enabled else "OFF")
 
-        # Add the dynamic rows again
-        add_status_row(1, "🎯", "Gaze Control", "Enabled" if self.app_running else "Disabled")
-        add_status_row(2, "🔊", "Voice Tips", "Enabled" if common.voice_tips_enabled else "Disabled")
-        add_status_row(3, "🔔", "Voice Confirmation", "Enabled" if common.voice_action_confirmation else "Disabled")
-        add_status_row(4, "⏰", "Rest Reminder", f"ON ({reminder_duration} min)" if reminder_enabled else "OFF")
+        for i in range(2):
+            self.status_card.body.grid_columnconfigure(i, weight=1)
 
-        # Ensure alignment stays correct
-        for i in range(3):
-            self.status_card.body.grid_columnconfigure(i, weight=0)
-        self.status_card.body.grid_columnconfigure(2, weight=1)
 
     def on_show(self):
         """Called when HomePage is shown again."""

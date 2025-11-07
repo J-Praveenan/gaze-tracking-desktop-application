@@ -44,7 +44,7 @@ from frontend.pages.sidebar import Sidebar
 import win32gui
 import win32process
 import psutil
-
+import webbrowser
 from tensorflow.keras.models import load_model
 
 from utils.common import speak_action_confirmation, speak
@@ -65,6 +65,11 @@ try:
 except ImportError:
     print("⚠️ TensorFlow not found — please install it with `pip install tensorflow`")
     raise
+
+# === New lists for comparison graph ===
+cnn_gaze_log = []         # from model.predict()
+landmark_gaze_log = []    # from your geometric/threshold logic
+frame_indices = []        # to keep X-axis aligned
 
 def flip_landmarks_x(face_landmarks, img_w):
     """Return a horizontally flipped copy of MediaPipe landmarks."""
@@ -543,7 +548,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     # --- Long-blink tuning ---
 
     # --- Wink & long-blink tuning (adjust to taste) ---
-    EAR_CLOSED = 0.2         # 0.18  # eye considered closed below this
+    EAR_CLOSED = 0.18         # 0.18  # eye considered closed below this
     EAR_OPEN_HYST = 0.16        # must be clearly open above this
     WINK_OPEN_MARGIN = 0.02     # the OTHER eye must be this much more open
     WINK_MIN_SEC = 0.08        # ignore micro twitches
@@ -1067,8 +1072,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             
         # --- Both eyes blink detection (duration-based) ---
         if (
-             left_eye_down_direction_threshold <= LEFT_EYE_CLOSED_THRESHOLD and
-             right_eye_down_direction_threshold <= RIGHT_EYE_CLOSED_THRESHOLD
+             left_eye_down_direction_threshold <= LEFT_EYE_CLOSED_THRESHOLD  and
+             right_eye_down_direction_threshold <= RIGHT_EYE_CLOSED_THRESHOLD 
         ):
             
             # Eyes currently closed
@@ -1095,14 +1100,55 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 # Reset regardless
                 detect_gaze._blink_start = None
                 
-                
-        if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            print("Final: LEFT WINK detected")
-            return "LEFT_BLINK", 100
+        # Blink Detection Based on the EAR values        
+        # if left_ear < EAR_CLOSED and right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     print("Final: LEFT WINK detected")
+        #     return "LEFT_BLINK", 100
 
-        elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
-            print("Final: RIGHT WINK detected")
+        # elif right_ear < EAR_CLOSED and left_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN):
+        #     print("Final: RIGHT WINK detected")
+        #     return "RIGHT_BLINK", 100  
+        
+        # --- Stable wink detection across frames ---
+        # Use static counters to accumulate consecutive wink frames
+        if not hasattr(detect_gaze, "_wink_counters"):
+            detect_gaze._wink_counters = {"left": 0, "right": 0}
+        WINK_HOLD_FRAMES = 1  # how many consecutive frames required to confirm
+
+        left_closed  = left_ear  < EAR_CLOSED
+        right_closed = right_ear < EAR_CLOSED
+        left_open    = left_ear  > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)
+        right_open   = right_ear > (EAR_OPEN_HYST + WINK_OPEN_MARGIN)
+
+
+        # if left_closed and right_closed:
+        #     print("NORMAL BLINK")
+        #     return "NORMAL BLINK", 100
+        # --- Left wink detection ---
+        if (left_closed and right_open) and (not (left_closed and right_closed)):
+            print("LEFT BLINK")
+            return "LEFT_BLINK", 100
+        
+        # --- Right wink detection ---
+        if (right_closed and left_open) and (not (left_closed and right_closed)):
+            print("RIGHT BLINK")
             return "RIGHT_BLINK", 100
+        
+
+
+        
+
+        #========================================================================================
+        
+        
+        # Blink Detection Based on the Thresold values
+        # if left_eye_down_direction_threshold <= LEFT_EYE_CLOSED_THRESHOLD + 0.006 and right_eye_down_direction_threshold > RIGHT_EYE_CLOSED_THRESHOLD + 0.004:
+        #     print("Final: LEFT WINK detected")
+        #     return "LEFT_BLINK", 100
+
+        # elif right_eye_down_direction_threshold <= RIGHT_EYE_CLOSED_THRESHOLD + 0.006 and left_eye_down_direction_threshold > LEFT_EYE_CLOSED_THRESHOLD + 0.004:
+        #     print("Final: RIGHT WINK detected")
+        #     return "RIGHT_BLINK", 100
             
             
         
@@ -1174,6 +1220,12 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         else:
             print("Looking CENTER (CNN model prediction)")
             
+            
+        # --- Log CNN vs Landmark predictions for comparison ---
+        global cnn_gaze_log, landmark_gaze_log, frame_indices
+        cnn_gaze_log.append(class_labels[np.argmax(pred_l)])  # CNN prediction
+        landmark_gaze_log.append(gaze)                        # Threshold-based prediction
+        frame_indices.append(len(cnn_gaze_log))
 
         return gaze, accuracy
 
@@ -1284,6 +1336,10 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     t_prev = time.perf_counter()  # ✅ setup initial timestamp
     gaze_points = []
     direction_log = []
+    
+    
+
+
 
 
     while cap.isOpened() and (external_stop is None or not external_stop.is_set()):
@@ -2020,9 +2076,97 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 # Save and display
                 save_path = ROOT / "Data" / "direction_frequency_chart.png"
                 plt.tight_layout()
-                plt.savefig(save_path)
-                plt.show()
+                plt.savefig(save_path, dpi=300)
+                plt.close()
                 print(f"[SAVED] Direction frequency chart saved to {save_path}")
+                webbrowser.open(save_path.as_uri())  # open image instead of GUI window
+
+                
+                
+                # === Plot CNN vs Landmark Gaze Prediction Comparison (1-second interval) ===
+                # === Plot CNN vs Landmark Gaze Prediction Comparison (1-second interval, no blink states) ===
+                if cnn_gaze_log and landmark_gaze_log:
+                    print("[INFO] Generating 1-second interval gaze comparison chart (no blink states)...")
+
+                    # Allowed gaze directions
+                    categories = ["center", "left", "right", "up", "down"]
+                    category_to_num = {cat: i for i, cat in enumerate(categories)}
+
+                    # Ignore blink/wink/eye-close states
+                    ignore_states = {
+                        "blink", "left_blink", "right_blink",
+                        "eye_close", "normal_blink", "deep_blink"
+                    }
+
+                    # Normalize and filter logs
+                    cnn_filtered = [val.lower() for val in cnn_gaze_log if val and val.lower() not in ignore_states]
+                    landmark_filtered = [val.lower() for val in landmark_gaze_log if val and val.lower() not in ignore_states]
+
+                    # Filter only those in categories
+                    cnn_filtered = [val for val in cnn_filtered if val in categories]
+                    landmark_filtered = [val for val in landmark_filtered if val in categories]
+
+                    # Debug info
+                    print(f"📊 CNN total: {len(cnn_filtered)}, Landmark total: {len(landmark_filtered)}")
+                    print(f"📈 Sample CNN values: {cnn_filtered[:15]}")
+                    print(f"📈 Sample Landmark values: {landmark_filtered[:15]}")
+
+                    if not cnn_filtered or not landmark_filtered:
+                        print("⚠️ No valid gaze data found (only blinks or empty logs). Skipping plot.")
+                    else:
+                        # Convert to numeric for plotting
+                        cnn_numeric = [category_to_num[val] for val in cnn_filtered]
+                        landmark_numeric = [category_to_num[val] for val in landmark_filtered]
+
+                        # Assume 30 FPS
+                        fps = 30
+                        total_frames = min(len(cnn_numeric), len(landmark_numeric))
+                        total_seconds = total_frames // fps
+
+                        # --- Group predictions by 1 second ---
+                        def group_predictions(predictions, fps):
+                            grouped = []
+                            for i in range(0, len(predictions), fps):
+                                chunk = predictions[i:i+fps]
+                                if not chunk:
+                                    continue
+                                most_common = max(set(chunk), key=chunk.count)
+                                grouped.append(most_common)
+                            return grouped
+
+                        cnn_per_sec = group_predictions(cnn_numeric, fps)
+                        landmark_per_sec = group_predictions(landmark_numeric, fps)
+
+                        if not cnn_per_sec or not landmark_per_sec:
+                            print("⚠️ No grouped data found. Check gaze logging consistency.")
+                        else:
+                            # Make time axis match number of 1-second groups
+                            time_axis = np.arange(len(cnn_per_sec))
+
+                            # === Plot Step-style Chart ===
+                            plt.figure(figsize=(12, 4))
+                            plt.step(time_axis, cnn_per_sec, where='post',
+                                    label="CNN Model Prediction", color="tab:blue", linewidth=1.8)
+                            plt.step(time_axis, landmark_per_sec, where='post',
+                                    label="Landmark Prediction", color="tab:orange", linestyle="--", linewidth=1.8)
+
+                            plt.xlabel("Time (seconds)")
+                            plt.ylabel("Gaze Direction")
+                            plt.title("Landmark Gaze Prediction vs CNN Model Gaze Prediction (Time-based)")
+                            plt.legend()
+                            plt.grid(True, linestyle="--", alpha=0.6)
+
+                            # Map y-ticks to labels
+                            plt.yticks(range(len(categories)), [c.capitalize() for c in categories])
+
+                            save_path = ROOT / "Data" / "cnn_vs_landmark_1s_comparison.png"
+                            plt.tight_layout()
+                            plt.savefig(save_path, dpi=300)
+                            plt.close()
+
+                            print(f"[SAVED] 1-second comparison chart saved to {save_path}")
+                            webbrowser.open(save_path.as_uri())
+
 
             continue
 
