@@ -323,7 +323,12 @@ def _double_click_debounced(interval=0.15):
     _last_click_flash_until = time.time() + 0.6
 
 
-
+def start_voice_thread():
+    import pythoncom
+    pythoncom.CoInitialize()
+    from voice.voice_typing import run_voice_typing_loop
+    run_voice_typing_loop()
+    pythoncom.CoUninitialize()
 
 
 def toggle_scroll_mode():
@@ -397,7 +402,18 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     global stop_signal
     stop_signal.clear()  # ✅ reset stop event before starting new session
 
-   
+   # 🟢 Delay-start voice typing after UI init (2s delay)
+    def delayed_start():
+        import time, pythoncom
+        pythoncom.CoInitialize()
+        from voice.voice_typing import run_voice_typing_loop
+        run_voice_typing_loop()
+        pythoncom.CoUninitialize()
+
+    threading.Thread(target=delayed_start, daemon=True).start()
+    print("[INFO] Voice Typing Watcher scheduled (delayed start).")
+    
+    
     # 🟩 Start gaze control
     with RUN_GAZE_LOCK:
         RUN_GAZE = True
@@ -548,7 +564,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     # --- Long-blink tuning ---
 
     # --- Wink & long-blink tuning (adjust to taste) ---
-    EAR_CLOSED = 0.2         # 0.18  # eye considered closed below this
+    EAR_CLOSED = 0.18         # 0.18  # eye considered closed below this
     EAR_OPEN_HYST = 0.16        # must be clearly open above this
     WINK_OPEN_MARGIN = 0.02     # the OTHER eye must be this much more open
     WINK_MIN_SEC = 0.08        # ignore micro twitches
@@ -736,15 +752,16 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             sw, sh = pyautogui.size()
             cx, cy = pyautogui.position()
 
-            speed = 50  # 🔹 adjust this for faster/slower motion (pixels per frame)
+            speed_left_up = 40  # 🔹 adjust this for faster/slower motion (pixels per frame)
+            speed_right_down = 80 
             if gaze == "left":
-                tx, ty = _clamp(cx - speed, 0, sw - 1), cy
+                tx, ty = _clamp(cx - speed_left_up, 0, sw - 1), cy
             elif gaze == "right":
-                tx, ty = _clamp(cx + speed, 0, sw - 1), cy
+                tx, ty = _clamp(cx + speed_right_down, 0, sw - 1), cy
             elif gaze == "up":
-                tx, ty = cx, _clamp(cy - speed, 0, sh - 1)
+                tx, ty = cx, _clamp(cy - speed_left_up, 0, sh - 1)
             elif gaze == "down":
-                tx, ty = cx, _clamp(cy + speed, 0, sh - 1)
+                tx, ty = cx, _clamp(cy + speed_right_down, 0, sh - 1)
             else:
                 return
 
@@ -991,11 +1008,11 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         # right_down_y1, right_down_y2 = landmarks[386].y, landmarks[374].y
         
         
-        left_eye_left_direction_threshold = landmarks[263].x- landmarks[476].x
-        right_eye_left_direction_threshold = landmarks[133].x- landmarks[469].x
+        left_eye_left_direction_threshold = landmarks[263].x- landmarks[473].x
+        right_eye_left_direction_threshold = landmarks[133].x- landmarks[468].x
         
-        left_eye_right_direction_threshold = landmarks[474].x- landmarks[362].x
-        right_eye_right_direction_threshold = landmarks[471].x- landmarks[33].x
+        left_eye_right_direction_threshold = landmarks[473].x- landmarks[362].x
+        right_eye_right_direction_threshold = landmarks[468].x- landmarks[33].x
         
         left_eye_up_direction_threshold = landmarks[386].y- landmarks[475].y
         right_eye_up_direction_threshold = landmarks[159].y- landmarks[470].y
@@ -1088,11 +1105,13 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 if 1.0 <= held < 2.0:
                     print("=================NORMAL BLINK====================")
                     detect_gaze._blink_start = None
+                    winsound.Beep(1000, 500)
                     return "NORMAL_BLINK", 100
 
                 elif held >= 2.0:
                     print("=================DEEP BLINK====================")
                     detect_gaze._blink_start = None
+                    winsound.Beep(1000, 500)
                     return "DEEP_BLINK", 100
 
                 # Reset regardless
@@ -1918,11 +1937,13 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 if gaze == "LEFT_BLINK":
                     left_blink_count += 1
                     _double_click_debounced()     # 👈 triggers double left-click 
+                    winsound.Beep(1000, 300)
                     print(f"👁️ Left blink count: {left_blink_count}")
 
                 elif gaze == "RIGHT_BLINK":
                     right_blink_count += 1
                     _right_click_debounced()      # 👈 triggers single right-click
+                    winsound.Beep(1000, 300)
                     print(f"👁️ Right blink count: {right_blink_count}")
 
                 elif gaze == "NORMAL_BLINK":
@@ -1938,6 +1959,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
 
 
 
+
             # Only allow new gaze prediction after a short interval      
             # if (gaze in ("left", "right", "up", "down")):
             #     move_cursor_for_gaze(gaze, accuracy)
@@ -1946,7 +1968,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         
             # Move mouse (function has its own cooldown & accuracy gate)
             if stable_gaze  in ("left", "right", "up", "down"):
-                move_cursor_for_gaze(gaze, accuracy)
+                move_cursor_for_gaze(stable_gaze, accuracy)
                 direction_log.append(stable_gaze)
 
                             
@@ -2178,6 +2200,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
 def run():
     main()
     # start_voice_autodictation()
+    
 
 
 

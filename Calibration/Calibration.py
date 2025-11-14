@@ -170,11 +170,11 @@ def calibrate_gaze():
                 # Compute values depending on direction
                 try:
                     if direction == "LEFT":
-                        left_val = landmarks[263][0] - landmarks[476][0]
-                        right_val = landmarks[133][0] - landmarks[469][0]
+                        left_val = landmarks[263][0] - landmarks[473][0]
+                        right_val = landmarks[133][0] - landmarks[468][0]
                     elif direction == "RIGHT":
-                        left_val = landmarks[474][0] - landmarks[362][0]
-                        right_val = landmarks[471][0] - landmarks[33][0]
+                        left_val = landmarks[473][0] - landmarks[362][0]
+                        right_val = landmarks[468][0] - landmarks[33][0]
                     elif direction == "UP":
                         left_val = landmarks[386][1] - landmarks[475][1]
                         right_val = landmarks[159][1] - landmarks[470][1]
@@ -208,11 +208,11 @@ def calibrate_gaze():
                 thresholds["LEFT_EYE_UP_DIRECTION_THRESHOLD"] = float(left_avg - 0.0005)
                 thresholds["RIGHT_EYE_UP_DIRECTION_THRESHOLD"] = float(right_avg - 0.0005)
             elif direction == "DOWN":
-                thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(left_avg)   # - 0.005
-                thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(right_avg) # - 0.005
+                thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(left_avg - 0.005)   # - 0.005
+                thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(right_avg - 0.005) # - 0.005
             elif direction == "CLOSED":
-                thresholds["LEFT_EYE_CLOSED_THRESHOLD"] = float(left_avg ) # + 0.003
-                thresholds["RIGHT_EYE_CLOSED_THRESHOLD"] = float(right_avg) # + 0.003
+                thresholds["LEFT_EYE_CLOSED_THRESHOLD"] = float(left_avg + 0.002) # + 0.003
+                thresholds["RIGHT_EYE_CLOSED_THRESHOLD"] = float(right_avg + 0.002) # + 0.003
 
 
         out_file = save_thresholds(thresholds)
