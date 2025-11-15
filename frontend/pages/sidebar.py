@@ -72,7 +72,11 @@ class Sidebar(RoundedCard):
                 # Special case: open On-Screen Keyboard
                 if key == "keyboard":
                     try:
-                        subprocess.Popen("osk.exe", shell=True)
+                        # subprocess.Popen("osk.exe", shell=True)
+                        # C:\Program Files\HotVirtualKeyboard
+                        shortcut = r"C:\Users\Public\Desktop\Hot Virtual Keyboard.lnk"
+                        subprocess.Popen(f'"{shortcut}"', shell=True)
+
                         root_window = self.controller.winfo_toplevel()
                         root_window.iconify()
                     except Exception as e:
