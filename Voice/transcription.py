@@ -40,7 +40,7 @@ def speak(text):
             print(f"[TTS ERROR] {e}")
 
 
-def transcribe_from_mic(duration=5):
+def transcribe_from_mic(duration=10):
     fs = 16000
     print("🎤 Listening...")
 
@@ -57,6 +57,18 @@ def transcribe_from_mic(duration=5):
     if len(text.split()) <= 2:
         print("⚠️ Ignored low-confidence result:", text)
         return ""
+    
+    UNWANTED_PHRASES = [
+    "please type your message here.",
+    "type your message here.",
+    "your message here.",
+    "message here.",
+    ]
+
+    if text in UNWANTED_PHRASES:
+        print("⚠️ Ignored unwanted phrase:", text)
+        return ""
+
 
     return text
 
