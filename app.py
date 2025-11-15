@@ -68,7 +68,10 @@ GUIDE_MP4 = data_path("assets", "guide.mp4")
 
 
 class App(tk.Tk):
+    _instance = None 
+    
     def __init__(self):
+        App._instance = self
         super().__init__()
         self.title(APP_TITLE)
         # self.geometry("1180x760")
@@ -180,7 +183,7 @@ class App(tk.Tk):
             else:
                 print("[APP] Manual Control mode active — waiting for 'Start gaze control' voice command.")
                 launch_gaze_app(enable_mouse_control=False)
-                speak("Manual mode enabled. Say 'Start gaze control' to begin gaze tracking.")
+                speak("Manual mode enabled.")
                 try:
                     from voice.transcription import start_voice_listener_thread
                     print("[APP] Voice listener started (manual mode).")
@@ -190,7 +193,7 @@ class App(tk.Tk):
         else:
             print("[APP] Stopping Look Track Vision.")
             launch_gaze_app(enable_mouse_control=False)
-            speak("Gaze control stopped.")
+            speak("LOOK TRACK VISION stopped.")
 
         # ✅ Sync TitleBar as well
         self._sync_gaze_buttons()

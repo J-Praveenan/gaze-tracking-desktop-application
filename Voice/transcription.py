@@ -54,15 +54,17 @@ def transcribe_from_mic(duration=10):
     text = result["text"].strip().lower()
     print(f"🗣 Recognized: {text}")
 
-    if len(text.split()) <= 2:
-        print("⚠️ Ignored low-confidence result:", text)
-        return ""
+    # if len(text.split()) <= 2:
+    #     print("⚠️ Ignored low-confidence result:", text)
+    #     return ""
     
     UNWANTED_PHRASES = [
     "please type your message here.",
     "type your message here.",
     "your message here.",
     "message here.",
+    "thank you.",
+    "thanks.",
     ]
 
     if text in UNWANTED_PHRASES:
@@ -74,22 +76,46 @@ def transcribe_from_mic(duration=10):
 
 # === Voice Command Handler ===
 def handle_voice_command(command: str):
-    """Parse spoken commands like 'start gaze control' or 'stop gaze control'."""
-    from frontend.pages.home import launch_gaze_app  # ✅ moved here to avoid circular import
+    """Parse spoken commands and trigger global gaze toggle."""
+    from app import App  # import here to avoid circular imports
+    from frontend.pages.home import pause_gaze_control, resume_gaze_control
 
-    if "start gaze control" in command:
+    cmd = command.lower().strip()
+
+    try:
+        app = App._instance  # get running app instance
+    except:
+        app = None
+
+    # ========== START GAZE CONTROL ==========
+    if "start gaze control" in cmd:
         print("[VOICE] Triggered: Start gaze control")
         speak("Starting gaze control")
-        launch_gaze_app(enable_mouse_control=True)
+
+        try:
+            from frontend.pages.home import start_mouse_control
+            start_mouse_control()
+        except Exception as e:
+            print("[VOICE ERROR] Failed to start mouse control:", e)
+
         return True
 
-    elif "stop gaze control" in command:
+
+    # ========== STOP GAZE CONTROL ==========
+    elif "stop gaze control" in cmd:
         print("[VOICE] Triggered: Stop gaze control")
         speak("Stopping gaze control")
-        launch_gaze_app(enable_mouse_control=False)
+
+        try:
+            from frontend.pages.home import launch_gaze_app
+            launch_gaze_app(enable_mouse_control=False)
+        except Exception as e:
+            print("[VOICE ERROR] Failed to stop mouse control:", e)
+
         return True
 
-    return False
+
+
 
 
 # === Background Voice Listener ===

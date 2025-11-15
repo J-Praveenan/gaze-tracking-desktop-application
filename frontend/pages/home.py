@@ -70,8 +70,15 @@ def launch_gaze_app(enable_mouse_control=False):
         # ==============================================================
         if control_mode == "manual":
             if not enable_mouse_control:
-                print("[INFO] Manual Control Mode: standby — system loaded but gaze tracking is OFF until voice command.")
+            # If a session is running → we MUST stop it
+                if main_gaze_session:
+                    print("[INFO] Manual Mode: Voice command STOP — shutting down gaze session.")
+                    main_gaze_session.stop()
+                    main_gaze_session = None
+                else:
+                    print("[INFO] Manual Mode: standby — no gaze session running.")
                 return
+
             else:
                 print("[INFO] Manual Control Mode: 'Start gaze control' voice command received — enabling gaze tracking.")
         else:
@@ -138,6 +145,60 @@ def launch_gaze_app(enable_mouse_control=False):
     except Exception as e:
         messagebox.showerror("Error", f"Failed to start gaze system:\n{e}")
         print(f"[ERROR] Failed to start gaze system: {e}")
+
+
+def pause_gaze_control():
+    """Pause gaze tracking without stopping the full application."""
+    global main_gaze_session
+    if main_gaze_session:
+        try:
+            main_gaze_session.stop_mouse_control()  # implement this method in gaze_runner.GazeSession
+            print("[INFO] Gaze control paused (manual mode).")
+        except Exception as e:
+            print(f"[WARN] Could not pause gaze control: {e}")
+    else:
+        print("[INFO] No active gaze session to pause.")
+
+
+def resume_gaze_control():
+    """Resume gaze tracking after it was paused."""
+    global main_gaze_session
+    if main_gaze_session:
+        try:
+            main_gaze_session.start_mouse_control()  # implement this method in gaze_runner.GazeSession
+            print("[INFO] Gaze control resumed (manual mode).")
+        except Exception as e:
+            print(f"[WARN] Could not resume gaze control: {e}")
+    else:
+        # Create and start a new session if none exists
+        print("[INFO] No existing gaze session. Starting fresh.")
+        launch_gaze_app(enable_mouse_control=True)
+
+# ==========================
+# DIRECT MOUSE CONTROL API
+# ==========================
+def start_mouse_control():
+    global main_gaze_session
+    if main_gaze_session:
+        try:
+            main_gaze_session.start_mouse_control()
+            print("[VOICE] Mouse control ENABLED")
+        except Exception as e:
+            print("[ERR] Cannot enable mouse control:", e)
+    else:
+        print("[VOICE] No gaze session running — starting fresh.")
+        launch_gaze_app(enable_mouse_control=True)
+
+
+def stop_mouse_control():
+    global main_gaze_session
+    if main_gaze_session:
+        try:
+            main_gaze_session.stop_mouse_control()
+            print("[VOICE] Mouse control DISABLED")
+        except Exception as e:
+            print("[ERR] Cannot disable mouse control:", e)
+
 
 # =====================================================================
 # Home Page frontend

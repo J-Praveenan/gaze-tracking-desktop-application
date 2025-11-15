@@ -247,6 +247,7 @@ class GazeSession:
         self.show_video = show_video
         self.stop_event = threading.Event()
         self.thread = None
+        self.mouse_active = enable_mouse_control 
 
     def start(self):
         if self.thread and self.thread.is_alive():
@@ -264,9 +265,33 @@ class GazeSession:
             print("[ERROR] Gaze session crashed:", e)
 
     def stop(self):
+        global RUN_GAZE
         print("[INFO] Stopping Gaze Session")
+
+        # stop gaze main loop
         RUN_GAZE = False
         self.stop_event.set()
+
+        # 🔥 STOP REMINDER TIMER ALSO
+        try:
+            from frontend.pages.home import stop_reminder_event
+            stop_reminder_event.set()
+            print("[INFO] Reminder timer cleared.")
+        except Exception as e:
+            print("[WARN] Could not clear reminder event:", e)
+
+        
+    # def stop_mouse_control(self):
+    #     """Temporarily disable gaze-based mouse control."""
+    #     self.mouse_active = False
+    #     print("[INFO] Mouse control paused.")
+
+
+    # def start_mouse_control(self):
+    #     """Re-enable gaze-based mouse control."""
+    #     self.mouse_active = True
+    #     print("[INFO] Mouse control resumed.")
+
 
 
 def _right_click_debounced():
