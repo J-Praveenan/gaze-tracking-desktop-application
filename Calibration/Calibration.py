@@ -205,8 +205,8 @@ def calibrate_gaze():
                 thresholds["LEFT_EYE_RIGHT_DIRECTION_THRESHOLD"] = float(left_avg - 0.0005)
                 thresholds["RIGHT_EYE_RIGHT_DIRECTION_THRESHOLD"] = float(right_avg - 0.0005)
             elif direction == "UP":
-                thresholds["LEFT_EYE_UP_DIRECTION_THRESHOLD"] = float(left_avg - 0.0005)
-                thresholds["RIGHT_EYE_UP_DIRECTION_THRESHOLD"] = float(right_avg - 0.0005)
+                thresholds["LEFT_EYE_UP_DIRECTION_THRESHOLD"] = float(left_avg ) #+ 0.0002
+                thresholds["RIGHT_EYE_UP_DIRECTION_THRESHOLD"] = float(right_avg ) #+ 0.0002
             elif direction == "DOWN":
                 thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(left_avg - 0.005)   # - 0.005
                 thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(right_avg - 0.005) # - 0.005

@@ -72,16 +72,15 @@ class Sidebar(RoundedCard):
                 # Special case: open On-Screen Keyboard
                 if key == "keyboard":
                     try:
-                        # subprocess.Popen("osk.exe", shell=True)
-                        # C:\Program Files\HotVirtualKeyboard
-                        shortcut = r"C:\Users\Public\Desktop\Hot Virtual Keyboard.lnk"
-                        subprocess.Popen(f'"{shortcut}"', shell=True)
+                        tabtip_path = r"C:\Program Files\Common Files\Microsoft Shared\ink\TabTip.exe"
+                        subprocess.Popen(["explorer.exe", tabtip_path])
 
                         root_window = self.controller.winfo_toplevel()
                         root_window.iconify()
                     except Exception as e:
-                        print("Error launching On-Screen Keyboard:", e)
+                        print("Error launching Touch Keyboard:", e)
                     return
+
 
                 # Step 1: highlight
                 self.controller.selected_page_key = key
