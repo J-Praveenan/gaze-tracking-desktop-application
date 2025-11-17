@@ -70,8 +70,15 @@ def launch_gaze_app(enable_mouse_control=False):
         # ==============================================================
         if control_mode == "manual":
             if not enable_mouse_control:
-                print("[INFO] Manual Control Mode: standby — system loaded but gaze tracking is OFF until voice command.")
+            # If a session is running → we MUST stop it
+                if main_gaze_session:
+                    print("[INFO] Manual Mode: Voice command STOP — shutting down gaze session.")
+                    main_gaze_session.stop()
+                    main_gaze_session = None
+                else:
+                    print("[INFO] Manual Mode: standby — no gaze session running.")
                 return
+
             else:
                 print("[INFO] Manual Control Mode: 'Start gaze control' voice command received — enabling gaze tracking.")
         else:
@@ -138,6 +145,60 @@ def launch_gaze_app(enable_mouse_control=False):
     except Exception as e:
         messagebox.showerror("Error", f"Failed to start gaze system:\n{e}")
         print(f"[ERROR] Failed to start gaze system: {e}")
+
+
+def pause_gaze_control():
+    """Pause gaze tracking without stopping the full application."""
+    global main_gaze_session
+    if main_gaze_session:
+        try:
+            main_gaze_session.stop_mouse_control()  # implement this method in gaze_runner.GazeSession
+            print("[INFO] Gaze control paused (manual mode).")
+        except Exception as e:
+            print(f"[WARN] Could not pause gaze control: {e}")
+    else:
+        print("[INFO] No active gaze session to pause.")
+
+
+def resume_gaze_control():
+    """Resume gaze tracking after it was paused."""
+    global main_gaze_session
+    if main_gaze_session:
+        try:
+            main_gaze_session.start_mouse_control()  # implement this method in gaze_runner.GazeSession
+            print("[INFO] Gaze control resumed (manual mode).")
+        except Exception as e:
+            print(f"[WARN] Could not resume gaze control: {e}")
+    else:
+        # Create and start a new session if none exists
+        print("[INFO] No existing gaze session. Starting fresh.")
+        launch_gaze_app(enable_mouse_control=True)
+
+# ==========================
+# DIRECT MOUSE CONTROL API
+# ==========================
+def start_mouse_control():
+    global main_gaze_session
+    if main_gaze_session:
+        try:
+            main_gaze_session.start_mouse_control()
+            print("[VOICE] Mouse control ENABLED")
+        except Exception as e:
+            print("[ERR] Cannot enable mouse control:", e)
+    else:
+        print("[VOICE] No gaze session running — starting fresh.")
+        launch_gaze_app(enable_mouse_control=True)
+
+
+def stop_mouse_control():
+    global main_gaze_session
+    if main_gaze_session:
+        try:
+            main_gaze_session.stop_mouse_control()
+            print("[VOICE] Mouse control DISABLED")
+        except Exception as e:
+            print("[ERR] Cannot disable mouse control:", e)
+
 
 # =====================================================================
 # Home Page frontend
@@ -491,6 +552,109 @@ class HomePage(BasePage):
             except Exception as e:
                 print(f"[WARN] Failed to save control mode: {e}")
 
+
+        class ModernTooltip:
+            def __init__(self, widget, text, width=280):
+                self.widget = widget
+                self.text = text
+                self.width = width
+                self.tooltip = None
+                self.alpha = 0  # For fade animation
+
+                widget.bind("<Enter>", self.show_tooltip)
+                widget.bind("<Leave>", self.hide_tooltip)
+
+            def show_tooltip(self, event=None):
+                if self.tooltip:
+                    return
+
+                # === Create floating tooltip ===
+                self.tooltip = tk.Toplevel(self.widget)
+                self.tooltip.overrideredirect(True)
+                self.tooltip.attributes("-topmost", True)
+                self.tooltip.attributes("-alpha", 0)   # Start invisible for fade-in
+
+                # === Shadow Frame ===
+                shadow = tk.Frame(self.tooltip, bg="#000000", bd=0)
+                shadow.pack(padx=4, pady=4)
+
+                # === Main Container ===
+                container = tk.Frame(
+                    shadow,
+                    bg="#1f2937",        # dark glass card
+                    bd=0,
+                    highlightthickness=0
+                )
+                container.pack()
+
+                # Rounded border using canvas
+                canvas = tk.Canvas(
+                    container,
+                    width=self.width,
+                    bg="#1f2937",
+                    highlightthickness=0,
+                    bd=0
+                )
+                canvas.pack(fill="both", expand=True)
+
+                # Draw rounded rectangle
+                radius = 14
+                w = self.width
+                h = 10  # temporary, updated after text sizing
+
+                def rounded_rect(x1, y1, x2, y2, r, color):
+                    canvas.create_arc(x1, y1, x1+r*2, y1+r*2, start=90, extent=90, fill=color, outline=color)
+                    canvas.create_arc(x2-r*2, y1, x2, y1+r*2, start=0, extent=90, fill=color, outline=color)
+                    canvas.create_arc(x1, y2-r*2, x1+r*2, y2, start=180, extent=90, fill=color, outline=color)
+                    canvas.create_arc(x2-r*2, y2-r*2, x2, y2, start=270, extent=90, fill=color, outline=color)
+                    canvas.create_rectangle(x1+r, y1, x2-r, y2, fill=color, outline=color)
+                    canvas.create_rectangle(x1, y1+r, x2, y2-r, fill=color, outline=color)
+
+                # Text element
+                text_id = canvas.create_text(
+                    20, 20,
+                    text=self.text,
+                    anchor="nw",
+                    fill="#ffffff",
+                    font=("Segoe UI", 10),
+                    width=self.width - 40  # padding
+                )
+
+                # Resize canvas to fit text
+                bbox = canvas.bbox(text_id)
+                text_h = (bbox[3] - bbox[1]) + 40
+                canvas.config(height=text_h)
+
+                rounded_rect(5, 5, self.width - 5, text_h - 5, 14, "#1f2937")
+                canvas.tag_raise(text_id)
+
+                # Position near widget
+                x = self.widget.winfo_rootx() + 20
+                y = self.widget.winfo_rooty() + 20
+                self.tooltip.geometry(f"+{x}+{y}")
+
+                self.fade_in()
+
+            def fade_in(self):
+                """Smooth fade-in animation"""
+                if self.tooltip is None:
+                    return
+                if self.alpha < 0.96:
+                    self.alpha += 0.12
+                    self.tooltip.attributes("-alpha", self.alpha)
+                    self.tooltip.after(20, self.fade_in)
+                else:
+                    self.tooltip.attributes("-alpha", 0.96)
+
+            def hide_tooltip(self, event=None):
+                if self.tooltip:
+                    try:
+                        self.tooltip.destroy()
+                    except:
+                        pass
+                self.tooltip = None
+                self.alpha = 0
+
         # === Tooltip helper ===
         def create_tooltip(widget, text):
             tooltip = tk.Toplevel(widget)
@@ -578,15 +742,15 @@ class HomePage(BasePage):
             tip_text = (
                 "Auto Control:\n"
                 "Automatically starts gaze tracking once the app launches.\n"
-                "Your eyes and blinks directly control the system — no manual activation needed."
+                "Your eyes and blinks directly control the system (no manual activation needed)."
             ) if "auto" in value.lower() else (
                 "Manual Control:\n"
                 "System is ready but waits for you to enable gaze tracking manually.\n"
                 "Useful to avoid accidental gaze actions.\n\n"
-                "🗣️ Say 'Start gaze control' — the mouse pointer will follow your gaze.\n"
-                "🗣️ Say 'Stop gaze control' — gaze tracking stops without closing the app."
+                "🗣️ Say 'Start gaze control' (the mouse pointer will follow your gaze).\n"
+                "🗣️ Say 'Stop gaze control' (gaze tracking stops without stopping the app)."
             )
-            create_tooltip(icon_label, tip_text)
+            ModernTooltip(icon_label, tip_text)
 
         card.body.update_idletasks()
         return card
