@@ -12,9 +12,9 @@
         "auto_open_instruction": false
     },
     "camera": {
-        "index": 1
+        "index": 0
     },
     "control": {
-        "mode": "manual"
+        "mode": "auto"
     }
 }
