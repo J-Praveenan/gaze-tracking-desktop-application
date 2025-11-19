@@ -74,7 +74,7 @@ class Sidebar(RoundedCard):
                     try:
                         # subprocess.Popen("osk.exe", shell=True)
                         # C:\Program Files\HotVirtualKeyboard
-                        shortcut = r"C:\Users\Public\Desktop\Hot Virtual Keyboard.lnk"
+                        shortcut = r"C:\Program Files\HotVirtualKeyboard\hvk.exe"
                         subprocess.Popen(f'"{shortcut}"', shell=True)
 
                         root_window = self.controller.winfo_toplevel()

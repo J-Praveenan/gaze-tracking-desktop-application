@@ -59,7 +59,7 @@ class SetupPage(BasePage):
         
         
         # --- Placeholder image before video plays ---
-        thumb_path = PROJECT_ROOT / "assets" / "guide_thumbnail.ico"
+        thumb_path = PROJECT_ROOT / "assets" / "thumbnail.ico"
         if thumb_path.exists():
             self.thumb_image = tk.PhotoImage(file=str(thumb_path))
             self.preview_label = tk.Label(
@@ -159,7 +159,7 @@ class SetupPage(BasePage):
 
 
         # --- VLC Setup ---
-        guide_path = PROJECT_ROOT / "assets" / "guide.mp4"
+        guide_path = PROJECT_ROOT / "assets" / "calibration.mp4"
         self.guide_video = str(guide_path)
         self._is_full = False
         self._muted = False
@@ -177,7 +177,7 @@ class SetupPage(BasePage):
         else:
             ph = tk.Label(
                 self.video_canvas,
-                text="(guide.mp4 not found in /assets)",
+                text="(start-up-video.mp4 not found in /assets)",
                 font=F("h3", ("Segoe UI", 14, "bold")),
                 fg="#fff",
                 bg=Colors.dark_card,

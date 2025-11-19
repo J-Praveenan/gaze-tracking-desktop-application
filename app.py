@@ -64,7 +64,7 @@ ASSETS = BASE_DIR / "assets"
 
 BG_IMG_PATH   = ASSETS / "bg.jpg"
 LOGO_IMG_PATH = ASSETS / "eyelogo.ico"
-GUIDE_MP4 = data_path("assets", "guide.mp4")
+GUIDE_MP4 = data_path("assets", "start-up-video.mp4")
 
 
 class App(tk.Tk):
