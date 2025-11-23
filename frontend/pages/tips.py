@@ -27,6 +27,6 @@ class TipsPage(BasePage):
         card.grid(row=0, column=1, sticky="nsew", padx=(0, 20))
 
         # Embed Guide video inside the card body
-        guide_path = Path(__file__).resolve().parents[2] / "assets" / "guide.mp4"
+        guide_path = Path(__file__).resolve().parents[2] / "assets" / "features.mp4"
         self.guide_video = GuideVideoPage(card.body, controller, guide_path,show_skip=False)
         self.guide_video.pack(fill="both", expand=True)

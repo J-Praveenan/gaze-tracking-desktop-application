@@ -211,8 +211,8 @@ def calibrate_gaze():
                 thresholds["LEFT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(left_avg - 0.005)   # - 0.005
                 thresholds["RIGHT_EYE_DOWN_DIRECTION_THRESHOLD"] = float(right_avg - 0.005) # - 0.005
             elif direction == "CLOSED":
-                thresholds["LEFT_EYE_CLOSED_THRESHOLD"] = float(left_avg + 0.002) # + 0.003
-                thresholds["RIGHT_EYE_CLOSED_THRESHOLD"] = float(right_avg + 0.002) # + 0.003
+                thresholds["LEFT_EYE_CLOSED_THRESHOLD"] = float(left_avg + 0.003) # + 0.003
+                thresholds["RIGHT_EYE_CLOSED_THRESHOLD"] = float(right_avg + 0.003) # + 0.003
 
 
         out_file = save_thresholds(thresholds)

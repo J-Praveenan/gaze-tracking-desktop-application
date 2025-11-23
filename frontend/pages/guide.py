@@ -132,7 +132,7 @@ class GuideVideoPage(BasePage):
             self.player.set_media(media)
             self.after(200, self._poll_state)
         else:
-            ph = tk.Label(self.video, text="( Put guide.mp4 in /assets )",
+            ph = tk.Label(self.video, text="( Put features.mp4 in /assets )",
                           font=Fonts.h3, fg="#ffffff", bg=ctrl_bg)
             ph.pack(expand=True)
 

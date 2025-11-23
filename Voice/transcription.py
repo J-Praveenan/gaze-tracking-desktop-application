@@ -43,8 +43,12 @@ def speak(text):
 def transcribe_from_mic(duration=10):
     fs = 16000
     print("🎤 Listening...")
+    
+    print("Available audio devices:")
+    print(sd.query_devices())
+    # MIC_DEVICE_INDEX = 1  # <-- adjust if needed
 
-    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
+    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16') #device=MIC_DEVICE_INDEX 
     sd.wait()
 
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav:

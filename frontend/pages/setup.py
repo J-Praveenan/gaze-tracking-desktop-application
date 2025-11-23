@@ -159,7 +159,7 @@ class SetupPage(BasePage):
 
 
         # --- VLC Setup ---
-        guide_path = PROJECT_ROOT / "assets" / "guide.mp4"
+        guide_path = PROJECT_ROOT / "assets" / "calibration.mp4"
         self.guide_video = str(guide_path)
         self._is_full = False
         self._muted = False
