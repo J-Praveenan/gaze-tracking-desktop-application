@@ -7,6 +7,7 @@ from voice.transcription import transcribe_from_mic
 import uiautomation as auto
 from uiautomation import UIAutomationInitializerInThread
 import win32gui
+from voice.recording_indicator import show_indicator, hide_indicator
 
 def is_zoom_chat_open():
         root = auto.GetRootControl()
@@ -63,20 +64,20 @@ def is_text_field_focused():
         
         
     # For Testing window and child elements
-    # root = auto.GetRootControl()
-    # for win in root.GetChildren():
-    #     try:
-    #         if  get_active_window_title().lower():  # Zoom meeting window
-    #             print("Active Window Title:", get_active_window_title().lower())
-    #             for child in win.GetChildren():
-    #                 try:
-    #                     print("Child:", child.ControlTypeName, "| Name:", child.Name, "| ClassName:", child.ClassName)
-    #                     if "chat" in (child.Name or "").lower() or "message" in (child.Name or "").lower():
-    #                         return True
-    #                 except Exception:
-    #                     continue  # skip if child is stale
-    #     except Exception:
-    #         continue  # skip if win is stale
+    root = auto.GetRootControl()
+    for win in root.GetChildren():
+        try:
+            if  get_active_window_title().lower():  # Zoom meeting window
+                print("Active Window Title:", get_active_window_title().lower())
+                for child in win.GetChildren():
+                    try:
+                        print("Child:", child.ControlTypeName, "| Name:", child.Name, "| ClassName:", child.ClassName)
+                        if "chat" in (child.Name or "").lower() or "message" in (child.Name or "").lower():
+                            return True
+                    except Exception:
+                        continue  # skip if child is stale
+        except Exception:
+            continue  # skip if win is stale
            
     
     return False
@@ -94,10 +95,15 @@ def speak(message):
 
 def voice_typing():
     speak_action_confirmation("Please type your message here")
-    time.sleep(0.5)
-    text = transcribe_from_mic(duration=3)
-    time.sleep(0.5)
-    pyautogui.typewrite(text, interval=0.05)
+    print("Vice Typing Activated. Please speak your message...")
+    
+    show_indicator()
+    text = transcribe_from_mic(duration=5)
+    hide_indicator()
+   
+    print("Voice Typing Deactivated.")
+      
+    pyautogui.typewrite(text+" ", interval=0.05)
     
     
 def run_voice_typing_loop():
@@ -108,6 +114,11 @@ def run_voice_typing_loop():
             if is_text_field_focused():
                 print("✅ Native text input focused!")
                 voice_typing()
+                # pyautogui.press('volumemute')
+                # try:
+                #     voice_typing()
+                # finally:
+                #     pyautogui.press('volumemute')
     
             if keyboard.is_pressed("esc"):
                 print("🛑 ESC pressed. Stopping.")
@@ -119,17 +130,7 @@ def run_voice_typing_loop():
 
 if __name__ == "__main__":
     print("🟢 Voice Typing Watcher started. Click on any text field to begin (or press ESC to stop)...")
-    
-    while True:
-        if is_text_field_focused():
-            print("✅ Native text input focused!")
-            voice_typing()
-            break
-    
-        if keyboard.is_pressed("esc"):
-            print("🛑 ESC pressed. Stopping.")
-            break
-        time.sleep(0.5)
+    # run_voice_typing_loop()
 
 
  

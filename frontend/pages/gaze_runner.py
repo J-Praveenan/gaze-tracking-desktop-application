@@ -66,11 +66,13 @@ except ImportError:
     print("⚠️ TensorFlow not found — please install it with `pip install tensorflow`")
     raise
 
+
 # === New lists for comparison graph ===
 cnn_gaze_log = []         # from model.predict()
 landmark_gaze_log = []    # from your geometric/threshold logic
 frame_indices = []        # to keep X-axis aligned
 final_gaze_log = []
+frame_counter = 0   # <--- add this
 
 def gaze_to_int(g):
     mapping = {
@@ -378,7 +380,7 @@ def toggle_scroll_mode():
     else:
         speak("Scroll mode is activated now")
     print(f"[MODE SWITCHED] {mode}")
-    winsound.Beep(1000 if SCROLL_MODE else 700, 150)
+    # winsound.Beep(1000 if SCROLL_MODE else 700, 150)
 
 
 def _start_cursor_smoother():
@@ -422,6 +424,7 @@ def _start_cursor_smoother():
 
 
 def main(enable_mouse_control=False, show_video=False, external_stop=None):
+    global frame_counter
     global left_blink_count, right_blink_count, both_blink_count
     left_blink_count = 0
     right_blink_count = 0
@@ -601,9 +604,9 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     # --- Long-blink tuning ---
 
     # --- Wink & long-blink tuning (adjust to taste) ---
-    EAR_CLOSED = 0.2         # 0.18  # eye considered closed below this
+    EAR_CLOSED = 0.18         # 0.18  # eye considered closed below this
     EAR_OPEN_HYST = 0.16        # must be clearly open above this
-    WINK_OPEN_MARGIN = 0.02     # the OTHER eye must be this much more open
+    WINK_OPEN_MARGIN = 0.04     # the OTHER eye must be this much more open
     WINK_MIN_SEC = 0.08        # ignore micro twitches
     WINK_MAX_SEC = 1.20         # long holds won't count as a wink
 
@@ -1090,8 +1093,8 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         
         # --- Both eyes blink detection (duration-based) ---
         if (
-             left_eye_down_direction_threshold <= LEFT_EYE_CLOSED_THRESHOLD  and
-             right_eye_down_direction_threshold <= RIGHT_EYE_CLOSED_THRESHOLD 
+              left_eye_down_direction_threshold <= LEFT_EYE_CLOSED_THRESHOLD  and
+              right_eye_down_direction_threshold <= RIGHT_EYE_CLOSED_THRESHOLD 
         ):
             
             # Eyes currently closed
@@ -1108,13 +1111,13 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 if 1.0 <= held <= 2.0:
                     print("=================NORMAL BLINK====================")
                     detect_gaze._blink_start = None
-                    winsound.Beep(1000, 300)
+                    winsound.Beep(1000, 200)
                     return "NORMAL_BLINK", 100
 
                 elif held > 2.0:
                     print("=================DEEP BLINK====================")
                     detect_gaze._blink_start = None
-                    winsound.Beep(1000, 300)
+                    winsound.Beep(1000, 200)
                     return "DEEP_BLINK", 100
 
                 # Reset regardless
@@ -1185,12 +1188,12 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         #     return "NORMAL BLINK", 100
         # --- Left wink detection ---
         
-        if (left_closed and right_open) and (not (left_closed and right_closed) and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD ):
+        if (left_closed and right_open) and (not (left_closed and right_closed) and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD + 0.0005):
             print("LEFT BLINK")
             return "LEFT_BLINK", 100
         
         # --- Right wink detection ---
-        if (right_closed and left_open) and (not (left_closed and right_closed)and left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD):
+        if (right_closed and left_open) and (not (left_closed and right_closed)and left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD + 0.0005):
             print("RIGHT BLINK")
             return "RIGHT_BLINK", 100
                
@@ -1415,6 +1418,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
 
     while cap.isOpened() and (external_stop is None or not external_stop.is_set()):
         
+        frame_counter += 1
 
         success, frame = cap.read()
         if not success:
@@ -1992,13 +1996,13 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 if gaze == "LEFT_BLINK":
                     left_blink_count += 1
                     _double_click_debounced()     # 👈 triggers double left-click 
-                    winsound.Beep(1000, 300)
+                    winsound.Beep(1000, 200)
                     print(f"👁️ Left blink count: {left_blink_count}")
 
                 elif gaze == "RIGHT_BLINK":
                     right_blink_count += 1
                     _right_click_debounced()      # 👈 triggers single right-click
-                    winsound.Beep(1000, 300)
+                    winsound.Beep(1000, 200)
                     print(f"👁️ Right blink count: {right_blink_count}")
 
                 elif gaze == "NORMAL_BLINK":
@@ -2026,7 +2030,40 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 move_cursor_for_gaze(stable_gaze, accuracy)
                 direction_log.append(stable_gaze)
 
-            final_gaze_log.append(stable_gaze)    # or gaze if you prefer
+            # Log final gaze ONLY when CNN & Landmark predictions were logged
+            if len(frame_indices) == len(cnn_gaze_log):
+                final_gaze_log.append(stable_gaze)
+
+            
+            # 💡 This runs every loop, NOT only on quit
+            # cnn_vals = [gaze_to_int(g) for g in cnn_gaze_log]
+            # landmark_vals = [gaze_to_int(g) for g in landmark_gaze_log]
+            # final_vals = [gaze_to_int(g) for g in final_gaze_log]
+
+            # # 🎯 SHIFT LINES so they don't overlap
+            # cnn_vals_shifted      = [v + 0.15 for v in cnn_vals]
+            # landmark_vals_shifted = [v - 0.15 for v in landmark_vals]
+            # final_vals_shifted    = final_vals
+
+
+            # plt.figure(figsize=(10, 4))
+            # plt.plot(frame_indices, cnn_vals_shifted, label="CNN", linewidth=1.5)
+            # plt.plot(frame_indices, landmark_vals_shifted, label="Landmarks", linewidth=1.5)
+            # plt.plot(frame_indices, final_vals_shifted, label="Final", linewidth=2)
+
+            # plt.yticks([0, 1, 2, 3, 4], ["Left", "Right", "Up", "Down", "Center"])
+            # plt.xlabel("Frame")
+            # plt.ylabel("Gaze Direction")
+            # plt.title("Gaze Tracking Progress")
+            # plt.legend()
+            # plt.grid(True, linestyle="--", alpha=0.4)
+
+            # save_path = ROOT / "Data" / "live_gaze_graph.png"
+            # plt.savefig(save_path, dpi=150)
+            # plt.close()
+            # print(f"[GRAPH] Saved live graph to: {save_path}")
+
+
                             
             # ✅ Log gaze coordinate for heatmap (center point)
             if results.multi_face_landmarks:
@@ -2158,27 +2195,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 webbrowser.open(save_path.as_uri())  # open image instead of GUI window
 
             # Convert to numeric
-            cnn_vals = [gaze_to_int(g) for g in cnn_gaze_log]
-            landmark_vals = [gaze_to_int(g) for g in landmark_gaze_log]
-            final_vals = [gaze_to_int(g) for g in final_gaze_log]
 
-            plt.figure(figsize=(12, 6))
-            plt.plot(frame_indices, cnn_vals, label="CNN Prediction", linewidth=2)
-            plt.plot(frame_indices, landmark_vals, label="Landmark Prediction", linewidth=2)
-            plt.plot(frame_indices, final_vals, label="Final Gaze Direction", linewidth=3)
-
-            plt.yticks([0,1,2,3,4], ["Left","Right","Up","Down","Center"])
-            plt.title("CNN vs Landmark vs Final Gaze Direction", fontsize=14)
-            plt.xlabel("Frame Number")
-            plt.ylabel("Gaze Direction")
-            plt.legend()
-            plt.grid(True, linestyle="--", alpha=0.5)
-
-            save_path2 = ROOT / "Data" / "gaze_comparison_graph.png"
-            plt.savefig(save_path2, dpi=300)
-            plt.close()
-            print(f"[SAVED] Combined gaze graph saved to {save_path2}")
-            webbrowser.open(save_path2.as_uri())
 
             continue
 
