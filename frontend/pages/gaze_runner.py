@@ -604,7 +604,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     # --- Long-blink tuning ---
 
     # --- Wink & long-blink tuning (adjust to taste) ---
-    EAR_CLOSED = 0.18         # 0.18  # eye considered closed below this
+    EAR_CLOSED = 0.2         # 0.18  # eye considered closed below this
     EAR_OPEN_HYST = 0.16        # must be clearly open above this
     WINK_OPEN_MARGIN = 0.04     # the OTHER eye must be this much more open
     WINK_MIN_SEC = 0.08        # ignore micro twitches
@@ -1188,12 +1188,12 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         #     return "NORMAL BLINK", 100
         # --- Left wink detection ---
         
-        if (left_closed and right_open) and (not (left_closed and right_closed) and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD + 0.0005):
+        if (left_closed and right_open) and (not (left_closed and right_closed) ): #and right_eye_down_direction_threshold > RIGHT_EYE_DOWN_DIRECTION_THRESHOLD + 0.0005
             print("LEFT BLINK")
             return "LEFT_BLINK", 100
         
         # --- Right wink detection ---
-        if (right_closed and left_open) and (not (left_closed and right_closed)and left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD + 0.0005):
+        if (right_closed and left_open) and (not (left_closed and right_closed)): #and left_eye_down_direction_threshold > LEFT_EYE_DOWN_DIRECTION_THRESHOLD + 0.0005
             print("RIGHT BLINK")
             return "RIGHT_BLINK", 100
                
@@ -1629,19 +1629,16 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 except Exception as e:
                     print("frontend update failed:", e)
 
+            
+            
             # if show_video:
             #     cv2.imshow("Real Time Gaze Estimation", ui)
-            #     if cv2.waitKey(1) in (ord('q'), ord('Q')): break
-            #     continue
-            
-            if show_video:
-                cv2.imshow("Real Time Gaze Estimation", ui)
-                key = cv2.waitKey(1) & 0xFF
-                if key in (ord('q'), ord('Q')):
-                    print("[INFO] Video window closed by user.")
-                    cap.release()
-                    show_video = False  # ✅ disable further imshow calls
-                    cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close only the video window
+            #     key = cv2.waitKey(1) & 0xFF
+            #     if key in (ord('q'), ord('Q')):
+            #         print("[INFO] Video window closed by user.")
+            #         cap.release()
+            #         show_video = False  # ✅ disable further imshow calls
+            #         cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close only the video window
 
 
         # ---------------- EARs (safe) ----------------
@@ -1688,14 +1685,14 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             #     if cv2.waitKey(1) in (ord('q'), ord('Q')): break
             #     continue
             
-            if show_video:
-                cv2.imshow("Real Time Gaze Estimation", ui)
-                key = cv2.waitKey(1) & 0xFF
-                if key in (ord('q'), ord('Q')):
-                    print("[INFO] Video window closed by user.")
-                    cap.release()
-                    show_video = False  # ✅ disable further imshow calls
-                    cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close only the video window
+            # if show_video:
+            #     cv2.imshow("Real Time Gaze Estimation", ui)
+            #     key = cv2.waitKey(1) & 0xFF
+            #     if key in (ord('q'), ord('Q')):
+            #         print("[INFO] Video window closed by user.")
+            #         cap.release()
+            #         show_video = False  # ✅ disable further imshow calls
+            #         cv2.destroyWindow("Real Time Gaze Estimation")  # ✅ close only the video window
 
 
         # Now it’s safe to use EAR values
@@ -1786,10 +1783,10 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 except Exception as e:
                     print("frontend update failed:", e)
                     
-            if show_video:       
-                cv2.imshow("Real Time Gaze Estimation", output)  # or whatever you draw
-                if cv2.waitKey(1) in (ord('q'), ord('Q')): break
-                continue
+            # if show_video:       
+            #     cv2.imshow("Real Time Gaze Estimation", output)  # or whatever you draw
+            #     if cv2.waitKey(1) in (ord('q'), ord('Q')): break
+            #     continue
 
                 
             
@@ -1938,15 +1935,15 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                     deep_blink_count="--"
                 )
 
-                if show_video:
-                    cv2.imshow("Real Time Gaze Estimation", ui)
-                    key = cv2.waitKey(1) & 0xFF
-                    if key in (ord('q'), ord('Q')):
-                        print("[INFO] Video window closed by user.")
-                        cap.release()
-                        show_video = False
-                        cv2.destroyWindow("Real Time Gaze Estimation")
-                continue  # 🚫 Skip gaze control for this frame
+                # if show_video:
+                #     cv2.imshow("Real Time Gaze Estimation", ui)
+                #     key = cv2.waitKey(1) & 0xFF
+                #     if key in (ord('q'), ord('Q')):
+                #         print("[INFO] Video window closed by user.")
+                #         cap.release()
+                #         show_video = False
+                #         cv2.destroyWindow("Real Time Gaze Estimation")
+                # continue  # 🚫 Skip gaze control for this frame
 
             # ✅ Smooth resume when forward
             elif getattr(main, "_head_warning_active", False) and head_direction == "Forward":
@@ -2155,44 +2152,62 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
                 cv2.imshow("Real Time Gaze Estimation", ui)
         
                         
-        # if cv2.waitKey(1) == ord('q') or cv2.waitKey(1) == ord('Q') : 
-        #     break
         key = cv2.waitKey(1) & 0xFF
         if key in (ord('q'), ord('Q')):
-            print("[INFO] Closing only video window (camera continues).")
-            RUN_GAZE = False
+            print("[STOP] Q pressed — shutting down FULL application.")
+            
+            # Stop gaze loop
+            with RUN_GAZE_LOCK:
+                RUN_GAZE = False
+
+            # Stop smoother
+            SMOOTHER_STOP.set()
+
+            # Stop this gaze session
+            if external_stop is not None:
+                external_stop.set()
+
             cap.release()
-            cv2.destroyWindow("Real Time Gaze Estimation")
-            show_video = False
+            cv2.destroyAllWindows()
+
+            # 🔥 IMPORTANT — Notify UI to stop the application
+            try:
+                from frontend.app import app_instance
+                app_instance._handle_global_gaze_toggle(False)
+            except Exception as e:
+                print("[WARN] Could not notify GUI:", e)
+
+            return
+
 
             # ✅ Generate gaze heatmap only once here
             # ✅ Show Direction Frequency Chart at the end
-            if direction_log:
-                print(f"[INFO] Generating direction frequency chart from {len(direction_log)} samples...")
+            # if direction_log:
+            #     print(f"[INFO] Generating direction frequency chart from {len(direction_log)} samples...")
 
-                counts = Counter(direction_log)
-                directions = ["left", "right", "up", "down", "center"]
-                values = [counts.get(d, 0) for d in directions]
+            #     counts = Counter(direction_log)
+            #     directions = ["left", "right", "up", "down", "center"]
+            #     values = [counts.get(d, 0) for d in directions]
 
-                plt.figure(figsize=(6, 4))
-                bars = plt.bar(directions, values, color=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"])
-                plt.title("Gaze Direction Frequency", fontsize=14)
-                plt.xlabel("Direction")
-                plt.ylabel("Count")
-                plt.grid(axis="y", linestyle="--", alpha=0.6)
+            #     plt.figure(figsize=(6, 4))
+            #     bars = plt.bar(directions, values, color=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"])
+            #     plt.title("Gaze Direction Frequency", fontsize=14)
+            #     plt.xlabel("Direction")
+            #     plt.ylabel("Count")
+            #     plt.grid(axis="y", linestyle="--", alpha=0.6)
 
-                # Add count labels on top of each bar
-                for bar in bars:
-                    plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                            f"{int(bar.get_height())}", ha='center', va='bottom', fontsize=10)
+            #     # Add count labels on top of each bar
+            #     for bar in bars:
+            #         plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+            #                 f"{int(bar.get_height())}", ha='center', va='bottom', fontsize=10)
 
-                # Save and display
-                save_path = ROOT / "Data" / "direction_frequency_chart.png"
-                plt.tight_layout()
-                plt.savefig(save_path, dpi=300)
-                plt.close()
-                print(f"[SAVED] Direction frequency chart saved to {save_path}")
-                webbrowser.open(save_path.as_uri())  # open image instead of GUI window
+            #     # Save and display
+            #     save_path = ROOT / "Data" / "direction_frequency_chart.png"
+            #     plt.tight_layout()
+            #     plt.savefig(save_path, dpi=300)
+            #     plt.close()
+            #     print(f"[SAVED] Direction frequency chart saved to {save_path}")
+            #     webbrowser.open(save_path.as_uri())  # open image instead of GUI window
 
             # Convert to numeric
 

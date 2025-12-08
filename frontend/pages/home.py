@@ -222,6 +222,12 @@ class HomePage(BasePage):
 
         self.app_running = False
         self._build_home_content(self.main_col)
+        
+        # ================================
+        # 🔥 GLOBAL KEYBIND: Press 'Q' to stop gaze app
+        # ================================
+        self.bind_all("<KeyPress-q>", self.on_quit_key)
+        self.bind_all("<KeyPress-Q>", self.on_quit_key)
 
 
         
@@ -995,3 +1001,12 @@ class HomePage(BasePage):
 
         except Exception as e:
             print(f"[WARN] Could not sync Instruction Tray: {e}")
+
+    def on_quit_key(self, event):
+        """Stop gaze control when Q is pressed while the application is running."""
+        if self.app_running:
+            print("[KEYBOARD] Q pressed — stopping gaze control...")
+
+            # Call the GLOBAL handler in App (this updates everything correctly)
+            self.controller._handle_global_gaze_toggle(False)
+
