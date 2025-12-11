@@ -5,6 +5,7 @@ import cv2
 import time
 import matplotlib.pyplot as plt
 from collections import Counter
+from pynput import keyboard
 
 
 # --- Ensure project root is in sys.path ---
@@ -83,6 +84,23 @@ def gaze_to_int(g):
         "center": 4
     }
     return mapping.get(g, 4)
+
+def on_press(key):
+    try:
+        if key.char.lower() == 'q':
+            print("[GLOBAL HOTKEY] Q pressed — stopping gaze.")
+            # stop_gaze()
+
+            # Also notify UI (same as your cv2.waitKey logic)
+            # Also notify UI (runs in Tkinter thread)
+            from frontend.pages.home import launch_gaze_app
+            launch_gaze_app(enable_mouse_control=False)
+            print("[INFO] Application stopped.")
+
+    except:
+        pass
+
+keyboard.Listener(on_press=on_press).start()
 
 
 def flip_landmarks_x(face_landmarks, img_w):
@@ -450,8 +468,9 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
         run_voice_typing_loop()
         pythoncom.CoUninitialize()
 
-    threading.Thread(target=delayed_start, daemon=True).start()
-    print("[INFO] Voice Typing Watcher scheduled (delayed start).")
+    if (enable_mouse_control == True):
+        threading.Thread(target=delayed_start, daemon=True).start()
+        print("[INFO] Voice Typing Watcher scheduled (delayed start).")
     
     
     # 🟩 Start gaze control
@@ -604,9 +623,9 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     # --- Long-blink tuning ---
 
     # --- Wink & long-blink tuning (adjust to taste) ---
-    EAR_CLOSED = 0.2         # 0.18  # eye considered closed below this
-    EAR_OPEN_HYST = 0.16        # must be clearly open above this
-    WINK_OPEN_MARGIN = 0.04     # the OTHER eye must be this much more open
+    EAR_CLOSED = 0.2          # 0.18  # eye considered closed below this
+    EAR_OPEN_HYST = 0.18        # must be clearly open above this
+    WINK_OPEN_MARGIN = 0.06     # the OTHER eye must be this much more open
     WINK_MIN_SEC = 0.08        # ignore micro twitches
     WINK_MAX_SEC = 1.20         # long holds won't count as a wink
 
@@ -1368,6 +1387,9 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
     if enable_mouse_control and not _smoother_started:
         _start_cursor_smoother()
         # speak("Gaze control enabled.")
+        
+    stable_gaze = "center"
+    main._stable_gaze = "center"
 
     # Set resolution for virtual camera
     height, width = frame.shape[:2]
@@ -2170,13 +2192,11 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
             cap.release()
             cv2.destroyAllWindows()
 
-            # 🔥 IMPORTANT — Notify UI to stop the application
-            try:
-                from frontend.app import app_instance
-                app_instance._handle_global_gaze_toggle(False)
-            except Exception as e:
-                print("[WARN] Could not notify GUI:", e)
-
+            from frontend.pages.home import launch_gaze_app
+            launch_gaze_app(enable_mouse_control=False)
+            print("[INFO] Application stopped.")
+                
+            
             return
 
 
@@ -2236,6 +2256,9 @@ def stop_gaze():
     SMOOTHER_STOP.set()
     stop_signal.set()
     print("[INFO] Gaze control stopped (via stop_gaze()).")
+    
+
+    
 
 
 
