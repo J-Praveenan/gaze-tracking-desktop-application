@@ -332,7 +332,6 @@ def _double_click_debounced(interval=0.15):
         pyautogui.click(x, y)
         print("⌨️ Keyboard detected — Single click triggered instead of double-click")
         
-        
 
     if any(browser in app for browser in ["chrome", "msedge", "firefox", "brave"]) or window_title.lower() == "look track vision":
         # 🔹 YouTube / web video context — send Space for play/pause
@@ -1339,6 +1338,7 @@ def main(enable_mouse_control=False, show_video=False, external_stop=None):
 
     # Set resolution for virtual camera
     height, width = frame.shape[:2]
+
 
 
 
