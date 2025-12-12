@@ -41,14 +41,36 @@ def is_text_field_focused():
             return True
         
         
+        
          # Browser case: ChatGPT, Gmail, etc.
+        # if "chrome" in get_active_window_title().lower() or "edge" in get_active_window_title().lower():
+        #     # Case 1: standard editable elements
+        #     if element.ControlTypeName in ["EditControl", "PaneControl"]:
+        #         return True
+        #     # Case 2: webpage input (ChatGPT typing bar, Gmail body, etc.)
+        #     if element.ControlTypeName == "DocumentControl" and element.ClassName == "Chrome_RenderWidgetHostHWND":
+        #         return True
+        # ✅ Chrome / Edge specific handling
         if "chrome" in get_active_window_title().lower() or "edge" in get_active_window_title().lower():
-            # Case 1: standard editable elements
-            if element.ControlTypeName in ["EditControl", "PaneControl"]:
-                return True
-            # Case 2: webpage input (ChatGPT typing bar, Gmail body, etc.)
+            # Must be keyboard-focusable
+            if not element.IsKeyboardFocusable:
+                return False
+
+            # Ignore the generic webpage container
             if element.ControlTypeName == "DocumentControl" and element.ClassName == "Chrome_RenderWidgetHostHWND":
+                return False
+
+            # Accept real editable fields
+            if element.ControlTypeName in ["EditControl", "ComboBoxControl"]:
                 return True
+
+            # Heuristic for web inputs (ChatGPT, Gmail, Google search)
+            name = (element.Name or "").lower()
+            if any(k in name for k in [
+                "search", "address", "type", "message", "chat", "compose", "prompt"
+            ]):
+                return True
+
             
         
         # ✅ Teams chat & participants            

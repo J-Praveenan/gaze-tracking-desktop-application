@@ -2,7 +2,7 @@ import tkinter as tk
 from frontend.theme import Colors, Fonts
 from frontend.widgets import RoundedCard
 from frontend.pages.base import BasePage
-from utils.common import speak_if_allowed
+from utils.common import speak
 
 
 class CommunicatorPage(BasePage):
@@ -154,7 +154,7 @@ class CommunicatorPage(BasePage):
     def speak_message(self):
         text = self.message_var.get().strip()
         if text:
-            speak_if_allowed(text)
+            speak(text)
             
     def handle_clear_click(self):
         """Detect single vs double click on Clear button."""

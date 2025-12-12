@@ -1,11 +1,11 @@
 {
     "reminder": {
         "enabled": true,
-        "duration": 30
+        "duration": 1
     },
     "voice": {
-        "tips_enabled": true,
-        "action_confirmation": true
+        "tips_enabled": false,
+        "action_confirmation": false
     },
     "tray": {
         "enabled": false,
