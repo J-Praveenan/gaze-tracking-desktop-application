@@ -199,6 +199,7 @@ class SettingsPage(BasePage):
 
         # === Sections ===
         self._build_reminder_settings(content)
+        self._build_cursor_speed_settings(content)
         self._build_voice_settings(content)
         self._build_tray_settings(content)
         self._build_camera_settings(content)
@@ -232,8 +233,13 @@ class SettingsPage(BasePage):
         default = {
             "reminder": {"enabled": False, "duration": 10},
             "voice": {"tips_enabled": True, "action_confirmation": True},
+            "voice_click": {"enabled": True},
             "tray": {"enabled": False},
-            "camera": {"index": 0}
+            "camera": {"index": 0},
+            "cursor": {
+                "speed_left_up": 40,
+                "speed_right_down": 80
+            }
         }
 
         # --- Load existing file ---
@@ -387,6 +393,85 @@ class SettingsPage(BasePage):
                   ).grid(row=3, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 6))
 
         self._toggle_enable()
+        
+        
+    def _save_cursor_speed(self):
+        ui_value = self.cursor_speed_ui.get()  # 0–100
+
+        self.config["cursor"] = {
+            "speed_left_up": ui_value,          # ✅ exact value
+            "speed_right_down": ui_value * 2    # ✅ double value
+        }
+
+        self._save_config()
+
+        messagebox.showinfo(
+            "Saved",
+            "Cursor speed settings saved successfully!"
+        )
+
+
+
+        
+        
+    def _build_cursor_speed_settings(self, parent):
+        data = self.config.get("cursor", {
+        "speed_left_up": 40,
+        "speed_right_down": 80
+    })
+
+        card = RoundedCard(
+            parent, radius=12, pad=12,
+            bg=Colors.glass_bg, border_color="#4b5563", border_width=2
+        )
+        card.pack(fill="x", pady=8)
+
+        tk.Label(
+            card.body,
+            text="Cursor Speed Settings",
+            fg=Colors.card_head,
+            bg=Colors.glass_bg,
+            font=F("h2b", ("Segoe UI", 13, "bold"))
+        ).grid(row=0, column=0, sticky="w", padx=6, pady=(0, 8))
+
+        tk.Label(
+            card.body,
+            text="Cursor Speed:",
+            bg=Colors.glass_bg,
+            fg=Colors.card_text,
+            font=("Segoe UI", 12)
+        ).grid(row=1, column=0, sticky="w", padx=10, pady=6)
+
+        # ✅ Load exact UI value (0–100)
+        self.cursor_speed_ui = tk.IntVar(
+            value=data.get("speed_left_up", 40)
+        )
+
+        tk.Scale(
+            card.body,
+            from_=0,
+            to=100,
+            resolution=10,        # 🔹 gap between navigation = 10
+            orient="horizontal",
+            variable=self.cursor_speed_ui,
+            bg=Colors.glass_bg,
+            fg=Colors.card_text,
+            highlightthickness=0,
+            length=260
+        ).grid(row=1, column=1, sticky="w", padx=10, pady=6)
+
+        tk.Button(
+            card.body,
+            text="Save",
+            bg="#31A0EB",
+            fg="white",
+            font=("Segoe UI", 12, "bold"),
+            command=self._save_cursor_speed
+        ).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 6))
+
+
+
+
 
     def _toggle_enable(self):
         state = "normal" if self.toggle.get() else "disabled"
@@ -417,6 +502,8 @@ class SettingsPage(BasePage):
         from utils import common
 
         data = self.config.get("voice", {"tips_enabled": True, "action_confirmation": True})
+        
+        voice_click_enabled = self.config.get("voice_click", {}).get("enabled", True)
 
         card = RoundedCard(parent, radius=12, pad=12,
                            bg=Colors.glass_bg, border_color="#4b5563", border_width=2)
@@ -442,6 +529,21 @@ class SettingsPage(BasePage):
         ModernToggle(card.body, initial=data["action_confirmation"],
                      on_toggle=lambda val: self._on_voice_confirm_toggle(val)
                      ).grid(row=2, column=1, sticky="w", padx=10, pady=6)
+        
+        tk.Label(
+            card.body,
+            text="Voice Click Mode:",
+            bg=Colors.glass_bg,
+            fg=Colors.card_text,
+            font=("Segoe UI", 12)
+        ).grid(row=3, column=0, sticky="w", padx=10, pady=6)
+
+        ModernToggle(
+            card.body,
+            initial=voice_click_enabled,
+            on_toggle=lambda val: self._on_voice_click_toggle(val)
+        ).grid(row=3, column=1, sticky="w", padx=10, pady=6)
+
 
     def _on_voice_tips_toggle(self, val):
         from utils import common
@@ -456,6 +558,19 @@ class SettingsPage(BasePage):
         self.config["voice"]["action_confirmation"] = val
         self._save_config()
         common.speak_action_confirmation(f"Voice confirmations {'enabled' if val else 'disabled'}.")
+        
+    def _on_voice_click_toggle(self, val: bool):
+        from utils.common import speak_action_confirmation
+
+        self.config["voice_click"]["enabled"] = val
+        self._save_config()
+
+        speak_action_confirmation(
+            f"Voice click mode {'enabled' if val else 'disabled'}."
+        )
+
+        print(f"[CONFIG] Voice click mode set to: {val}")
+
 
     # -----------------------------------------------------------------
     # Tray Section

@@ -29,21 +29,22 @@ class CommunicatorPage(BasePage):
 
         # message bar
         self.message_var = tk.StringVar(value="")
-        msg_bar = tk.Entry(
-            card, textvariable=self.message_var, font=("Segoe UI", 14),
-            bg="white", fg="black", relief="flat", justify="center"
-        )
-        msg_bar.pack(pady=(0, 15), ipady=8, fill="x", padx=30)
+        self.msg_bar = tk.Entry(
+    card,
+    textvariable=self.message_var,
+    font=("Segoe UI", 14),
+    bg="white",
+    fg="black",
+    relief="flat",
+    justify="center"
+)
+        self.msg_bar.pack(pady=(0, 15), ipady=8, fill="x", padx=30)
 
-        # grid container
-        self.grid_frame = tk.Frame(card, bg=Colors.page_bg)
-        self.grid_frame.pack(expand=True, fill="both", padx=20, pady=10)
-
+        
         # bottom control bar
         control_frame = tk.Frame(card, bg=Colors.page_bg)
         control_frame.pack(pady=(10, 5))
-
-        # ✅ Bottom Control Buttons
+        
         tk.Button(
             control_frame,
             text="🔊 Speak",
@@ -82,6 +83,15 @@ class CommunicatorPage(BasePage):
             cursor="hand2",
             command=lambda: self.clear_message(full=True)
         ).pack(side="left", padx=20)
+
+        # grid container
+        self.grid_frame = tk.Frame(card, bg=Colors.page_bg)
+        self.grid_frame.pack(expand=True, fill="both", padx=20, pady=10)
+
+        
+
+        # ✅ Bottom Control Buttons
+       
 
 
         self._build_grid(self.vocab_sets["home"])
@@ -150,6 +160,10 @@ class CommunicatorPage(BasePage):
     def add_word(self, word):
         cur = self.message_var.get().strip()
         self.message_var.set(f"{cur} {word}".strip())
+
+    # ✅ Move cursor to end
+        self.msg_bar.icursor(tk.END)
+
 
     def speak_message(self):
         text = self.message_var.get().strip()

@@ -1,7 +1,7 @@
 {
     "reminder": {
         "enabled": true,
-        "duration": 1
+        "duration": 2
     },
     "voice": {
         "tips_enabled": false,
@@ -9,12 +9,19 @@
     },
     "tray": {
         "enabled": false,
-        "auto_open_instruction": false
+        "auto_open_instruction": true
     },
     "camera": {
         "index": 0
     },
     "control": {
         "mode": "auto"
+    },
+    "cursor": {
+        "speed_left_up": 60,
+        "speed_right_down": 120
+    },
+    "voice_click": {
+        "enabled": false
     }
 }

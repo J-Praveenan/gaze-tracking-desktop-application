@@ -87,8 +87,16 @@ def handle_voice_command(command: str):
     """Parse spoken commands and trigger global gaze toggle."""
     from app import App  # import here to avoid circular imports
     from frontend.pages.home import pause_gaze_control, resume_gaze_control
+    from frontend.pages.gaze_runner import handle_voice_click 
 
     cmd = command.lower().strip()
+    print(f"[VOICE] Command received: {cmd}")
+    
+        # ================= CLICK COMMANDS =================
+    if any(k in cmd for k in ["left click", "right click"]):
+        print(f"[VOICE] Click command detected: {cmd}")
+        # handle_voice_click(cmd)
+        return True
 
     try:
         app = App._instance  # get running app instance
